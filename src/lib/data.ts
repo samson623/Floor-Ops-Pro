@@ -26,6 +26,44 @@ export interface DailyLog {
     weather: string;
     sqft: number;
     notes: string;
+    // Enhanced fields for field production
+    siteConditions?: string;
+    blockers?: string;
+    temperature?: number;
+}
+
+// Photo with semantic labels for field documentation
+export type PhotoLabel = 'before' | 'during' | 'after' | 'issue' | 'subfloor' | 'moisture';
+
+export interface PhotoCapture {
+    id: number;
+    url: string;
+    label: PhotoLabel;
+    caption?: string;
+    timestamp: string;
+    location?: string;
+}
+
+// QA Checklist types
+export type QAChecklistType = 'prep' | 'install' | 'closeout';
+
+export interface QAChecklistItem {
+    id: number;
+    text: string;
+    checked: boolean;
+    notes?: string;
+    checkedBy?: string;
+    checkedAt?: string;
+}
+
+export interface QAChecklist {
+    id: number;
+    projectId: number;
+    type: QAChecklistType;
+    createdAt: string;
+    updatedAt: string;
+    completedAt?: string;
+    items: QAChecklistItem[];
 }
 
 export interface ScheduleItem {
@@ -94,8 +132,10 @@ export interface Project {
     dailyLogs: DailyLog[];
     schedule: ScheduleItem[];
     photos: string[];
+    photoCaptures: PhotoCapture[];
     materials: Material[];
     changeOrders: ChangeOrder[];
+    qaChecklists: QAChecklist[];
     financials: ProjectFinancials;
 }
 
@@ -187,6 +227,19 @@ export interface Database {
     globalSchedule: ScheduleItem[];
     messages: Message[];
     estimates: Estimate[];
+    // Offline queue for syncing
+    offlineQueue: OfflineQueueItem[];
+}
+
+// Offline Mode Support
+export interface OfflineQueueItem {
+    id: string;
+    action: 'create' | 'update' | 'delete';
+    entity: 'dailyLog' | 'photoCapture' | 'qaChecklist' | 'punchItem';
+    projectId: number;
+    payload: unknown;
+    timestamp: string;
+    synced: boolean;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -294,6 +347,8 @@ export const initialData: Database = {
                     ]
                 }
             ],
+            photoCaptures: [],
+            qaChecklists: [],
             financials: { contract: 45200, costs: 28450, margin: 37 }
         },
         {
@@ -344,6 +399,8 @@ export const initialData: Database = {
                     ]
                 }
             ],
+            photoCaptures: [],
+            qaChecklists: [],
             financials: { contract: 28750, costs: 16400, margin: 43 }
         },
         {
@@ -356,8 +413,10 @@ export const initialData: Database = {
                 { id: 3, title: 'Project Start', date: 'Jan 2', status: 'upcoming' }
             ],
             punchList: [], dailyLogs: [], schedule: [], photos: [],
+            photoCaptures: [],
             materials: [{ name: 'Shaw LVP Various', qty: 3200, unit: 'sf', status: 'ordered' }],
             changeOrders: [],
+            qaChecklists: [],
             financials: { contract: 52000, costs: 0, margin: 35 }
         },
         {
@@ -368,7 +427,7 @@ export const initialData: Database = {
                 { id: 1, title: 'Proposal Sent', date: 'Dec 8', status: 'completed' },
                 { id: 2, title: 'Awaiting Approval', date: 'Dec 15', status: 'current' }
             ],
-            punchList: [], dailyLogs: [], schedule: [], photos: [], materials: [], changeOrders: [],
+            punchList: [], dailyLogs: [], schedule: [], photos: [], photoCaptures: [], materials: [], changeOrders: [], qaChecklists: [],
             financials: { contract: 35500, costs: 0, margin: 32 }
         }
     ],
@@ -503,5 +562,6 @@ export const initialData: Database = {
             depositPercent: 50,
             notes: 'Historic preservation project. Extra care required. Client approved premium materials.'
         }
-    ]
+    ],
+    offlineQueue: []
 };

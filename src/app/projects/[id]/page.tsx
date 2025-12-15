@@ -1,20 +1,30 @@
 'use client';
 
-import { use, useState, useEffect } from 'react';
+import { use, useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import Link from 'next/link';
 import { TopBar } from '@/components/top-bar';
 import { StatCard } from '@/components/stat-card';
 import { ScheduleItemCard } from '@/components/schedule-item';
 import { useData } from '@/components/data-provider';
+import {
+    CODetailModal,
+    NewCOModal,
+    NewPunchModal,
+    NewLogModal,
+    CaptureModal,
+    ExecutionSuccessModal,
+    CaptureSuccessModal,
+    PhotoCaptureModal,
+    QAChecklistModal
+} from '@/components/modals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ChangeOrder, DailyLog, PunchItem, PhotoCapture, QAChecklistType } from '@/lib/data';
 import {
     ArrowLeft,
     Zap,
@@ -23,7 +33,6 @@ import {
     Users,
     CheckCircle2,
     Circle,
-    Clock,
     Camera,
     Plus,
     Download
@@ -50,10 +59,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const { id } = use(params);
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { getProject, togglePunchItem, data } = useData();
+    const { data, getProject, togglePunchItem, addPunchItem, addChangeOrder, updateChangeOrder, addDailyLog, updateProject } = useData();
 
     const [activeTab, setActiveTab] = useState<TabType>('overview');
     const [captureText, setCaptureText] = useState('');
+
+    // Modal states
+    const [showNewCO, setShowNewCO] = useState(false);
+    const [showCODetail, setShowCODetail] = useState<ChangeOrder | null>(null);
+    const [showNewPunch, setShowNewPunch] = useState(false);
+    const [showNewLog, setShowNewLog] = useState(false);
+    const [showCapture, setShowCapture] = useState(false);
+    const [executionSuccess, setExecutionSuccess] = useState<{
+        coId: string;
+        costImpact: number;
+        timeImpact: number;
+        newDueDate: string;
+        newContract: number;
+        newMargin: number;
+    } | null>(null);
+    const [captureSuccess, setCaptureSuccess] = useState<{
+        log: { date: string; crew: number; hours: number; sqft: number };
+        extractedPunch: string[];
+    } | null>(null);
+    const [showPhotoCapture, setShowPhotoCapture] = useState(false);
+    const [showQAChecklist, setShowQAChecklist] = useState<QAChecklistType | null>(null);
 
     const project = getProject(parseInt(id));
 
@@ -62,12 +92,183 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         if (tab) setActiveTab(tab);
     }, [searchParams]);
 
+    // CO Actions
+    const handleSubmitCO = useCallback((coId: string) => {
+        if (!project) return;
+        const today = new Date().toISOString().split('T')[0];
+        const co = project.changeOrders.find(c => c.id === coId);
+        if (!co) return;
+
+        updateChangeOrder(project.id, coId, {
+            status: 'submitted',
+            submittedDate: today,
+            history: [...co.history, { action: 'Submitted for Approval', date: today, by: 'Derek Morrison' }],
+        });
+        toast.success(`${coId} submitted for approval!`);
+    }, [project, updateChangeOrder]);
+
+    const handleApproveCO = useCallback((coId: string) => {
+        if (!project) return;
+        const today = new Date().toISOString().split('T')[0];
+        const co = project.changeOrders.find(c => c.id === coId);
+        if (!co) return;
+
+        updateChangeOrder(project.id, coId, {
+            status: 'approved',
+            approvedDate: today,
+            approvedBy: project.client,
+            history: [...co.history, { action: 'Approved', date: today, by: project.client }],
+        });
+        toast.success(`${coId} approved by client! Ready for execution.`);
+    }, [project, updateChangeOrder]);
+
+    const handleRejectCO = useCallback((coId: string) => {
+        if (!project) return;
+        const today = new Date().toISOString().split('T')[0];
+        const co = project.changeOrders.find(c => c.id === coId);
+        if (!co) return;
+
+        updateChangeOrder(project.id, coId, {
+            status: 'rejected',
+            history: [...co.history, { action: 'Rejected', date: today, by: project.client }],
+        });
+        toast.error(`${coId} was rejected.`);
+    }, [project, updateChangeOrder]);
+
+    const handleExecuteCO = useCallback((coId: string) => {
+        if (!project) return;
+        const today = new Date().toISOString().split('T')[0];
+        const co = project.changeOrders.find(c => c.id === coId);
+        if (!co) return;
+
+        // Calculate new values
+        const oldDueDate = new Date(project.dueDate);
+        oldDueDate.setDate(oldDueDate.getDate() + co.timeImpact);
+        const newDueDate = oldDueDate.toISOString().split('T')[0];
+        const newContract = project.financials.contract + co.costImpact;
+        const newMargin = Math.round(((newContract - project.financials.costs) / newContract) * 100);
+
+        // Update CO
+        updateChangeOrder(project.id, coId, {
+            status: 'executed',
+            executedDate: today,
+            history: [...co.history, { action: 'Executed & Applied', date: today, by: 'System' }],
+        });
+
+        // Update project
+        updateProject(project.id, {
+            value: project.value + co.costImpact,
+            dueDate: newDueDate,
+            financials: {
+                contract: newContract,
+                costs: project.financials.costs,
+                margin: newMargin,
+            },
+            dailyLogs: [
+                {
+                    id: Date.now(),
+                    date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+                    crew: 0,
+                    hours: 0,
+                    weather: '📋',
+                    sqft: 0,
+                    notes: `[CO EXECUTED] ${co.id}: ${co.desc}. Contract adjusted by +$${co.costImpact.toLocaleString()}, schedule extended by ${co.timeImpact} day(s).`,
+                },
+                ...project.dailyLogs,
+            ],
+        });
+
+        // Show success modal
+        setExecutionSuccess({
+            coId: co.id,
+            costImpact: co.costImpact,
+            timeImpact: co.timeImpact,
+            newDueDate,
+            newContract,
+            newMargin,
+        });
+    }, [project, updateChangeOrder, updateProject]);
+
+    const handleDeleteCO = useCallback((coId: string) => {
+        if (!project) return;
+        const newCOs = project.changeOrders.filter(c => c.id !== coId);
+        updateProject(project.id, { changeOrders: newCOs });
+        toast.success(`${coId} deleted`);
+    }, [project, updateProject]);
+
+    const handleCreateCO = useCallback((co: Omit<ChangeOrder, 'id'>) => {
+        if (!project) return;
+        addChangeOrder(project.id, co);
+    }, [project, addChangeOrder]);
+
+    const handleCreatePunch = useCallback((item: Omit<PunchItem, 'id'>) => {
+        if (!project) return;
+        addPunchItem(project.id, item);
+    }, [project, addPunchItem]);
+
+    const handleCreateLog = useCallback((log: Omit<DailyLog, 'id'>) => {
+        if (!project) return;
+        addDailyLog(project.id, log);
+    }, [project, addDailyLog]);
+
+    const handleProcessCapture = useCallback((text: string) => {
+        if (!project) return;
+
+        // Simulate AI extraction
+        const extractedPunch: string[] = [];
+        const words = text.toLowerCase();
+        if (words.includes('issue') || words.includes('problem') || words.includes('found')) {
+            extractedPunch.push('AI-extracted: ' + text.substring(0, 50) + '...');
+            addPunchItem(project.id, {
+                text: 'AI-extracted: ' + text.substring(0, 50) + '...',
+                priority: 'medium',
+                reporter: 'Derek',
+                due: 'Dec 15',
+                completed: false,
+            });
+        }
+
+        // Create log
+        const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const sqftMatch = text.match(/(\d+)\s*(sf|sq\s*ft|square\s*feet)/i);
+        const crewMatch = text.match(/crew\s*of\s*(\d+)/i);
+        const hoursMatch = text.match(/(\d+)\s*hours?/i);
+
+        const crew = crewMatch ? parseInt(crewMatch[1]) : 3;
+        const hours = hoursMatch ? parseInt(hoursMatch[1]) * crew : 24;
+        const sqft = sqftMatch ? parseInt(sqftMatch[1]) : 0;
+
+        addDailyLog(project.id, {
+            date: today,
+            crew,
+            hours,
+            weather: '☀️',
+            sqft,
+            notes: text,
+        });
+
+        setCaptureSuccess({
+            log: { date: today, crew, hours, sqft },
+            extractedPunch,
+        });
+    }, [project, addPunchItem, addDailyLog]);
+
+    const handleCapture = () => {
+        if (!project) return;
+        if (!captureText.trim()) {
+            toast.error('Please enter an update');
+            return;
+        }
+        handleProcessCapture(captureText);
+        setCaptureText('');
+    };
+
     if (!project) {
         return (
             <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold mb-2">Project Not Found</h2>
-                    <p className="text-muted-foreground mb-4">The project you're looking for doesn't exist.</p>
+                    <p className="text-muted-foreground mb-4">The project you&apos;re looking for doesn&apos;t exist.</p>
                     <Button onClick={() => router.push('/projects')}>
                         <ArrowLeft className="w-4 h-4 mr-2" />
                         Back to Projects
@@ -82,16 +283,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const completedPunch = project.punchList.filter(i => i.completed);
     const approvedCOs = project.changeOrders.filter(co => co.status === 'approved' || co.status === 'executed');
     const approvedTotal = approvedCOs.reduce((sum, co) => sum + co.costImpact, 0);
-    const adjustedContract = project.financials.contract + approvedTotal;
+    const adjustedContract = project.financials.contract + (project.changeOrders.filter(co => co.status === 'approved').reduce((s, co) => s + co.costImpact, 0));
 
-    const handleCapture = () => {
-        if (!captureText.trim()) {
-            toast.error('Please enter an update');
-            return;
-        }
-        toast.success('Update processed! In production, this would use AI to extract punch items and create logs.');
-        setCaptureText('');
+    // CO Stats
+    const coStats = {
+        submitted: project.changeOrders.filter(co => co.status === 'submitted').length,
+        approved: project.changeOrders.filter(co => co.status === 'approved' || co.status === 'executed').length,
+        approvedValue: project.changeOrders.filter(co => co.status === 'approved' || co.status === 'executed').reduce((s, co) => s + co.costImpact, 0),
+        totalDays: project.changeOrders.filter(co => co.status === 'approved' || co.status === 'executed').reduce((s, co) => s + co.timeImpact, 0),
     };
+    const needsActionCOs = project.changeOrders.filter(co => co.status === 'submitted' || co.status === 'approved');
 
     return (
         <>
@@ -129,7 +330,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <ArrowLeft className="w-4 h-4 mr-2" />
                                 Back
                             </Button>
-                            <Button onClick={() => toast.success('Capture modal coming soon')}>
+                            <Button onClick={() => setShowCapture(true)}>
                                 <Zap className="w-4 h-4 mr-2" />
                                 Capture Update
                             </Button>
@@ -236,16 +437,33 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             <Card>
                                 <CardHeader><CardTitle className="text-base">Quick Actions</CardTitle></CardHeader>
                                 <CardContent className="space-y-3">
-                                    <Button variant="secondary" className="w-full justify-start" onClick={() => toast.success('Upload coming soon')}>
+                                    <Button variant="secondary" className="w-full justify-start" onClick={() => setShowPhotoCapture(true)}>
                                         <Camera className="w-4 h-4 mr-2" />
-                                        Upload Photos
+                                        📷 Capture Photo
                                     </Button>
-                                    <Button variant="secondary" className="w-full justify-start" onClick={() => setActiveTab('logs')}>
+                                    <Button variant="secondary" className="w-full justify-start" onClick={() => setShowNewLog(true)}>
                                         📝 Add Daily Log
                                     </Button>
-                                    <Button variant="secondary" className="w-full justify-start" onClick={() => setActiveTab('punch')}>
+                                    <Button variant="secondary" className="w-full justify-start" onClick={() => setShowNewPunch(true)}>
                                         🔧 Add Punch Item
                                     </Button>
+                                    <div className="border-t pt-3 mt-2">
+                                        <div className="text-xs text-muted-foreground mb-2 font-medium">📋 QA Checklists</div>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <Button variant="outline" size="sm" onClick={() => setShowQAChecklist('prep')} className="flex flex-col h-auto py-2">
+                                                <span className="text-lg">🏗️</span>
+                                                <span className="text-xs">Prep</span>
+                                            </Button>
+                                            <Button variant="outline" size="sm" onClick={() => setShowQAChecklist('install')} className="flex flex-col h-auto py-2">
+                                                <span className="text-lg">🔨</span>
+                                                <span className="text-xs">Install</span>
+                                            </Button>
+                                            <Button variant="outline" size="sm" onClick={() => setShowQAChecklist('closeout')} className="flex flex-col h-auto py-2">
+                                                <span className="text-lg">✅</span>
+                                                <span className="text-xs">Closeout</span>
+                                            </Button>
+                                        </div>
+                                    </div>
                                 </CardContent>
                             </Card>
                         </div>
@@ -264,7 +482,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         <div
                                             key={item.id}
                                             className="flex items-center gap-3 p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors"
-                                            onClick={() => togglePunchItem(project.id, item.id)}
+                                            onClick={() => {
+                                                togglePunchItem(project.id, item.id);
+                                                toast.success('Item marked as complete!');
+                                            }}
                                         >
                                             <Circle className="w-5 h-5 text-muted-foreground" />
                                             <div className="flex-1 min-w-0">
@@ -297,11 +518,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             </CardHeader>
                             <CardContent>
                                 <div className="relative">
-                                    {/* Timeline line */}
                                     <div className="absolute left-[11px] top-3 bottom-3 w-0.5 bg-border" />
-
                                     <div className="space-y-6">
-                                        {project.milestones.map((m, i) => (
+                                        {project.milestones.map((m) => (
                                             <div key={m.id} className="flex gap-4 relative">
                                                 <div className={cn(
                                                     'w-6 h-6 rounded-full flex items-center justify-center shrink-0 z-10',
@@ -311,10 +530,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                                 )}>
                                                     {m.status === 'completed' ? '✓' : m.status === 'current' ? '●' : '○'}
                                                 </div>
-                                                <div className={cn(
-                                                    'flex-1 pb-6',
-                                                    m.status === 'upcoming' && 'opacity-50'
-                                                )}>
+                                                <div className={cn('flex-1 pb-6', m.status === 'upcoming' && 'opacity-50')}>
                                                     <div className="font-semibold">{m.title}</div>
                                                     <div className="text-sm text-muted-foreground">{m.date}</div>
                                                     <div className="text-xs text-muted-foreground mt-1">
@@ -354,7 +570,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     {/* Daily Logs Tab */}
                     <TabsContent value="logs" className="mt-0 space-y-4">
                         <div className="flex gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => toast.success('Creating log...')}>
+                            <Button variant="secondary" size="sm" onClick={() => setShowNewLog(true)}>
                                 <Plus className="w-4 h-4 mr-1" />
                                 New Log
                             </Button>
@@ -398,7 +614,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         ) : (
                             <Card>
                                 <CardContent className="py-8 text-center text-muted-foreground">
-                                    No logs yet.
+                                    No logs yet. <Button variant="link" onClick={() => setShowNewLog(true)}>Create one</Button>
                                 </CardContent>
                             </Card>
                         )}
@@ -420,7 +636,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         <div
                                             key={i}
                                             className="aspect-square bg-muted rounded-xl flex items-center justify-center text-4xl cursor-pointer hover:bg-muted/80 transition-colors relative overflow-hidden group"
-                                            onClick={() => toast.success('Opening photo...')}
+                                            onClick={() => toast.success(`Opening ${label}...`)}
                                         >
                                             📷
                                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white text-xs font-semibold translate-y-full group-hover:translate-y-0 transition-transform">
@@ -442,7 +658,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     {/* Punch List Tab */}
                     <TabsContent value="punch" className="mt-0 space-y-4">
                         <div className="flex gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => toast.success('Adding...')}>
+                            <Button variant="secondary" size="sm" onClick={() => setShowNewPunch(true)}>
                                 <Plus className="w-4 h-4 mr-1" />
                                 Add Item
                             </Button>
@@ -516,11 +732,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     {/* Materials Tab */}
                     <TabsContent value="materials" className="mt-0 space-y-4">
                         <div className="flex gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => toast.success('Adding...')}>
+                            <Button variant="secondary" size="sm" onClick={() => toast.success('Adding material...')}>
                                 <Plus className="w-4 h-4 mr-1" />
                                 Add Material
                             </Button>
-                            <Button variant="outline" size="sm" onClick={() => toast.success('Ordering...')}>
+                            <Button variant="outline" size="sm" onClick={() => toast.success('Opening order form...')}>
                                 📦 Order
                             </Button>
                         </div>
@@ -552,7 +768,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                                             </Badge>
                                                         </td>
                                                         <td className="p-4">
-                                                            <Button variant="secondary" size="sm" onClick={() => toast.success('Ordering...')}>
+                                                            <Button variant="secondary" size="sm" onClick={() => toast.success('Opening order form...')}>
                                                                 Order
                                                             </Button>
                                                         </td>
@@ -574,45 +790,117 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
                     {/* Change Orders Tab */}
                     <TabsContent value="changeorders" className="mt-0 space-y-4">
-                        <Button variant="secondary" size="sm" onClick={() => toast.success('Creating CO...')}>
-                            <Plus className="w-4 h-4 mr-1" />
-                            New Change Order
-                        </Button>
-
-                        {project.changeOrders.length > 0 ? (
-                            project.changeOrders.map(co => (
-                                <Card key={co.id} className="hover:shadow-md transition-shadow">
-                                    <CardContent className="pt-6">
-                                        <div className="flex items-start justify-between gap-4 mb-4">
-                                            <div>
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="font-bold">{co.id}</span>
-                                                    <Badge className={coStatusConfig[co.status].className}>
-                                                        {coStatusConfig[co.status].label}
-                                                    </Badge>
-                                                </div>
-                                                <h3 className="font-semibold">{co.desc}</h3>
-                                                <p className="text-sm text-muted-foreground mt-1">{co.reason}</p>
-                                            </div>
-                                            <div className="text-right shrink-0">
-                                                <div className="text-lg font-bold text-success">+${co.costImpact.toLocaleString()}</div>
-                                                <div className="text-xs text-muted-foreground">+{co.timeImpact} days</div>
-                                            </div>
-                                        </div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Created: {co.createdDate}
-                                            {co.approvedBy && ` • Approved by: ${co.approvedBy}`}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))
-                        ) : (
+                        {/* CO Stats Header */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <Card className="bg-warning/5 border-warning/20">
+                                <CardContent className="pt-6">
+                                    <div className="text-2xl font-bold text-warning">{coStats.submitted}</div>
+                                    <div className="text-sm text-muted-foreground">Awaiting Approval</div>
+                                </CardContent>
+                            </Card>
+                            <Card className="bg-success/5 border-success/20">
+                                <CardContent className="pt-6">
+                                    <div className="text-2xl font-bold text-success">{coStats.approved}</div>
+                                    <div className="text-sm text-muted-foreground">Approved</div>
+                                </CardContent>
+                            </Card>
                             <Card>
-                                <CardContent className="py-8 text-center text-muted-foreground">
-                                    No change orders yet.
+                                <CardContent className="pt-6">
+                                    <div className="text-2xl font-bold text-success">+${coStats.approvedValue.toLocaleString()}</div>
+                                    <div className="text-sm text-muted-foreground">Revenue Added</div>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <div className="text-2xl font-bold text-warning">+{coStats.totalDays}d</div>
+                                    <div className="text-sm text-muted-foreground">Schedule Impact</div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        {/* Quick Actions */}
+                        <div className="flex gap-2 flex-wrap">
+                            <Button onClick={() => setShowNewCO(true)}>+ Request Change Order</Button>
+                            <Button variant="outline" onClick={() => toast.success('Exporting CO report...')}>📥 Export Report</Button>
+                            <Button variant="outline" onClick={() => toast.success('Sending summary to client...')}>📧 Send Summary</Button>
+                        </div>
+
+                        {/* Needs Action */}
+                        {needsActionCOs.length > 0 && (
+                            <Card className="border-warning">
+                                <CardHeader className="bg-warning/10">
+                                    <CardTitle className="text-base">⚠️ Needs Action ({needsActionCOs.length})</CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-3 pt-4">
+                                    {needsActionCOs.map(co => (
+                                        <div
+                                            key={co.id}
+                                            className="p-4 rounded-lg border bg-card cursor-pointer hover:shadow-md transition-all"
+                                            onClick={() => setShowCODetail(co)}
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-bold">{co.id}</span>
+                                                        <Badge className={coStatusConfig[co.status].className}>
+                                                            {coStatusConfig[co.status].label}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="font-medium">{co.desc}</div>
+                                                    <div className="text-sm text-muted-foreground">{co.reason}</div>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <div className="font-bold text-success">+${co.costImpact.toLocaleString()}</div>
+                                                    <div className="text-xs text-muted-foreground">+{co.timeImpact}d</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
                                 </CardContent>
                             </Card>
                         )}
+
+                        {/* All Change Orders */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-base">All Change Orders ({project.changeOrders.length})</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                {project.changeOrders.length > 0 ? (
+                                    project.changeOrders.map(co => (
+                                        <div
+                                            key={co.id}
+                                            className="p-4 rounded-lg border bg-card cursor-pointer hover:shadow-md transition-all"
+                                            onClick={() => setShowCODetail(co)}
+                                        >
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <span className="font-bold">{co.id}</span>
+                                                        <Badge className={coStatusConfig[co.status].className}>
+                                                            {coStatusConfig[co.status].label}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="font-medium">{co.desc}</div>
+                                                    <div className="text-sm text-muted-foreground">{co.reason}</div>
+                                                </div>
+                                                <div className="text-right shrink-0">
+                                                    <div className="font-bold text-success">+${co.costImpact.toLocaleString()}</div>
+                                                    <div className="text-xs text-muted-foreground">+{co.timeImpact}d • Created: {co.createdDate}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <div className="text-center py-8">
+                                        <div className="text-4xl mb-2">📋</div>
+                                        <div className="font-semibold">No Change Orders Yet</div>
+                                        <p className="text-sm text-muted-foreground mb-4">Change orders help you track scope changes and protect your profit margins.</p>
+                                        <Button onClick={() => setShowNewCO(true)}>+ Create First Change Order</Button>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     </TabsContent>
 
                     {/* Financials Tab */}
@@ -659,7 +947,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         </thead>
                                         <tbody>
                                             {project.changeOrders.map(co => (
-                                                <tr key={co.id} className="border-b last:border-0 hover:bg-muted/30">
+                                                <tr key={co.id} className="border-b last:border-0 hover:bg-muted/30 cursor-pointer" onClick={() => setShowCODetail(co)}>
                                                     <td className="p-4 font-medium">{co.id}</td>
                                                     <td className="p-4">{co.desc}</td>
                                                     <td className="p-4 text-success font-medium">+${co.costImpact.toLocaleString()}</td>
@@ -679,6 +967,94 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     </TabsContent>
                 </Tabs>
             </div>
+
+            {/* Modals */}
+            {showCODetail && (
+                <CODetailModal
+                    open={!!showCODetail}
+                    onClose={() => setShowCODetail(null)}
+                    project={project}
+                    changeOrder={showCODetail}
+                    onSubmit={handleSubmitCO}
+                    onApprove={handleApproveCO}
+                    onReject={handleRejectCO}
+                    onExecute={handleExecuteCO}
+                    onDelete={handleDeleteCO}
+                />
+            )}
+
+            <NewCOModal
+                open={showNewCO}
+                onClose={() => setShowNewCO(false)}
+                projectId={project.id}
+                nextNumber={project.changeOrders.length + 1}
+                onCreate={handleCreateCO}
+            />
+
+            <NewPunchModal
+                open={showNewPunch}
+                onClose={() => setShowNewPunch(false)}
+                onCreate={handleCreatePunch}
+            />
+
+            <NewLogModal
+                open={showNewLog}
+                onClose={() => setShowNewLog(false)}
+                onCreate={handleCreateLog}
+            />
+
+            <CaptureModal
+                open={showCapture}
+                onClose={() => setShowCapture(false)}
+                projectName={project.name}
+                onProcess={handleProcessCapture}
+            />
+
+            {executionSuccess && (
+                <ExecutionSuccessModal
+                    open={!!executionSuccess}
+                    onClose={() => setExecutionSuccess(null)}
+                    {...executionSuccess}
+                />
+            )}
+
+            {captureSuccess && (
+                <CaptureSuccessModal
+                    open={!!captureSuccess}
+                    onClose={() => setCaptureSuccess(null)}
+                    projectName={project.name}
+                    log={captureSuccess.log}
+                    extractedPunch={captureSuccess.extractedPunch}
+                />
+            )}
+
+            <PhotoCaptureModal
+                open={showPhotoCapture}
+                onClose={() => setShowPhotoCapture(false)}
+                onCapture={(photo) => {
+                    // Add photo to project's photos array (simulated)
+                    const label = photo.label.charAt(0).toUpperCase() + photo.label.slice(1);
+                    updateProject(project.id, {
+                        photos: [...project.photos, label + (photo.location ? ` - ${photo.location}` : '')],
+                    });
+                    toast.success(`Photo saved with "${label}" label!`);
+                }}
+            />
+
+            {showQAChecklist && (
+                <QAChecklistModal
+                    open={!!showQAChecklist}
+                    onClose={() => setShowQAChecklist(null)}
+                    projectId={project.id}
+                    type={showQAChecklist}
+                    onSave={(checklist) => {
+                        // Save checklist to project (simulated - would need full integration)
+                        const typeName = checklist.type.charAt(0).toUpperCase() + checklist.type.slice(1);
+                        const completed = checklist.completedAt ? ' (Complete)' : '';
+                        toast.success(`${typeName} Checklist${completed} saved!`);
+                    }}
+                />
+            )}
         </>
     );
 }

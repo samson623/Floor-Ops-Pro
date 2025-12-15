@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useCallback } from 'react';
-import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog } from '@/lib/data';
+import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog, PhotoCapture, QAChecklist } from '@/lib/data';
 import { useLocalStorage } from '@/lib/storage';
 
 interface DataContextType {
@@ -167,6 +167,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             dailyLogs: [],
             schedule: [],
             photos: [],
+            photoCaptures: [],
             materials: estimate.materials.map(m => ({
                 name: m.name,
                 qty: m.sqft || m.qty || 0,
@@ -174,6 +175,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 status: 'ordered' as const
             })),
             changeOrders: [],
+            qaChecklists: [],
             financials: {
                 contract: estimate.totals.total,
                 costs: 0,
@@ -242,7 +244,8 @@ export function useData(): DataContextType {
             inventory: [],
             globalSchedule: [],
             messages: [],
-            estimates: []
+            estimates: [],
+            offlineQueue: []
         };
         return {
             data: emptyData,
