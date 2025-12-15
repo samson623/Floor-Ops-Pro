@@ -3,6 +3,7 @@
 import { useTheme } from './theme-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { RoleSwitcher } from '@/components/role-switcher';
 import { Sun, Moon, Plus, Search } from 'lucide-react';
 
 interface TopBarProps {
@@ -34,7 +35,7 @@ export function TopBar({
                 {/* Center: Children (optional project selector, etc.) */}
                 {children}
 
-                {/* Right: Search, Theme, Actions */}
+                {/* Right: Search, Role Switcher, Theme, Actions */}
                 <div className="flex items-center gap-2 lg:gap-3">
                     {/* Search - Hidden on mobile */}
                     <div className="relative hidden md:block">
@@ -45,6 +46,9 @@ export function TopBar({
                             className="w-48 lg:w-64 pl-9 bg-muted/50 border-0 focus-visible:ring-1"
                         />
                     </div>
+
+                    {/* Role Switcher */}
+                    <RoleSwitcher />
 
                     {/* Theme Toggle */}
                     <Button
@@ -76,3 +80,4 @@ export function TopBar({
         </header>
     );
 }
+

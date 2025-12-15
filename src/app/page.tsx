@@ -6,6 +6,7 @@ import { StatCard } from '@/components/stat-card';
 import { ProjectCard } from '@/components/project-card';
 import { ScheduleItemCard } from '@/components/schedule-item';
 import { useData } from '@/components/data-provider';
+import { usePermissions, PermissionGate } from '@/components/permission-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -13,17 +14,23 @@ import { toast } from 'sonner';
 export default function DashboardPage() {
   const router = useRouter();
   const { data, getActiveProjects, getTotalPipeline, getOpenPunchCount } = useData();
+  const { canViewPricing, currentUser, can } = usePermissions();
 
   const activeProjects = getActiveProjects();
   const pipeline = getTotalPipeline();
   const openPunch = getOpenPunchCount();
 
+  // For field workers, show their assigned projects count
+  const assignedCount = currentUser?.assignedProjectIds?.length || 0;
+  const showPricing = canViewPricing();
+
   return (
     <>
       <TopBar
         title="Dashboard"
-        breadcrumb="Overview"
+        breadcrumb={currentUser ? `Welcome back, ${currentUser.name.split(' ')[0]}` : 'Overview'}
         onNewProject={() => toast.info('New project form coming soon')}
+        showNewProject={can('CREATE_PROJECT')}
       />
 
       <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
@@ -36,13 +43,24 @@ export default function DashboardPage() {
             trend="up"
             onClick={() => router.push('/projects')}
           />
-          <StatCard
-            label="Pipeline"
-            value={`$${(pipeline / 1000).toFixed(0)}K`}
-            change="↑ 12%"
-            trend="up"
-            variant="success"
-          />
+          {showPricing ? (
+            <StatCard
+              label="Pipeline"
+              value={`$${(pipeline / 1000).toFixed(0)}K`}
+              change="↑ 12%"
+              trend="up"
+              variant="success"
+            />
+          ) : (
+            <StatCard
+              label="My Assignments"
+              value={assignedCount}
+              change={assignedCount > 0 ? 'Active jobs' : 'No assignments'}
+              trend="up"
+              variant="success"
+              onClick={() => router.push('/projects')}
+            />
+          )}
           <StatCard
             label="Open Punch"
             value={openPunch}

@@ -6,6 +6,7 @@ import { TopBar } from '@/components/top-bar';
 import { StatCard } from '@/components/stat-card';
 import { ScheduleItemCard } from '@/components/schedule-item';
 import { useData } from '@/components/data-provider';
+import { usePermissions } from '@/components/permission-context';
 import {
     CODetailModal,
     NewCOModal,
@@ -337,6 +338,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         );
     }
 
+    const { canViewPricing, can } = usePermissions();
+    const showPricing = canViewPricing();
+
     const status = statusConfig[project.status];
     const openPunch = project.punchList.filter(i => !i.completed);
     const completedPunch = project.punchList.filter(i => i.completed);
@@ -403,8 +407,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             <div className="text-xs text-muted-foreground">Sq Ft</div>
                         </div>
                         <div className="text-center p-4 rounded-xl bg-background/50 backdrop-blur">
-                            <div className="text-2xl font-bold text-success">${(project.value / 1000).toFixed(1)}K</div>
-                            <div className="text-xs text-muted-foreground">Value</div>
+                            <div className="text-2xl font-bold text-success">{showPricing ? `$${(project.value / 1000).toFixed(1)}K` : '—'}</div>
+                            <div className="text-xs text-muted-foreground">{showPricing ? 'Value' : 'Restricted'}</div>
                         </div>
                         <div className="text-center p-4 rounded-xl bg-background/50 backdrop-blur">
                             <div className="text-2xl font-bold text-primary">{project.progress}%</div>
@@ -414,10 +418,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             <div className="text-2xl font-bold">{openPunch.length}</div>
                             <div className="text-xs text-muted-foreground">Open Punch</div>
                         </div>
-                        <div className="text-center p-4 rounded-xl bg-background/50 backdrop-blur">
-                            <div className="text-2xl font-bold text-success">{project.financials.margin}%</div>
-                            <div className="text-xs text-muted-foreground">Margin</div>
-                        </div>
+                        {showPricing && (
+                            <div className="text-center p-4 rounded-xl bg-background/50 backdrop-blur">
+                                <div className="text-2xl font-bold text-success">{project.financials.margin}%</div>
+                                <div className="text-xs text-muted-foreground">Margin</div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -439,15 +445,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         </TabsTrigger>
                         <TabsTrigger value="materials">📦 Materials</TabsTrigger>
                         <TabsTrigger value="changeorders">🔄 Change Orders</TabsTrigger>
-                        <TabsTrigger value="financials">💰 Financials</TabsTrigger>
-                        <TabsTrigger value="invoices" className="relative">
-                            🧾 Invoices
-                            {getClientInvoicesByProject(project.id).filter(inv => inv.status === 'sent' || inv.status === 'partial').length > 0 && (
-                                <Badge className="ml-1 h-5 px-1.5 bg-amber-500 text-white text-xs">
-                                    {getClientInvoicesByProject(project.id).filter(inv => inv.status === 'sent' || inv.status === 'partial').length}
-                                </Badge>
-                            )}
-                        </TabsTrigger>
+                        {showPricing && <TabsTrigger value="financials">💰 Financials</TabsTrigger>}
+                        {can('VIEW_CLIENT_INVOICES') && (
+                            <TabsTrigger value="invoices" className="relative">
+                                🧾 Invoices
+                                {getClientInvoicesByProject(project.id).filter(inv => inv.status === 'sent' || inv.status === 'partial').length > 0 && (
+                                    <Badge className="ml-1 h-5 px-1.5 bg-amber-500 text-white text-xs">
+                                        {getClientInvoicesByProject(project.id).filter(inv => inv.status === 'sent' || inv.status === 'partial').length}
+                                    </Badge>
+                                )}
+                            </TabsTrigger>
+                        )}
                         <TabsTrigger value="walkthrough" className="relative">
                             ✅ Walkthrough
                             {getWalkthroughsByProject(project.id).filter(w => w.status === 'scheduled').length > 0 && (

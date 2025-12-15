@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { DataProvider } from "@/components/data-provider";
+import { PermissionProvider } from "@/components/permission-context";
 import { Sidebar } from "@/components/sidebar";
 import { AIPanel } from "@/components/ai-panel";
 import { Toaster } from "@/components/ui/sonner";
@@ -28,14 +29,16 @@ export default function RootLayout({
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
           <DataProvider>
-            <div className="flex min-h-screen bg-background">
-              <Sidebar />
-              <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                {children}
-              </main>
-            </div>
-            <AIPanel />
-            <Toaster richColors position="bottom-right" />
+            <PermissionProvider>
+              <div className="flex min-h-screen bg-background">
+                <Sidebar />
+                <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                  {children}
+                </main>
+              </div>
+              <AIPanel />
+              <Toaster richColors position="bottom-right" />
+            </PermissionProvider>
           </DataProvider>
         </ThemeProvider>
       </body>
