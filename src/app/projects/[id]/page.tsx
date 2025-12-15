@@ -17,6 +17,12 @@ import {
     PhotoCaptureModal,
     QAChecklistModal
 } from '@/components/modals';
+import {
+    EnhancedPunchModal,
+    ClientWalkthroughMode,
+    CompletionCertificateModal,
+    WalkthroughManager
+} from '@/components/walkthrough-modals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,7 +30,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { ChangeOrder, DailyLog, PunchItem, PhotoCapture, QAChecklistType } from '@/lib/data';
+import { ChangeOrder, DailyLog, PunchItem, PhotoCapture, QAChecklistType, PHASE_CONFIGS, WalkthroughSession, CompletionCertificate, SignatureData } from '@/lib/data';
+import { Progress } from '@/components/ui/progress';
 import {
     ArrowLeft,
     Zap,
@@ -35,10 +42,13 @@ import {
     Circle,
     Camera,
     Plus,
-    Download
+    Download,
+    ClipboardCheck,
+    FileSignature,
+    Star
 } from 'lucide-react';
 
-type TabType = 'overview' | 'timeline' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials';
+type TabType = 'overview' | 'timeline' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials' | 'walkthrough';
 
 const statusConfig = {
     active: { label: 'Active', className: 'bg-success/10 text-success border-success/20' },
@@ -59,7 +69,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const { id } = use(params);
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { data, getProject, togglePunchItem, addPunchItem, addChangeOrder, updateChangeOrder, addDailyLog, updateProject } = useData();
+    const {
+        data,
+        getProject,
+        togglePunchItem,
+        addPunchItem,
+        updatePunchItem,
+        addChangeOrder,
+        updateChangeOrder,
+        addDailyLog,
+        updateProject,
+        getProjectBudget,
+        getLaborSummary,
+        getProfitLeakAlerts,
+        getInvoicesByProject,
+        createWalkthroughSession,
+        updateWalkthroughSession,
+        startWalkthrough,
+        completeWalkthrough,
+        getWalkthroughsByProject,
+        createCompletionCertificate,
+        updateCompletionCertificate,
+        addSignature,
+        getCertificateByProject,
+        getTeamMembers
+    } = useData();
 
     const [activeTab, setActiveTab] = useState<TabType>('overview');
     const [captureText, setCaptureText] = useState('');
@@ -84,6 +118,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     } | null>(null);
     const [showPhotoCapture, setShowPhotoCapture] = useState(false);
     const [showQAChecklist, setShowQAChecklist] = useState<QAChecklistType | null>(null);
+
+    // Walkthrough modal states
+    const [showEnhancedPunch, setShowEnhancedPunch] = useState(false);
+    const [showWalkthroughManager, setShowWalkthroughManager] = useState(false);
+    const [showClientWalkthrough, setShowClientWalkthrough] = useState<WalkthroughSession | null>(null);
+    const [showCompletionCert, setShowCompletionCert] = useState(false);
 
     const project = getProject(parseInt(id));
 
@@ -381,6 +421,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <TabsTrigger value="materials">📦 Materials</TabsTrigger>
                         <TabsTrigger value="changeorders">🔄 Change Orders</TabsTrigger>
                         <TabsTrigger value="financials">💰 Financials</TabsTrigger>
+                        <TabsTrigger value="walkthrough" className="relative">
+                            ✅ Walkthrough
+                            {getWalkthroughsByProject(project.id).filter(w => w.status === 'scheduled').length > 0 && (
+                                <Badge className="ml-1 h-5 px-1.5 bg-primary text-primary-foreground text-xs">
+                                    {getWalkthroughsByProject(project.id).filter(w => w.status === 'scheduled').length}
+                                </Badge>
+                            )}
+                        </TabsTrigger>
                     </TabsList>
 
                     {/* Overview Tab */}
@@ -902,9 +950,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             </CardContent>
                         </Card>
                     </TabsContent>
-
                     {/* Financials Tab */}
                     <TabsContent value="financials" className="mt-0 space-y-6">
+                        {/* Revenue & Margin Overview */}
                         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                             <StatCard label="Original Contract" value={`$${project.financials.contract.toLocaleString()}`} />
                             <StatCard label="Approved COs" value={`+$${approvedTotal.toLocaleString()}`} variant="success" />
@@ -916,16 +964,240 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             <StatCard label="Adjusted Contract" value={`$${adjustedContract.toLocaleString()}`} variant="primary" />
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                            <StatCard label="Costs to Date" value={`$${project.financials.costs.toLocaleString()}`} />
-                            <StatCard label="Remaining" value={`$${(adjustedContract - project.financials.costs).toLocaleString()}`} variant="success" />
-                            <StatCard
-                                label="Current Margin"
-                                value={`${Math.round(((adjustedContract - project.financials.costs) / adjustedContract) * 100)}%`}
-                                variant="success"
-                            />
-                        </div>
+                        {(() => {
+                            const budget = getProjectBudget(project.id);
+                            const laborSummary = getLaborSummary(project.id);
+                            const alerts = getProfitLeakAlerts(project.id).filter(a => !a.resolvedAt);
+                            const invoices = getInvoicesByProject(project.id);
 
+                            if (budget) {
+                                return (
+                                    <>
+                                        {/* Margin Health Card */}
+                                        <Card className={cn(
+                                            "overflow-hidden",
+                                            budget.projectedMargin >= budget.targetMargin
+                                                ? "border-green-500/30 bg-gradient-to-r from-green-500/5 to-transparent"
+                                                : budget.projectedMargin >= budget.targetMargin - 5
+                                                    ? "border-amber-500/30 bg-gradient-to-r from-amber-500/5 to-transparent"
+                                                    : "border-red-500/30 bg-gradient-to-r from-red-500/5 to-transparent"
+                                        )}>
+                                            <CardContent className="pt-6">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div>
+                                                        <h3 className="text-lg font-semibold">Margin Health</h3>
+                                                        <p className="text-sm text-muted-foreground">Projected vs target margin</p>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <div className={cn(
+                                                            "text-3xl font-bold",
+                                                            budget.projectedMargin >= budget.targetMargin ? "text-green-500" :
+                                                                budget.projectedMargin >= budget.targetMargin - 5 ? "text-amber-500" : "text-red-500"
+                                                        )}>
+                                                            {budget.projectedMargin.toFixed(1)}%
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">Target: {budget.targetMargin}%</div>
+                                                    </div>
+                                                </div>
+                                                <div className="grid grid-cols-4 gap-4 pt-4 border-t">
+                                                    <div>
+                                                        <div className="text-xs text-muted-foreground uppercase">Revenue</div>
+                                                        <div className="text-lg font-bold">${(budget.totalRevenue / 1000).toFixed(1)}K</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-muted-foreground uppercase">Spent</div>
+                                                        <div className="text-lg font-bold">${(budget.actualCost / 1000).toFixed(1)}K</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-muted-foreground uppercase">Projected</div>
+                                                        <div className="text-lg font-bold">${(budget.projectedCost / 1000).toFixed(1)}K</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-xs text-muted-foreground uppercase">Profit</div>
+                                                        <div className="text-lg font-bold text-green-500">
+                                                            ${((budget.totalRevenue - budget.projectedCost) / 1000).toFixed(1)}K
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+
+                                        {/* Profit Leak Alerts */}
+                                        {alerts.length > 0 && (
+                                            <Card className="border-amber-500/30 bg-gradient-to-r from-amber-500/5 to-transparent">
+                                                <CardHeader>
+                                                    <CardTitle className="text-base flex items-center gap-2">
+                                                        ⚠️ Profit Leak Alerts ({alerts.length})
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent className="space-y-3">
+                                                    {alerts.map(alert => (
+                                                        <div key={alert.id} className={cn(
+                                                            "p-3 rounded-lg border",
+                                                            alert.severity === 'critical' ? "bg-red-500/10 border-red-500/30" :
+                                                                alert.severity === 'warning' ? "bg-amber-500/10 border-amber-500/30" : "bg-blue-500/10 border-blue-500/30"
+                                                        )}>
+                                                            <div className="flex items-start justify-between gap-4">
+                                                                <div>
+                                                                    <div className="font-medium">{alert.title}</div>
+                                                                    <div className="text-sm text-muted-foreground">{alert.description}</div>
+                                                                </div>
+                                                                <div className="text-right shrink-0">
+                                                                    <div className={cn(
+                                                                        "font-bold",
+                                                                        alert.severity === 'critical' ? "text-red-500" : "text-amber-500"
+                                                                    )}>
+                                                                        ${alert.impact.toLocaleString()}
+                                                                    </div>
+                                                                    <div className="text-xs text-muted-foreground">impact</div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </CardContent>
+                                            </Card>
+                                        )}
+
+                                        {/* Phase Budget Breakdown */}
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-base">📊 Actual vs Estimate by Phase</CardTitle>
+                                            </CardHeader>
+                                            <CardContent className="space-y-4">
+                                                {budget.phaseBudgets.map(phase => {
+                                                    const config = PHASE_CONFIGS[phase.phase];
+                                                    const progressPercent = phase.estimatedTotal > 0
+                                                        ? Math.min((phase.actualTotal / phase.estimatedTotal) * 100, 150)
+                                                        : 0;
+
+                                                    return (
+                                                        <div key={phase.phase} className="space-y-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-lg">{config?.icon}</span>
+                                                                    <span className="font-medium">{config?.label || phase.phase}</span>
+                                                                    <Badge variant="outline" className={cn(
+                                                                        "text-xs",
+                                                                        phase.status === 'on-budget' ? "border-green-500/30 text-green-500" :
+                                                                            phase.status === 'warning' ? "border-amber-500/30 text-amber-500" :
+                                                                                "border-red-500/30 text-red-500"
+                                                                    )}>
+                                                                        {phase.status === 'on-budget' ? 'On Budget' :
+                                                                            phase.status === 'warning' ? 'Warning' : 'Over Budget'}
+                                                                    </Badge>
+                                                                </div>
+                                                                <div className="text-right text-sm">
+                                                                    <span className="font-medium">${phase.actualTotal.toLocaleString()}</span>
+                                                                    <span className="text-muted-foreground"> / ${phase.estimatedTotal.toLocaleString()}</span>
+                                                                    {phase.variance !== 0 && (
+                                                                        <span className={cn(
+                                                                            "ml-2",
+                                                                            phase.variance > 0 ? "text-red-500" : "text-green-500"
+                                                                        )}>
+                                                                            ({phase.variance > 0 ? '+' : ''}{phase.variancePercent.toFixed(0)}%)
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <Progress
+                                                                value={progressPercent > 100 ? 100 : progressPercent}
+                                                                className={cn(
+                                                                    "h-2",
+                                                                    progressPercent > 100 && "[&>div]:bg-red-500"
+                                                                )}
+                                                            />
+                                                            <div className="grid grid-cols-4 gap-2 text-xs text-muted-foreground">
+                                                                <div>Labor: ${phase.actualLabor.toLocaleString()}</div>
+                                                                <div>Materials: ${phase.actualMaterials.toLocaleString()}</div>
+                                                                <div>Subs: ${phase.actualSubcontractors.toLocaleString()}</div>
+                                                                <div>Other: ${phase.actualOther.toLocaleString()}</div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </CardContent>
+                                        </Card>
+
+                                        {/* Labor & Subcontractor Summary */}
+                                        <div className="grid lg:grid-cols-2 gap-6">
+                                            {/* Labor Summary */}
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle className="text-base">👷 Labor Summary</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="grid grid-cols-2 gap-4 mb-4">
+                                                        <div className="p-3 rounded-lg bg-muted/50 text-center">
+                                                            <div className="text-2xl font-bold">{laborSummary.totalHours.toFixed(0)}h</div>
+                                                            <div className="text-xs text-muted-foreground">Total Hours</div>
+                                                        </div>
+                                                        <div className="p-3 rounded-lg bg-muted/50 text-center">
+                                                            <div className="text-2xl font-bold">${laborSummary.totalCost.toLocaleString()}</div>
+                                                            <div className="text-xs text-muted-foreground">Labor Cost</div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-2">By Phase</div>
+                                                    <div className="space-y-1">
+                                                        {Object.entries(laborSummary.byPhase).map(([phase, data]) => (
+                                                            <div key={phase} className="flex items-center justify-between py-1 text-sm">
+                                                                <span className="flex items-center gap-1">
+                                                                    {PHASE_CONFIGS[phase as keyof typeof PHASE_CONFIGS]?.icon}
+                                                                    {PHASE_CONFIGS[phase as keyof typeof PHASE_CONFIGS]?.label || phase}
+                                                                </span>
+                                                                <span className="font-medium">{data.hours.toFixed(0)}h / ${data.cost.toLocaleString()}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+
+                                            {/* Subcontractor Summary */}
+                                            <Card>
+                                                <CardHeader>
+                                                    <CardTitle className="text-base">🏗️ Subcontractor Invoices</CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    {invoices.length > 0 ? (
+                                                        <div className="space-y-3">
+                                                            {invoices.slice(0, 4).map(inv => (
+                                                                <div key={inv.id} className="flex items-center justify-between p-2 rounded-lg border hover:bg-muted/50 transition-colors">
+                                                                    <div>
+                                                                        <div className="font-medium text-sm">{inv.subcontractorName}</div>
+                                                                        <div className="text-xs text-muted-foreground">{inv.invoiceNumber}</div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <div className="font-bold">${inv.total.toLocaleString()}</div>
+                                                                        <Badge className={cn("text-xs",
+                                                                            inv.status === 'paid' ? "bg-green-500/10 text-green-500" :
+                                                                                inv.status === 'approved' ? "bg-blue-500/10 text-blue-500" :
+                                                                                    inv.status === 'pending-approval' ? "bg-amber-500/10 text-amber-500" : ""
+                                                                        )}>
+                                                                            {inv.status}
+                                                                        </Badge>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                            {invoices.length > 4 && (
+                                                                <Button variant="ghost" size="sm" className="w-full" onClick={() => router.push('/subcontractors')}>
+                                                                    View all {invoices.length} invoices →
+                                                                </Button>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center py-6 text-muted-foreground">
+                                                            No subcontractor invoices yet
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                    </>
+                                );
+                            }
+                            return null;
+                        })()}
+
+                        {/* Change Orders Summary */}
                         <Card>
                             <CardHeader className="flex flex-row items-center justify-between">
                                 <CardTitle className="text-base">Change Orders Summary</CardTitle>
@@ -962,6 +1234,241 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                         </tbody>
                                     </table>
                                 </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Walkthrough Tab */}
+                    <TabsContent value="walkthrough" className="mt-0 space-y-6">
+                        {/* Action Buttons */}
+                        <div className="flex flex-wrap gap-2">
+                            <Button onClick={() => setShowWalkthroughManager(true)}>
+                                <ClipboardCheck className="w-4 h-4 mr-2" />
+                                Manage Walkthroughs
+                            </Button>
+                            <Button variant="secondary" onClick={() => setShowEnhancedPunch(true)}>
+                                <Plus className="w-4 h-4 mr-2" />
+                                Add Punch Item
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => setShowCompletionCert(true)}
+                                disabled={openPunch.length > 0}
+                            >
+                                <FileSignature className="w-4 h-4 mr-2" />
+                                Completion Certificate
+                            </Button>
+                        </div>
+
+                        {/* Upcoming Walkthroughs */}
+                        {(() => {
+                            const sessions = getWalkthroughsByProject(project.id);
+                            const scheduled = sessions.filter(s => s.status === 'scheduled');
+                            const completed = sessions.filter(s => s.status === 'completed');
+
+                            return (
+                                <div className="grid lg:grid-cols-2 gap-6">
+                                    {/* Scheduled Sessions */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-base flex items-center gap-2">
+                                                <ClipboardCheck className="w-5 h-5 text-primary" />
+                                                Scheduled Walkthroughs
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {scheduled.length > 0 ? (
+                                                <div className="space-y-3">
+                                                    {scheduled.map(session => (
+                                                        <div
+                                                            key={session.id}
+                                                            className="p-4 rounded-lg border bg-gradient-to-r from-primary/5 to-transparent hover:border-primary/50 transition-colors"
+                                                        >
+                                                            <div className="flex items-start justify-between">
+                                                                <div>
+                                                                    <div className="font-medium flex items-center gap-2">
+                                                                        <span className="text-lg">
+                                                                            {session.type === 'final' ? '✅' :
+                                                                                session.type === 'punch' ? '🔧' :
+                                                                                    session.type === 'mid-project' ? '🔄' : '📋'}
+                                                                        </span>
+                                                                        {session.type.charAt(0).toUpperCase() + session.type.slice(1).replace('-', ' ')} Walkthrough
+                                                                    </div>
+                                                                    <div className="text-sm text-muted-foreground mt-1">
+                                                                        📅 {session.scheduledDate} {session.scheduledTime && `at ${session.scheduledTime}`}
+                                                                    </div>
+                                                                    <div className="text-xs text-muted-foreground mt-1">
+                                                                        👥 {session.attendees.map(a => a.name).join(', ')}
+                                                                    </div>
+                                                                </div>
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() => {
+                                                                        startWalkthrough(session.id);
+                                                                        setShowClientWalkthrough(session);
+                                                                    }}
+                                                                >
+                                                                    Start
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-8 text-muted-foreground">
+                                                    <ClipboardCheck className="w-12 h-12 mx-auto mb-2 opacity-30" />
+                                                    <div>No walkthroughs scheduled</div>
+                                                    <Button
+                                                        variant="link"
+                                                        onClick={() => setShowWalkthroughManager(true)}
+                                                    >
+                                                        Schedule one →
+                                                    </Button>
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+
+                                    {/* Completed Sessions */}
+                                    <Card>
+                                        <CardHeader>
+                                            <CardTitle className="text-base flex items-center gap-2">
+                                                <CheckCircle2 className="w-5 h-5 text-success" />
+                                                Completed Walkthroughs
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent>
+                                            {completed.length > 0 ? (
+                                                <div className="space-y-3">
+                                                    {completed.map(session => (
+                                                        <div
+                                                            key={session.id}
+                                                            className="p-4 rounded-lg border bg-muted/30"
+                                                        >
+                                                            <div className="flex items-start justify-between">
+                                                                <div>
+                                                                    <div className="font-medium">
+                                                                        {session.type.charAt(0).toUpperCase() + session.type.slice(1).replace('-', ' ')} Walkthrough
+                                                                    </div>
+                                                                    <div className="text-sm text-muted-foreground">
+                                                                        Completed {new Date(session.completedAt || '').toLocaleDateString()}
+                                                                    </div>
+                                                                    <div className="text-xs mt-1">
+                                                                        {session.punchItemsCreated.length} issues found
+                                                                    </div>
+                                                                </div>
+                                                                {session.overallRating && (
+                                                                    <div className="flex items-center gap-0.5">
+                                                                        {[1, 2, 3, 4, 5].map(n => (
+                                                                            <Star
+                                                                                key={n}
+                                                                                className={cn(
+                                                                                    'w-4 h-4',
+                                                                                    n <= session.overallRating! ? 'fill-warning text-warning' : 'text-muted-foreground/30'
+                                                                                )}
+                                                                            />
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            {session.clientFeedback && (
+                                                                <div className="mt-2 text-sm italic text-muted-foreground">
+                                                                    "{session.clientFeedback}"
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <div className="text-center py-8 text-muted-foreground">
+                                                    No completed walkthroughs yet
+                                                </div>
+                                            )}
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            );
+                        })()}
+
+                        {/* Completion Status */}
+                        <Card className={cn(
+                            "bg-gradient-to-r",
+                            openPunch.length === 0 ? "from-success/10 to-transparent border-success/30" : "from-muted/50 to-transparent"
+                        )}>
+                            <CardHeader>
+                                <CardTitle className="text-base flex items-center gap-2">
+                                    <FileSignature className="w-5 h-5" />
+                                    Project Completion Status
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className={cn(
+                                        "p-3 rounded-lg border text-center",
+                                        project.punchList.every(p => p.completed) ? "bg-success/10 border-success/30" : "bg-muted/30"
+                                    )}>
+                                        <div className="text-2xl mb-1">
+                                            {project.punchList.every(p => p.completed) ? '✅' : '📋'}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">Punch List</div>
+                                        <div className="font-medium text-sm">
+                                            {project.punchList.every(p => p.completed) ? 'Complete' : `${openPunch.length} Open`}
+                                        </div>
+                                    </div>
+
+                                    <div className={cn(
+                                        "p-3 rounded-lg border text-center",
+                                        getWalkthroughsByProject(project.id).some(s => s.type === 'final' && s.status === 'completed')
+                                            ? "bg-success/10 border-success/30" : "bg-muted/30"
+                                    )}>
+                                        <div className="text-2xl mb-1">
+                                            {getWalkthroughsByProject(project.id).some(s => s.type === 'final' && s.status === 'completed') ? '✅' : '🚶'}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">Final Walkthrough</div>
+                                        <div className="font-medium text-sm">
+                                            {getWalkthroughsByProject(project.id).some(s => s.type === 'final' && s.status === 'completed')
+                                                ? 'Complete' : 'Pending'}
+                                        </div>
+                                    </div>
+
+                                    <div className={cn(
+                                        "p-3 rounded-lg border text-center",
+                                        (project.qaChecklists || []).some(c => c.type === 'closeout' && c.completedAt)
+                                            ? "bg-success/10 border-success/30" : "bg-muted/30"
+                                    )}>
+                                        <div className="text-2xl mb-1">
+                                            {(project.qaChecklists || []).some(c => c.type === 'closeout' && c.completedAt) ? '✅' : '📝'}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">QA Closeout</div>
+                                        <div className="font-medium text-sm">
+                                            {(project.qaChecklists || []).some(c => c.type === 'closeout' && c.completedAt) ? 'Complete' : 'Pending'}
+                                        </div>
+                                    </div>
+
+                                    <div className={cn(
+                                        "p-3 rounded-lg border text-center",
+                                        getCertificateByProject(project.id)?.status === 'fully-executed'
+                                            ? "bg-success/10 border-success/30" : "bg-muted/30"
+                                    )}>
+                                        <div className="text-2xl mb-1">
+                                            {getCertificateByProject(project.id)?.status === 'fully-executed' ? '✅' : '🏆'}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground">Certificate</div>
+                                        <div className="font-medium text-sm">
+                                            {getCertificateByProject(project.id)?.status === 'fully-executed' ? 'Signed' :
+                                                getCertificateByProject(project.id) ? 'Pending Signatures' : 'Not Generated'}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {openPunch.length === 0 && (
+                                    <div className="mt-4 text-center">
+                                        <Button onClick={() => setShowCompletionCert(true)} size="lg">
+                                            <FileSignature className="w-5 h-5 mr-2" />
+                                            Generate Completion Certificate
+                                        </Button>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>
@@ -1032,7 +1539,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 open={showPhotoCapture}
                 onClose={() => setShowPhotoCapture(false)}
                 onCapture={(photo) => {
-                    // Add photo to project's photos array (simulated)
                     const label = photo.label.charAt(0).toUpperCase() + photo.label.slice(1);
                     updateProject(project.id, {
                         photos: [...project.photos, label + (photo.location ? ` - ${photo.location}` : '')],
@@ -1048,13 +1554,68 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     projectId={project.id}
                     type={showQAChecklist}
                     onSave={(checklist) => {
-                        // Save checklist to project (simulated - would need full integration)
                         const typeName = checklist.type.charAt(0).toUpperCase() + checklist.type.slice(1);
                         const completed = checklist.completedAt ? ' (Complete)' : '';
                         toast.success(`${typeName} Checklist${completed} saved!`);
                     }}
                 />
             )}
+
+            {/* Walkthrough Modals */}
+            <EnhancedPunchModal
+                open={showEnhancedPunch}
+                onClose={() => setShowEnhancedPunch(false)}
+                onCreate={handleCreatePunch}
+                teamMembers={getTeamMembers()}
+                projectAreas={['Main Lobby', 'Hallway', 'Reception', 'Break Room', 'Office Area', 'Restroom', 'Elevator Area']}
+            />
+
+            <WalkthroughManager
+                open={showWalkthroughManager}
+                onClose={() => setShowWalkthroughManager(false)}
+                project={project}
+                sessions={getWalkthroughsByProject(project.id)}
+                onCreateSession={(session) => createWalkthroughSession(session)}
+                onStartSession={(id) => {
+                    startWalkthrough(id);
+                    const session = getWalkthroughsByProject(project.id).find(s => s.id === id);
+                    if (session) {
+                        setShowClientWalkthrough(session);
+                        setShowWalkthroughManager(false);
+                    }
+                }}
+            />
+
+            {showClientWalkthrough && (
+                <ClientWalkthroughMode
+                    open={!!showClientWalkthrough}
+                    onClose={() => setShowClientWalkthrough(null)}
+                    project={project}
+                    session={showClientWalkthrough}
+                    onAddPunchItem={handleCreatePunch}
+                    onComplete={(rating, feedback) => {
+                        completeWalkthrough(showClientWalkthrough.id, rating, feedback);
+                    }}
+                    onUpdateSession={(updates) => {
+                        updateWalkthroughSession(showClientWalkthrough.id, updates);
+                    }}
+                    teamMembers={getTeamMembers()}
+                />
+            )}
+
+            <CompletionCertificateModal
+                open={showCompletionCert}
+                onClose={() => setShowCompletionCert(false)}
+                project={project}
+                certificate={getCertificateByProject(project.id)}
+                onGenerate={(cert) => createCompletionCertificate(cert)}
+                onAddSignature={(type, signature) => {
+                    const cert = getCertificateByProject(project.id);
+                    if (cert) {
+                        addSignature(cert.id, type, signature);
+                    }
+                }}
+            />
         </>
     );
 }

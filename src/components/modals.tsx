@@ -265,7 +265,7 @@ export function NewCOModal({ open, onClose, projectId, nextNumber, onCreate }: N
             executedDate: null,
             approvedBy: null,
             photos: ['Documentation'],
-            notes: notes.trim() || null,
+            notes: notes.trim() || '',
             history: [{ action: 'Created', date: today, by: 'Derek Morrison' }],
         });
 

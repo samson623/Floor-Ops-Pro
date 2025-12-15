@@ -15,7 +15,22 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
                 const parsed = JSON.parse(stored);
-                setData(parsed);
+                // Merge with initialData to ensure new fields are present
+                const merged: Database = {
+                    ...initialData,
+                    ...parsed,
+                    // Ensure new walkthrough fields use initialData if not in localStorage
+                    walkthroughSessions: parsed.walkthroughSessions?.length > 0
+                        ? parsed.walkthroughSessions
+                        : initialData.walkthroughSessions,
+                    completionCertificates: parsed.completionCertificates?.length > 0
+                        ? parsed.completionCertificates
+                        : initialData.completionCertificates,
+                    teamMembers: parsed.teamMembers?.length > 0
+                        ? parsed.teamMembers
+                        : initialData.teamMembers,
+                };
+                setData(merged);
             }
         } catch (error) {
             console.error('Error loading data from localStorage:', error);

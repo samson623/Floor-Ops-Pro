@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useCallback } from 'react';
-import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog, PhotoCapture, QAChecklist } from '@/lib/data';
+import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog, PhotoCapture, QAChecklist, PurchaseOrder, Delivery, MaterialLot, AcclimationEntry, AcclimationReading, DeliveryPhoto, LotWarning, LaborEntry, Subcontractor, SubcontractorInvoice, ProjectBudget, ProfitLeakAlert, JobPhase, WorkerRole, WalkthroughSession, CompletionCertificate, TeamMember, SignatureData } from '@/lib/data';
 import { useLocalStorage } from '@/lib/storage';
 
 interface DataContextType {
@@ -15,6 +15,7 @@ interface DataContextType {
     // Punch list operations
     togglePunchItem: (projectId: number, itemId: number) => void;
     addPunchItem: (projectId: number, item: Omit<PunchItem, 'id'>) => void;
+    updatePunchItem: (projectId: number, itemId: number, updates: Partial<PunchItem>) => void;
 
     // Change order operations
     addChangeOrder: (projectId: number, co: Omit<ChangeOrder, 'id'>) => void;
@@ -33,6 +34,64 @@ interface DataContextType {
     getTotalPipeline: () => number;
     getOpenPunchCount: () => number;
     getUnreadMessageCount: () => number;
+
+    // Purchase Order operations
+    createPO: (po: Omit<PurchaseOrder, 'id'>) => string;
+    updatePO: (id: string, updates: Partial<PurchaseOrder>) => void;
+    getPOsByVendor: (vendorId: number) => PurchaseOrder[];
+    getPOsByProject: (projectId: number) => PurchaseOrder[];
+
+    // Delivery operations
+    createDelivery: (delivery: Omit<Delivery, 'id'>) => string;
+    updateDelivery: (id: string, updates: Partial<Delivery>) => void;
+    checkInDelivery: (id: string, lineItems: Delivery['lineItems'], photos: DeliveryPhoto[], notes?: string, issues?: string) => void;
+
+    // Lot tracking operations
+    createLot: (lot: Omit<MaterialLot, 'id'>) => string;
+    updateLot: (id: string, updates: Partial<MaterialLot>) => void;
+    getLotWarnings: (projectId?: number) => LotWarning[];
+
+    // Acclimation operations
+    startAcclimation: (entry: Omit<AcclimationEntry, 'id'>) => string;
+    updateAcclimation: (id: string, updates: Partial<AcclimationEntry>) => void;
+    addAcclimationReading: (entryId: string, reading: Omit<AcclimationReading, 'id'>) => void;
+    getActiveAcclimation: () => AcclimationEntry[];
+
+    // Budgeting & Job Costing operations
+    addLaborEntry: (entry: Omit<LaborEntry, 'id'>) => string;
+    updateLaborEntry: (id: string, updates: Partial<LaborEntry>) => void;
+    getLaborByProject: (projectId: number) => LaborEntry[];
+    getLaborSummary: (projectId: number) => { totalHours: number; totalCost: number; byPhase: Record<JobPhase, { hours: number; cost: number }> };
+
+    // Subcontractor operations
+    addSubcontractorInvoice: (invoice: Omit<SubcontractorInvoice, 'id'>) => string;
+    updateSubcontractorInvoice: (id: string, updates: Partial<SubcontractorInvoice>) => void;
+    approveInvoice: (id: string, approvedBy: string) => void;
+    getInvoicesByProject: (projectId: number) => SubcontractorInvoice[];
+    getPendingInvoices: () => SubcontractorInvoice[];
+
+    // Budget & Margin operations
+    getProjectBudget: (projectId: number) => ProjectBudget | undefined;
+    updateProjectBudget: (projectId: number, updates: Partial<ProjectBudget>) => void;
+    getProfitLeakAlerts: (projectId?: number) => ProfitLeakAlert[];
+    acknowledgeAlert: (alertId: string, acknowledgedBy: string) => void;
+    resolveAlert: (alertId: string) => void;
+
+    // Walkthrough & Sign-Off operations
+    createWalkthroughSession: (session: Omit<WalkthroughSession, 'id'>) => string;
+    updateWalkthroughSession: (id: string, updates: Partial<WalkthroughSession>) => void;
+    startWalkthrough: (id: string) => void;
+    completeWalkthrough: (id: string, rating?: number, feedback?: string) => void;
+    getWalkthroughsByProject: (projectId: number) => WalkthroughSession[];
+
+    // Completion Certificate operations
+    createCompletionCertificate: (cert: Omit<CompletionCertificate, 'id'>) => string;
+    updateCompletionCertificate: (id: string, updates: Partial<CompletionCertificate>) => void;
+    addSignature: (certId: string, type: 'client' | 'contractor', signature: SignatureData) => void;
+    getCertificateByProject: (projectId: number) => CompletionCertificate | undefined;
+
+    // Team members
+    getTeamMembers: () => TeamMember[];
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -74,6 +133,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
         const newProjects = data.projects.map(p => {
             if (p.id === projectId) {
                 return { ...p, punchList: [...p.punchList, newItem] };
+            }
+            return p;
+        });
+        saveData({ ...data, projects: newProjects });
+        return newId;
+    }, [data, saveData]);
+
+    const updatePunchItem = useCallback((projectId: number, itemId: number, updates: Partial<PunchItem>) => {
+        const newProjects = data.projects.map(p => {
+            if (p.id === projectId) {
+                const newPunchList = p.punchList.map(item =>
+                    item.id === itemId ? { ...item, ...updates } : item
+                );
+                return { ...p, punchList: newPunchList };
             }
             return p;
         });
@@ -210,6 +283,368 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return data.messages.filter(m => m.unread).length;
     }, [data.messages]);
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // PURCHASE ORDER OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const createPO = useCallback((po: Omit<PurchaseOrder, 'id'>) => {
+        const newId = `PO-${String((data.purchaseOrders?.length || 0) + 1).padStart(3, '0')}`;
+        const newPO: PurchaseOrder = { ...po, id: newId };
+        saveData({ ...data, purchaseOrders: [...(data.purchaseOrders || []), newPO] });
+        return newId;
+    }, [data, saveData]);
+
+    const updatePO = useCallback((id: string, updates: Partial<PurchaseOrder>) => {
+        const newPOs = (data.purchaseOrders || []).map(po =>
+            po.id === id ? { ...po, ...updates } : po
+        );
+        saveData({ ...data, purchaseOrders: newPOs });
+    }, [data, saveData]);
+
+    const getPOsByVendor = useCallback((vendorId: number) => {
+        return (data.purchaseOrders || []).filter(po => po.vendorId === vendorId);
+    }, [data.purchaseOrders]);
+
+    const getPOsByProject = useCallback((projectId: number) => {
+        return (data.purchaseOrders || []).filter(po => po.projectId === projectId);
+    }, [data.purchaseOrders]);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // DELIVERY OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const createDelivery = useCallback((delivery: Omit<Delivery, 'id'>) => {
+        const newId = `DEL-${String((data.deliveries?.length || 0) + 1).padStart(3, '0')}`;
+        const newDelivery: Delivery = { ...delivery, id: newId };
+        saveData({ ...data, deliveries: [...(data.deliveries || []), newDelivery] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateDelivery = useCallback((id: string, updates: Partial<Delivery>) => {
+        const newDeliveries = (data.deliveries || []).map(d =>
+            d.id === id ? { ...d, ...updates } : d
+        );
+        saveData({ ...data, deliveries: newDeliveries });
+    }, [data, saveData]);
+
+    const checkInDelivery = useCallback((id: string, lineItems: Delivery['lineItems'], photos: DeliveryPhoto[], notes?: string, issues?: string) => {
+        const now = new Date().toISOString();
+        const hasIssues = lineItems.some(li => li.damagedQty > 0 || li.receivedQty < li.orderedQty) || !!issues;
+
+        const newDeliveries = (data.deliveries || []).map(d => {
+            if (d.id === id) {
+                return {
+                    ...d,
+                    status: hasIssues ? 'issues' as const : 'checked-in' as const,
+                    actualArrival: d.actualArrival || now,
+                    checkedInAt: now,
+                    checkedInBy: 'Derek Morrison', // TODO: Get from auth
+                    lineItems,
+                    photos: [...(d.photos || []), ...photos],
+                    notes,
+                    issues
+                };
+            }
+            return d;
+        });
+
+        // Also update the PO status
+        const delivery = (data.deliveries || []).find(d => d.id === id);
+        let newPOs = data.purchaseOrders || [];
+        if (delivery) {
+            const allReceived = lineItems.every(li => li.receivedQty >= li.orderedQty);
+            const anyReceived = lineItems.some(li => li.receivedQty > 0);
+            newPOs = newPOs.map(po => {
+                if (po.id === delivery.poId) {
+                    return {
+                        ...po,
+                        status: allReceived ? 'received' as const : anyReceived ? 'partial' as const : po.status,
+                        lineItems: po.lineItems.map(li => {
+                            const deliveryLi = lineItems.find(dli => dli.poLineItemId === li.id);
+                            if (deliveryLi) {
+                                return { ...li, receivedQty: deliveryLi.receivedQty, damagedQty: deliveryLi.damagedQty, lotNumber: deliveryLi.lotNumber };
+                            }
+                            return li;
+                        })
+                    };
+                }
+                return po;
+            });
+        }
+
+        saveData({ ...data, deliveries: newDeliveries, purchaseOrders: newPOs });
+    }, [data, saveData]);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // LOT TRACKING OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const createLot = useCallback((lot: Omit<MaterialLot, 'id'>) => {
+        const newId = `LOT-${String((data.materialLots?.length || 0) + 1).padStart(3, '0')}`;
+        const newLot: MaterialLot = { ...lot, id: newId };
+        saveData({ ...data, materialLots: [...(data.materialLots || []), newLot] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateLot = useCallback((id: string, updates: Partial<MaterialLot>) => {
+        const newLots = (data.materialLots || []).map(l =>
+            l.id === id ? { ...l, ...updates } : l
+        );
+        saveData({ ...data, materialLots: newLots });
+    }, [data, saveData]);
+
+    const getLotWarnings = useCallback((projectId?: number) => {
+        const lots = data.materialLots || [];
+        const relevantLots = projectId ? lots.filter(l => l.projectId === projectId) : lots;
+
+        // Group by project and material
+        const grouped: Record<string, MaterialLot[]> = {};
+        relevantLots.forEach(lot => {
+            if (lot.projectId) {
+                const key = `${lot.projectId}-${lot.materialName}`;
+                if (!grouped[key]) grouped[key] = [];
+                grouped[key].push(lot);
+            }
+        });
+
+        // Find materials with multiple lots
+        const warnings: LotWarning[] = [];
+        Object.entries(grouped).forEach(([key, lotsForMaterial]) => {
+            if (lotsForMaterial.length > 1) {
+                const uniqueLots = [...new Set(lotsForMaterial.map(l => l.lotNumber))];
+                if (uniqueLots.length > 1) {
+                    const project = data.projects.find(p => p.id === lotsForMaterial[0].projectId);
+                    warnings.push({
+                        projectId: lotsForMaterial[0].projectId!,
+                        projectName: project?.name || lotsForMaterial[0].projectName || 'Unknown',
+                        materialName: lotsForMaterial[0].materialName,
+                        lots: lotsForMaterial.map(l => ({ lotNumber: l.lotNumber, quantity: l.quantity })),
+                        severity: uniqueLots.length > 2 ? 'critical' : 'warning',
+                        message: `⚠️ Multiple lots detected: ${uniqueLots.join(', ')}`
+                    });
+                }
+            }
+        });
+
+        return warnings;
+    }, [data.materialLots, data.projects]);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // ACCLIMATION OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const startAcclimation = useCallback((entry: Omit<AcclimationEntry, 'id'>) => {
+        const newId = `ACC-${String((data.acclimationEntries?.length || 0) + 1).padStart(3, '0')}`;
+        const newEntry: AcclimationEntry = { ...entry, id: newId };
+        saveData({ ...data, acclimationEntries: [...(data.acclimationEntries || []), newEntry] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateAcclimation = useCallback((id: string, updates: Partial<AcclimationEntry>) => {
+        const newEntries = (data.acclimationEntries || []).map(e =>
+            e.id === id ? { ...e, ...updates } : e
+        );
+        saveData({ ...data, acclimationEntries: newEntries });
+    }, [data, saveData]);
+
+    const addAcclimationReading = useCallback((entryId: string, reading: Omit<AcclimationReading, 'id'>) => {
+        const newReadingId = `rd-${Date.now()}`;
+        const newReading: AcclimationReading = { ...reading, id: newReadingId };
+
+        const newEntries = (data.acclimationEntries || []).map(e => {
+            if (e.id === entryId) {
+                return { ...e, readings: [...e.readings, newReading] };
+            }
+            return e;
+        });
+        saveData({ ...data, acclimationEntries: newEntries });
+    }, [data, saveData]);
+
+    const getActiveAcclimation = useCallback(() => {
+        return (data.acclimationEntries || []).filter(e => e.status === 'in-progress' || e.status === 'not-started');
+    }, [data.acclimationEntries]);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // BUDGETING & JOB COSTING OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const addLaborEntry = useCallback((entry: Omit<LaborEntry, 'id'>) => {
+        const newId = `LE-${String((data.laborEntries?.length || 0) + 1).padStart(3, '0')}`;
+        const newEntry: LaborEntry = { ...entry, id: newId };
+        saveData({ ...data, laborEntries: [...(data.laborEntries || []), newEntry] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateLaborEntry = useCallback((id: string, updates: Partial<LaborEntry>) => {
+        const newEntries = (data.laborEntries || []).map(e =>
+            e.id === id ? { ...e, ...updates } : e
+        );
+        saveData({ ...data, laborEntries: newEntries });
+    }, [data, saveData]);
+
+    const getLaborByProject = useCallback((projectId: number) => {
+        return (data.laborEntries || []).filter(e => e.projectId === projectId);
+    }, [data.laborEntries]);
+
+    const getLaborSummary = useCallback((projectId: number) => {
+        const entries = (data.laborEntries || []).filter(e => e.projectId === projectId);
+        const totalHours = entries.reduce((sum, e) => sum + e.regularHours + e.overtimeHours, 0);
+        const totalCost = entries.reduce((sum, e) => sum + e.totalCost, 0);
+
+        const byPhase: Record<JobPhase, { hours: number; cost: number }> = {} as Record<JobPhase, { hours: number; cost: number }>;
+        entries.forEach(e => {
+            if (!byPhase[e.phase]) byPhase[e.phase] = { hours: 0, cost: 0 };
+            byPhase[e.phase].hours += e.regularHours + e.overtimeHours;
+            byPhase[e.phase].cost += e.totalCost;
+        });
+
+        return { totalHours, totalCost, byPhase };
+    }, [data.laborEntries]);
+
+    // Subcontractor Invoice Operations
+    const addSubcontractorInvoice = useCallback((invoice: Omit<SubcontractorInvoice, 'id'>) => {
+        const newId = `INV-${String((data.subcontractorInvoices?.length || 0) + 1).padStart(3, '0')}`;
+        const newInvoice: SubcontractorInvoice = { ...invoice, id: newId };
+        saveData({ ...data, subcontractorInvoices: [...(data.subcontractorInvoices || []), newInvoice] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateSubcontractorInvoice = useCallback((id: string, updates: Partial<SubcontractorInvoice>) => {
+        const newInvoices = (data.subcontractorInvoices || []).map(inv =>
+            inv.id === id ? { ...inv, ...updates } : inv
+        );
+        saveData({ ...data, subcontractorInvoices: newInvoices });
+    }, [data, saveData]);
+
+    const approveInvoice = useCallback((id: string, approvedBy: string) => {
+        const today = new Date().toISOString().split('T')[0];
+        const newInvoices = (data.subcontractorInvoices || []).map(inv =>
+            inv.id === id ? { ...inv, status: 'approved' as const, approvedBy, approvedDate: today } : inv
+        );
+        saveData({ ...data, subcontractorInvoices: newInvoices });
+    }, [data, saveData]);
+
+    const getInvoicesByProject = useCallback((projectId: number) => {
+        return (data.subcontractorInvoices || []).filter(inv => inv.projectId === projectId);
+    }, [data.subcontractorInvoices]);
+
+    const getPendingInvoices = useCallback(() => {
+        return (data.subcontractorInvoices || []).filter(inv => inv.status === 'pending-approval' || inv.status === 'submitted');
+    }, [data.subcontractorInvoices]);
+
+    // Budget & Margin Operations
+    const getProjectBudget = useCallback((projectId: number) => {
+        return (data.projectBudgets || []).find(b => b.projectId === projectId);
+    }, [data.projectBudgets]);
+
+    const updateProjectBudget = useCallback((projectId: number, updates: Partial<ProjectBudget>) => {
+        const newBudgets = (data.projectBudgets || []).map(b =>
+            b.projectId === projectId ? { ...b, ...updates } : b
+        );
+        saveData({ ...data, projectBudgets: newBudgets });
+    }, [data, saveData]);
+
+    const getProfitLeakAlerts = useCallback((projectId?: number) => {
+        const alerts = data.profitLeakAlerts || [];
+        return projectId ? alerts.filter(a => a.projectId === projectId) : alerts;
+    }, [data.profitLeakAlerts]);
+
+    const acknowledgeAlert = useCallback((alertId: string, acknowledgedBy: string) => {
+        const now = new Date().toISOString();
+        const newAlerts = (data.profitLeakAlerts || []).map(a =>
+            a.id === alertId ? { ...a, acknowledgedAt: now, acknowledgedBy } : a
+        );
+        saveData({ ...data, profitLeakAlerts: newAlerts });
+    }, [data, saveData]);
+
+    const resolveAlert = useCallback((alertId: string) => {
+        const now = new Date().toISOString();
+        const newAlerts = (data.profitLeakAlerts || []).map(a =>
+            a.id === alertId ? { ...a, resolvedAt: now } : a
+        );
+        saveData({ ...data, profitLeakAlerts: newAlerts });
+    }, [data, saveData]);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // WALKTHROUGH & SIGN-OFF OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const createWalkthroughSession = useCallback((session: Omit<WalkthroughSession, 'id'>) => {
+        const newId = `WS-${String((data.walkthroughSessions?.length || 0) + 1).padStart(3, '0')}`;
+        const newSession: WalkthroughSession = { ...session, id: newId };
+        saveData({ ...data, walkthroughSessions: [...(data.walkthroughSessions || []), newSession] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateWalkthroughSession = useCallback((id: string, updates: Partial<WalkthroughSession>) => {
+        const newSessions = (data.walkthroughSessions || []).map(s =>
+            s.id === id ? { ...s, ...updates } : s
+        );
+        saveData({ ...data, walkthroughSessions: newSessions });
+    }, [data, saveData]);
+
+    const startWalkthrough = useCallback((id: string) => {
+        const now = new Date().toISOString();
+        const newSessions = (data.walkthroughSessions || []).map(s =>
+            s.id === id ? { ...s, status: 'in-progress' as const, startedAt: now } : s
+        );
+        saveData({ ...data, walkthroughSessions: newSessions });
+    }, [data, saveData]);
+
+    const completeWalkthrough = useCallback((id: string, rating?: number, feedback?: string) => {
+        const now = new Date().toISOString();
+        const newSessions = (data.walkthroughSessions || []).map(s =>
+            s.id === id ? {
+                ...s,
+                status: 'completed' as const,
+                completedAt: now,
+                overallRating: rating as 1 | 2 | 3 | 4 | 5 | undefined,
+                clientFeedback: feedback
+            } : s
+        );
+        saveData({ ...data, walkthroughSessions: newSessions });
+    }, [data, saveData]);
+
+    const getWalkthroughsByProject = useCallback((projectId: number) => {
+        return (data.walkthroughSessions || []).filter(s => s.projectId === projectId);
+    }, [data.walkthroughSessions]);
+
+    // Completion Certificate Operations
+    const createCompletionCertificate = useCallback((cert: Omit<CompletionCertificate, 'id'>) => {
+        const newId = `CERT-${String((data.completionCertificates?.length || 0) + 1).padStart(3, '0')}`;
+        const newCert: CompletionCertificate = { ...cert, id: newId };
+        saveData({ ...data, completionCertificates: [...(data.completionCertificates || []), newCert] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateCompletionCertificate = useCallback((id: string, updates: Partial<CompletionCertificate>) => {
+        const newCerts = (data.completionCertificates || []).map(c =>
+            c.id === id ? { ...c, ...updates } : c
+        );
+        saveData({ ...data, completionCertificates: newCerts });
+    }, [data, saveData]);
+
+    const addSignature = useCallback((certId: string, type: 'client' | 'contractor', signature: SignatureData) => {
+        const newCerts = (data.completionCertificates || []).map(c => {
+            if (c.id === certId) {
+                const updates: Partial<CompletionCertificate> = type === 'client'
+                    ? { clientSignature: signature, status: c.contractorSignature ? 'fully-executed' : 'client-signed' }
+                    : { contractorSignature: signature, status: c.clientSignature ? 'fully-executed' : 'pending-signature' };
+                return { ...c, ...updates };
+            }
+            return c;
+        });
+        saveData({ ...data, completionCertificates: newCerts });
+    }, [data, saveData]);
+
+    const getCertificateByProject = useCallback((projectId: number) => {
+        return (data.completionCertificates || []).find(c => c.projectId === projectId);
+    }, [data.completionCertificates]);
+
+    const getTeamMembers = useCallback(() => {
+        return data.teamMembers || [];
+    }, [data.teamMembers]);
+
     return (
         <DataContext.Provider value={{
             data,
@@ -228,6 +663,48 @@ export function DataProvider({ children }: { children: ReactNode }) {
             getTotalPipeline,
             getOpenPunchCount,
             getUnreadMessageCount,
+            // Materials operations
+            createPO,
+            updatePO,
+            getPOsByVendor,
+            getPOsByProject,
+            createDelivery,
+            updateDelivery,
+            checkInDelivery,
+            createLot,
+            updateLot,
+            getLotWarnings,
+            startAcclimation,
+            updateAcclimation,
+            addAcclimationReading,
+            getActiveAcclimation,
+            // Budgeting operations
+            addLaborEntry,
+            updateLaborEntry,
+            getLaborByProject,
+            getLaborSummary,
+            addSubcontractorInvoice,
+            updateSubcontractorInvoice,
+            approveInvoice,
+            getInvoicesByProject,
+            getPendingInvoices,
+            getProjectBudget,
+            updateProjectBudget,
+            getProfitLeakAlerts,
+            acknowledgeAlert,
+            resolveAlert,
+            // Walkthrough & Sign-Off operations
+            updatePunchItem,
+            createWalkthroughSession,
+            updateWalkthroughSession,
+            startWalkthrough,
+            completeWalkthrough,
+            getWalkthroughsByProject,
+            createCompletionCertificate,
+            updateCompletionCertificate,
+            addSignature,
+            getCertificateByProject,
+            getTeamMembers,
         }}>
             {children}
         </DataContext.Provider>
@@ -249,7 +726,19 @@ export function useData(): DataContextType {
             crews: [],
             crewAvailability: [],
             scheduleEntries: [],
-            blockers: []
+            blockers: [],
+            purchaseOrders: [],
+            deliveries: [],
+            materialLots: [],
+            acclimationEntries: [],
+            laborEntries: [],
+            subcontractors: [],
+            subcontractorInvoices: [],
+            projectBudgets: [],
+            profitLeakAlerts: [],
+            walkthroughSessions: [],
+            completionCertificates: [],
+            teamMembers: []
         };
         return {
             data: emptyData,
@@ -268,6 +757,48 @@ export function useData(): DataContextType {
             getTotalPipeline: () => 0,
             getOpenPunchCount: () => 0,
             getUnreadMessageCount: () => 0,
+            // Materials operations
+            createPO: () => '',
+            updatePO: () => { },
+            getPOsByVendor: () => [],
+            getPOsByProject: () => [],
+            createDelivery: () => '',
+            updateDelivery: () => { },
+            checkInDelivery: () => { },
+            createLot: () => '',
+            updateLot: () => { },
+            getLotWarnings: () => [],
+            startAcclimation: () => '',
+            updateAcclimation: () => { },
+            addAcclimationReading: () => { },
+            getActiveAcclimation: () => [],
+            // Budgeting operations
+            addLaborEntry: () => '',
+            updateLaborEntry: () => { },
+            getLaborByProject: () => [],
+            getLaborSummary: () => ({ totalHours: 0, totalCost: 0, byPhase: {} as Record<JobPhase, { hours: number; cost: number }> }),
+            addSubcontractorInvoice: () => '',
+            updateSubcontractorInvoice: () => { },
+            approveInvoice: () => { },
+            getInvoicesByProject: () => [],
+            getPendingInvoices: () => [],
+            getProjectBudget: () => undefined,
+            updateProjectBudget: () => { },
+            getProfitLeakAlerts: () => [],
+            acknowledgeAlert: () => { },
+            resolveAlert: () => { },
+            // Walkthrough & Sign-Off operations
+            updatePunchItem: () => { },
+            createWalkthroughSession: () => '',
+            updateWalkthroughSession: () => { },
+            startWalkthrough: () => { },
+            completeWalkthrough: () => { },
+            getWalkthroughsByProject: () => [],
+            createCompletionCertificate: () => '',
+            updateCompletionCertificate: () => { },
+            addSignature: () => { },
+            getCertificateByProject: () => undefined,
+            getTeamMembers: () => [],
         };
     }
     return context;

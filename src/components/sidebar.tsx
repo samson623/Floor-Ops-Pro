@@ -16,7 +16,8 @@ import {
     Store,
     MessageSquare,
     Menu,
-    Home
+    Home,
+    Truck
 } from 'lucide-react';
 
 interface NavItem {
@@ -50,9 +51,17 @@ function SidebarContent() {
             ]
         },
         {
+            title: 'Finance',
+            items: [
+                { href: '/budget', label: 'Job Costing', icon: <LayoutDashboard className="w-5 h-5" />, badge: (data.profitLeakAlerts || []).filter(a => !a.resolvedAt && a.severity === 'critical').length || undefined },
+                { href: '/subcontractors', label: 'Subcontractors', icon: <Store className="w-5 h-5" />, badge: (data.subcontractorInvoices || []).filter(inv => inv.status === 'pending-approval' || inv.status === 'submitted').length || undefined },
+            ]
+        },
+        {
             title: 'Operations',
             items: [
                 { href: '/schedule', label: 'Master Schedule', icon: <Calendar className="w-5 h-5" /> },
+                { href: '/materials', label: 'Materials', icon: <Truck className="w-5 h-5" />, badge: data.deliveries?.filter(d => d.status === 'scheduled' || d.status === 'arrived').length || 0 },
                 { href: '/inventory', label: 'Inventory', icon: <Package className="w-5 h-5" /> },
                 { href: '/vendors', label: 'Vendors', icon: <Store className="w-5 h-5" /> },
             ]

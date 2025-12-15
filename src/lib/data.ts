@@ -16,6 +16,16 @@ export interface PunchItem {
     reporter: string;
     due: string;
     completed: boolean;
+    // Enhanced fields for walkthrough & sign-off
+    assignedTo?: string;
+    assignedDate?: string;
+    location?: string; // Room/area within project
+    photos?: string[]; // Photo documentation of the issue
+    notes?: string;
+    completedBy?: string;
+    completedDate?: string;
+    walkthroughSessionId?: string; // Link to walkthrough session
+    category?: 'flooring' | 'transition' | 'grout' | 'baseboard' | 'damage' | 'installation' | 'other';
 }
 
 export interface DailyLog {
@@ -220,6 +230,90 @@ export interface Estimate {
     notes: string;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// WALKTHROUGH & SIGN-OFF TYPES
+// ══════════════════════════════════════════════════════════════════
+
+export type WalkthroughType = 'pre-install' | 'mid-project' | 'final' | 'punch';
+
+export interface WalkthroughAttendee {
+    name: string;
+    role: 'client' | 'pm' | 'installer' | 'lead' | 'gc' | 'architect' | 'other';
+    email?: string;
+    phone?: string;
+}
+
+export interface WalkthroughSession {
+    id: string;
+    projectId: number;
+    type: WalkthroughType;
+    status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+    scheduledDate: string;
+    scheduledTime?: string;
+    startedAt?: string;
+    completedAt?: string;
+    attendees: WalkthroughAttendee[];
+    punchItemsCreated: number[]; // IDs of punch items created during session
+    notes?: string;
+    overallRating?: 1 | 2 | 3 | 4 | 5;
+    clientFeedback?: string;
+    areasReviewed: string[]; // List of areas/rooms reviewed
+    createdBy: string;
+    weather?: string;
+    photos: string[];
+}
+
+export interface SignatureData {
+    signature: string; // Base64 PNG data
+    signedBy: string;
+    signedAt: string;
+    title?: string;
+    ipAddress?: string;
+}
+
+export interface CompletionCertificate {
+    id: string;
+    projectId: number;
+    projectName: string;
+    clientName: string;
+    clientAddress: string;
+    contractValue: number;
+    changeOrdersTotal: number;
+    finalValue: number;
+    completionDate: string;
+    generatedDate: string;
+
+    // Sign-off data
+    clientSignature?: SignatureData;
+    contractorSignature?: SignatureData;
+
+    // Completion checklist
+    allPunchItemsClosed: boolean;
+    finalWalkthroughComplete: boolean;
+    qaChecklistsComplete: boolean;
+    photosDocumented: boolean;
+
+    // Outstanding items (if any)
+    outstandingItems: string[];
+    warrantyStartDate: string;
+    warrantyEndDate: string;
+    warrantyTerms?: string;
+
+    // Additional info
+    notes?: string;
+    status: 'draft' | 'pending-signature' | 'client-signed' | 'fully-executed';
+}
+
+// Team members for assignment
+export interface TeamMember {
+    id: number;
+    name: string;
+    role: 'lead' | 'installer' | 'helper' | 'pm' | 'apprentice';
+    phone?: string;
+    email?: string;
+    avatar?: string;
+}
+
 export interface Database {
     projects: Project[];
     vendors: Vendor[];
@@ -234,6 +328,21 @@ export interface Database {
     crewAvailability: CrewAvailability[];
     scheduleEntries: ScheduleEntry[];
     blockers: ProjectBlocker[];
+    // Materials & Vendor Tracking
+    purchaseOrders: PurchaseOrder[];
+    deliveries: Delivery[];
+    materialLots: MaterialLot[];
+    acclimationEntries: AcclimationEntry[];
+    // Budgeting & Job Costing
+    laborEntries: LaborEntry[];
+    subcontractors: Subcontractor[];
+    subcontractorInvoices: SubcontractorInvoice[];
+    projectBudgets: ProjectBudget[];
+    profitLeakAlerts: ProfitLeakAlert[];
+    // Walkthrough & Sign-Off
+    walkthroughSessions: WalkthroughSession[];
+    completionCertificates: CompletionCertificate[];
+    teamMembers: TeamMember[];
 }
 
 // Offline Mode Support
@@ -358,6 +467,333 @@ export interface DailyPlanItem {
     weatherOk: boolean;
     recommendedCrewId?: string;
     travelMinutes?: number;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// MATERIALS & VENDOR TRACKING TYPES
+// ══════════════════════════════════════════════════════════════════
+
+// Purchase Order Types
+export type POStatus = 'draft' | 'submitted' | 'confirmed' | 'partial' | 'received' | 'cancelled';
+
+export interface POLineItem {
+    id: string;
+    materialName: string;
+    sku?: string;
+    quantity: number;
+    unit: string;
+    unitCost: number;
+    total: number;
+    lotNumber?: string;
+    receivedQty?: number;
+    damagedQty?: number;
+}
+
+export interface PurchaseOrder {
+    id: string;
+    poNumber: string;
+    vendorId: number;
+    vendorName: string;
+    projectId?: number;
+    projectName?: string;
+    status: POStatus;
+    lineItems: POLineItem[];
+    subtotal: number;
+    tax: number;
+    total: number;
+    createdDate: string;
+    submittedDate?: string;
+    confirmedDate?: string;
+    expectedDeliveryDate?: string;
+    notes: string;
+}
+
+// Delivery Tracking Types
+export type DeliveryStatus = 'scheduled' | 'in-transit' | 'arrived' | 'checked-in' | 'issues';
+
+export interface DeliveryPhoto {
+    id: string;
+    type: 'pallet' | 'damage' | 'label' | 'other';
+    url: string; // base64 or URL
+    caption?: string;
+    timestamp: string;
+}
+
+export interface DeliveryLineItem {
+    poLineItemId: string;
+    materialName: string;
+    orderedQty: number;
+    receivedQty: number;
+    damagedQty: number;
+    lotNumber?: string;
+    unit: string;
+}
+
+export interface Delivery {
+    id: string;
+    poId: string;
+    poNumber: string;
+    vendorId: number;
+    vendorName: string;
+    projectId?: number;
+    projectName?: string;
+    status: DeliveryStatus;
+    scheduledDate: string;
+    estimatedTime?: string;
+    actualArrival?: string;
+    checkedInAt?: string;
+    checkedInBy?: string;
+    lineItems: DeliveryLineItem[];
+    photos: DeliveryPhoto[];
+    notes?: string;
+    issues?: string;
+}
+
+// Lot/Dye Tracking Types
+export interface MaterialLot {
+    id: string;
+    materialName: string;
+    lotNumber: string;
+    dyeLot?: string;
+    quantity: number;
+    unit: string;
+    vendorId: number;
+    vendorName: string;
+    projectId?: number;
+    projectName?: string;
+    deliveryId?: string;
+    receivedDate: string;
+    expirationDate?: string;
+    notes?: string;
+}
+
+export interface LotWarning {
+    projectId: number;
+    projectName: string;
+    materialName: string;
+    lots: { lotNumber: string; quantity: number }[];
+    severity: 'warning' | 'critical';
+    message: string;
+}
+
+// Acclimation Tracking Types
+export type AcclimationStatus = 'not-started' | 'in-progress' | 'ready' | 'expired';
+export type MaterialType = 'lvp' | 'hardwood' | 'engineered' | 'laminate' | 'tile' | 'carpet';
+
+export const ACCLIMATION_REQUIREMENTS: Record<MaterialType, { hours: number; minTemp: number; maxTemp: number; minHumidity: number; maxHumidity: number }> = {
+    lvp: { hours: 48, minTemp: 65, maxTemp: 85, minHumidity: 30, maxHumidity: 60 },
+    hardwood: { hours: 72, minTemp: 60, maxTemp: 80, minHumidity: 35, maxHumidity: 55 },
+    engineered: { hours: 48, minTemp: 65, maxTemp: 85, minHumidity: 30, maxHumidity: 60 },
+    laminate: { hours: 48, minTemp: 65, maxTemp: 85, minHumidity: 35, maxHumidity: 65 },
+    tile: { hours: 24, minTemp: 50, maxTemp: 100, minHumidity: 20, maxHumidity: 80 },
+    carpet: { hours: 24, minTemp: 65, maxTemp: 85, minHumidity: 30, maxHumidity: 65 },
+};
+
+export interface AcclimationReading {
+    id: string;
+    timestamp: string;
+    temperature: number;
+    humidity: number;
+    notes?: string;
+    recordedBy?: string;
+}
+
+export interface AcclimationEntry {
+    id: string;
+    materialName: string;
+    materialType: MaterialType;
+    lotNumber?: string;
+    projectId: number;
+    projectName: string;
+    location: string;
+    requiredHours: number;
+    startTime: string;
+    endTime?: string;
+    status: AcclimationStatus;
+    readings: AcclimationReading[];
+    minTemp: number;
+    maxTemp: number;
+    minHumidity: number;
+    maxHumidity: number;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// BUDGETING & JOB COSTING TYPES
+// ══════════════════════════════════════════════════════════════════
+
+// Labor Tracking
+export type WorkerRole = 'lead' | 'installer' | 'helper' | 'apprentice';
+
+export interface LaborEntry {
+    id: string;
+    projectId: number;
+    workerId: number;
+    workerName: string;
+    role: WorkerRole;
+    phase: JobPhase;
+    date: string;
+    regularHours: number;
+    overtimeHours: number;
+    regularRate: number;
+    overtimeRate: number;
+    totalCost: number;
+    notes?: string;
+    approvedBy?: string;
+    approvedAt?: string;
+}
+
+export interface LaborSummary {
+    projectId: number;
+    totalHours: number;
+    regularHours: number;
+    overtimeHours: number;
+    totalCost: number;
+    byPhase: Record<JobPhase, { hours: number; cost: number }>;
+    byWorker: Record<number, { name: string; hours: number; cost: number }>;
+    byRole: Record<WorkerRole, { hours: number; cost: number }>;
+}
+
+// Budget Categories
+export type CostCategory = 'labor' | 'materials' | 'subcontractor' | 'equipment' | 'overhead' | 'other';
+
+export interface BudgetLineItem {
+    id: string;
+    category: CostCategory;
+    description: string;
+    estimatedQty: number;
+    estimatedRate: number;
+    estimatedTotal: number;
+    actualQty: number;
+    actualRate: number;
+    actualTotal: number;
+    variance: number;
+    variancePercent: number;
+    notes?: string;
+}
+
+export interface PhaseBudget {
+    phase: JobPhase;
+    estimatedLabor: number;
+    estimatedMaterials: number;
+    estimatedSubcontractors: number;
+    estimatedOther: number;
+    estimatedTotal: number;
+    actualLabor: number;
+    actualMaterials: number;
+    actualSubcontractors: number;
+    actualOther: number;
+    actualTotal: number;
+    variance: number;
+    variancePercent: number;
+    status: 'on-budget' | 'warning' | 'over-budget';
+}
+
+export interface ProjectBudget {
+    projectId: number;
+    contractValue: number;
+    approvedCOs: number;
+    totalRevenue: number;
+    estimatedCost: number;
+    actualCost: number;
+    projectedCost: number;
+    currentMargin: number;
+    projectedMargin: number;
+    targetMargin: number;
+    phaseBudgets: PhaseBudget[];
+    lineItems: BudgetLineItem[];
+    lastUpdated: string;
+}
+
+// Subcontractor Management
+export interface Subcontractor {
+    id: number;
+    name: string;
+    company: string;
+    trade: string;
+    phone: string;
+    email: string;
+    address?: string;
+    hourlyRate?: number;
+    notes?: string;
+    rating: number;
+    totalJobsCompleted: number;
+    insuranceExpiry?: string;
+    licenseNumber?: string;
+}
+
+export type InvoiceStatus = 'draft' | 'submitted' | 'pending-approval' | 'approved' | 'rejected' | 'paid' | 'disputed';
+
+export interface SubcontractorInvoiceItem {
+    id: string;
+    description: string;
+    quantity: number;
+    rate: number;
+    total: number;
+    phase?: JobPhase;
+}
+
+export interface SubcontractorInvoice {
+    id: string;
+    invoiceNumber: string;
+    subcontractorId: number;
+    subcontractorName: string;
+    projectId: number;
+    projectName: string;
+    status: InvoiceStatus;
+    items: SubcontractorInvoiceItem[];
+    subtotal: number;
+    tax: number;
+    total: number;
+    invoiceDate: string;
+    dueDate: string;
+    submittedDate?: string;
+    approvedDate?: string;
+    approvedBy?: string;
+    paidDate?: string;
+    notes?: string;
+    attachments?: string[];
+    disputeReason?: string;
+}
+
+// Profit Leak Detection
+export type AlertSeverity = 'info' | 'warning' | 'critical';
+export type AlertType = 'labor-overrun' | 'material-overrun' | 'sub-overrun' | 'margin-erosion' | 'schedule-delay' | 'change-order-pending';
+
+export interface ProfitLeakAlert {
+    id: string;
+    projectId: number;
+    projectName: string;
+    type: AlertType;
+    severity: AlertSeverity;
+    title: string;
+    description: string;
+    impact: number;
+    impactPercent: number;
+    phase?: JobPhase;
+    recommendation: string;
+    createdAt: string;
+    acknowledgedAt?: string;
+    acknowledgedBy?: string;
+    resolvedAt?: string;
+}
+
+export interface MarginAnalysis {
+    projectId: number;
+    contractValue: number;
+    approvedChangeOrders: number;
+    totalRevenue: number;
+    laborCost: number;
+    materialCost: number;
+    subcontractorCost: number;
+    overheadCost: number;
+    totalCost: number;
+    grossProfit: number;
+    grossMargin: number;
+    targetMargin: number;
+    marginVariance: number;
+    profitLeakAlerts: ProfitLeakAlert[];
+    trend: 'improving' | 'stable' | 'declining';
+    projectedFinalMargin: number;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -795,5 +1231,683 @@ export const initialData: Database = {
             createdAt: '2024-12-14',
             priority: 'low'
         }
+    ],
+    // Materials & Vendor Tracking Sample Data
+    purchaseOrders: [
+        {
+            id: 'PO-001',
+            poNumber: 'PO-2024-001',
+            vendorId: 1,
+            vendorName: 'Shaw Flooring',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            status: 'received',
+            lineItems: [
+                { id: 'li-001', materialName: 'Shaw Commercial Carpet Tile', sku: 'SH-CCT-2400', quantity: 2400, unit: 'sf', unitCost: 3.25, total: 7800, lotNumber: 'DL-2024-1215-A', receivedQty: 2400, damagedQty: 0 },
+                { id: 'li-002', materialName: 'Carpet Tile Adhesive', sku: 'ADH-CT-5GAL', quantity: 8, unit: 'bucket', unitCost: 125, total: 1000, receivedQty: 8, damagedQty: 0 }
+            ],
+            subtotal: 8800,
+            tax: 726,
+            total: 9526,
+            createdDate: '2024-11-20',
+            submittedDate: '2024-11-20',
+            confirmedDate: '2024-11-21',
+            expectedDeliveryDate: '2024-11-28',
+            notes: 'Rush order for Downtown project'
+        },
+        {
+            id: 'PO-002',
+            poNumber: 'PO-2024-002',
+            vendorId: 1,
+            vendorName: 'Shaw Flooring',
+            projectId: 2,
+            projectName: 'Oakridge Medical Remodel',
+            status: 'confirmed',
+            lineItems: [
+                { id: 'li-003', materialName: 'Shaw Endura LVP - Oak', sku: 'SH-END-001', quantity: 1800, unit: 'sf', unitCost: 4.50, total: 8100, lotNumber: 'LVP-2024-1210-B' },
+                { id: 'li-004', materialName: 'LVP Underlayment', sku: 'UND-LVP-200', quantity: 1800, unit: 'sf', unitCost: 0.75, total: 1350 },
+                { id: 'li-005', materialName: 'T-Molding Transitions', sku: 'TM-OAK-8FT', quantity: 12, unit: 'pcs', unitCost: 24, total: 288 }
+            ],
+            subtotal: 9738,
+            tax: 803,
+            total: 10541,
+            createdDate: '2024-12-05',
+            submittedDate: '2024-12-05',
+            confirmedDate: '2024-12-06',
+            expectedDeliveryDate: '2024-12-16',
+            notes: 'Medical facility - need low-VOC materials'
+        },
+        {
+            id: 'PO-003',
+            poNumber: 'PO-2024-003',
+            vendorId: 2,
+            vendorName: 'Tile Distributors Inc',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            status: 'partial',
+            lineItems: [
+                { id: 'li-006', materialName: 'Ceramic Entry Tile 12x24', sku: 'CET-1224-GRY', quantity: 200, unit: 'sf', unitCost: 6.75, total: 1350, lotNumber: 'TL-2024-A12', receivedQty: 150, damagedQty: 5 },
+                { id: 'li-007', materialName: 'Mapei Ultraflex 2 Mortar', sku: 'MP-UF2-50', quantity: 10, unit: 'bag', unitCost: 35, total: 350, receivedQty: 10, damagedQty: 0 },
+                { id: 'li-008', materialName: 'Unsanded Grout - Gray', sku: 'GRT-UNS-25', quantity: 4, unit: 'bag', unitCost: 18, total: 72, receivedQty: 4, damagedQty: 0 }
+            ],
+            subtotal: 1772,
+            tax: 146,
+            total: 1918,
+            createdDate: '2024-11-25',
+            submittedDate: '2024-11-25',
+            confirmedDate: '2024-11-26',
+            expectedDeliveryDate: '2024-12-01',
+            notes: 'Partial shipment - backorder on 50sf tile. ETA Dec 18.'
+        },
+        {
+            id: 'PO-004',
+            poNumber: 'PO-2024-004',
+            vendorId: 1,
+            vendorName: 'Shaw Flooring',
+            projectId: 3,
+            projectName: 'Lakeside Condo Units',
+            status: 'submitted',
+            lineItems: [
+                { id: 'li-009', materialName: 'Shaw LVP Various (Mixed)', sku: 'SH-LVP-MIX', quantity: 3200, unit: 'sf', unitCost: 4.25, total: 13600 },
+                { id: 'li-010', materialName: 'Quarter Round Trim', sku: 'QR-OAK-8FT', quantity: 48, unit: 'pcs', unitCost: 8, total: 384 }
+            ],
+            subtotal: 13984,
+            tax: 1154,
+            total: 15138,
+            createdDate: '2024-12-12',
+            submittedDate: '2024-12-12',
+            expectedDeliveryDate: '2024-12-28',
+            notes: 'Scheduled for Jan 2 start'
+        }
+    ],
+    deliveries: [
+        {
+            id: 'DEL-001',
+            poId: 'PO-001',
+            poNumber: 'PO-2024-001',
+            vendorId: 1,
+            vendorName: 'Shaw Flooring',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            status: 'checked-in',
+            scheduledDate: '2024-11-28',
+            estimatedTime: '10:00 AM',
+            actualArrival: '2024-11-28T10:15:00',
+            checkedInAt: '2024-11-28T10:45:00',
+            checkedInBy: 'Derek Morrison',
+            lineItems: [
+                { poLineItemId: 'li-001', materialName: 'Shaw Commercial Carpet Tile', orderedQty: 2400, receivedQty: 2400, damagedQty: 0, lotNumber: 'DL-2024-1215-A', unit: 'sf' },
+                { poLineItemId: 'li-002', materialName: 'Carpet Tile Adhesive', orderedQty: 8, receivedQty: 8, damagedQty: 0, unit: 'bucket' }
+            ],
+            photos: [
+                { id: 'ph-001', type: 'pallet', url: '/placeholder-pallet.jpg', caption: 'Carpet tile pallet - good condition', timestamp: '2024-11-28T10:20:00' }
+            ],
+            notes: 'All materials received in good condition'
+        },
+        {
+            id: 'DEL-002',
+            poId: 'PO-002',
+            poNumber: 'PO-2024-002',
+            vendorId: 1,
+            vendorName: 'Shaw Flooring',
+            projectId: 2,
+            projectName: 'Oakridge Medical Remodel',
+            status: 'scheduled',
+            scheduledDate: '2024-12-16',
+            estimatedTime: '2:00 PM',
+            lineItems: [
+                { poLineItemId: 'li-003', materialName: 'Shaw Endura LVP - Oak', orderedQty: 1800, receivedQty: 0, damagedQty: 0, lotNumber: 'LVP-2024-1210-B', unit: 'sf' },
+                { poLineItemId: 'li-004', materialName: 'LVP Underlayment', orderedQty: 1800, receivedQty: 0, damagedQty: 0, unit: 'sf' },
+                { poLineItemId: 'li-005', materialName: 'T-Molding Transitions', orderedQty: 12, receivedQty: 0, damagedQty: 0, unit: 'pcs' }
+            ],
+            photos: [],
+            notes: 'Delivery to job site - Oakridge Medical'
+        },
+        {
+            id: 'DEL-003',
+            poId: 'PO-003',
+            poNumber: 'PO-2024-003',
+            vendorId: 2,
+            vendorName: 'Tile Distributors Inc',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            status: 'issues',
+            scheduledDate: '2024-12-01',
+            estimatedTime: '9:00 AM',
+            actualArrival: '2024-12-01T09:30:00',
+            checkedInAt: '2024-12-01T10:00:00',
+            checkedInBy: 'Tony Martinez',
+            lineItems: [
+                { poLineItemId: 'li-006', materialName: 'Ceramic Entry Tile 12x24', orderedQty: 200, receivedQty: 150, damagedQty: 5, lotNumber: 'TL-2024-A12', unit: 'sf' },
+                { poLineItemId: 'li-007', materialName: 'Mapei Ultraflex 2 Mortar', orderedQty: 10, receivedQty: 10, damagedQty: 0, unit: 'bag' },
+                { poLineItemId: 'li-008', materialName: 'Unsanded Grout - Gray', orderedQty: 4, receivedQty: 4, damagedQty: 0, unit: 'bag' }
+            ],
+            photos: [
+                { id: 'ph-002', type: 'damage', url: '/placeholder-damage.jpg', caption: '5 tiles cracked in transit', timestamp: '2024-12-01T09:45:00' },
+                { id: 'ph-003', type: 'pallet', url: '/placeholder-pallet2.jpg', caption: 'Partial shipment received', timestamp: '2024-12-01T09:40:00' }
+            ],
+            notes: 'Partial delivery - 50sf backordered',
+            issues: '5 tiles damaged in transit. 50sf backordered - ETA Dec 18. Filed damage claim with vendor.'
+        }
+    ],
+    materialLots: [
+        {
+            id: 'LOT-001',
+            materialName: 'Shaw Commercial Carpet Tile',
+            lotNumber: 'DL-2024-1215-A',
+            dyeLot: 'DYE-BLU-2024-12',
+            quantity: 2400,
+            unit: 'sf',
+            vendorId: 1,
+            vendorName: 'Shaw Flooring',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            deliveryId: 'DEL-001',
+            receivedDate: '2024-11-28',
+            notes: 'Main carpet tile for lobby - verify dye lot match on any reorders'
+        },
+        {
+            id: 'LOT-002',
+            materialName: 'Shaw Endura LVP - Oak',
+            lotNumber: 'LVP-2024-1210-B',
+            quantity: 1800,
+            unit: 'sf',
+            vendorId: 1,
+            vendorName: 'Shaw Flooring',
+            projectId: 2,
+            projectName: 'Oakridge Medical Remodel',
+            receivedDate: '2024-12-16',
+            notes: '48hr acclimation required'
+        },
+        {
+            id: 'LOT-003',
+            materialName: 'Ceramic Entry Tile 12x24',
+            lotNumber: 'TL-2024-A12',
+            dyeLot: 'DYE-GRY-A12',
+            quantity: 145,
+            unit: 'sf',
+            vendorId: 2,
+            vendorName: 'Tile Distributors Inc',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            deliveryId: 'DEL-003',
+            receivedDate: '2024-12-01',
+            notes: '5sf damaged - awaiting backorder with SAME lot number'
+        }
+    ],
+    acclimationEntries: [
+        {
+            id: 'ACC-001',
+            materialName: 'Shaw Commercial Carpet Tile',
+            materialType: 'carpet',
+            lotNumber: 'DL-2024-1215-A',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            location: 'Job site - Main lobby staging area',
+            requiredHours: 24,
+            startTime: '2024-11-28T11:00:00',
+            endTime: '2024-11-29T11:00:00',
+            status: 'ready',
+            readings: [
+                { id: 'rd-001', timestamp: '2024-11-28T11:00:00', temperature: 68, humidity: 42, recordedBy: 'Derek Morrison' },
+                { id: 'rd-002', timestamp: '2024-11-28T17:00:00', temperature: 70, humidity: 44, recordedBy: 'Tony Martinez' },
+                { id: 'rd-003', timestamp: '2024-11-29T08:00:00', temperature: 69, humidity: 43, recordedBy: 'Derek Morrison' }
+            ],
+            minTemp: 65,
+            maxTemp: 85,
+            minHumidity: 30,
+            maxHumidity: 65
+        },
+        {
+            id: 'ACC-002',
+            materialName: 'Shaw Endura LVP - Oak',
+            materialType: 'lvp',
+            lotNumber: 'LVP-2024-1210-B',
+            projectId: 2,
+            projectName: 'Oakridge Medical Remodel',
+            location: 'Oakridge Medical - Storage Room 101',
+            requiredHours: 48,
+            startTime: '2024-12-16T14:00:00',
+            status: 'in-progress',
+            readings: [
+                { id: 'rd-004', timestamp: '2024-12-16T14:00:00', temperature: 72, humidity: 48, recordedBy: 'Sarah Chen', notes: 'Initial reading after delivery' }
+            ],
+            minTemp: 65,
+            maxTemp: 85,
+            minHumidity: 30,
+            maxHumidity: 60
+        }
+    ],
+    // ═══════════════════════════════════════════════════════════════════════
+    // BUDGETING & JOB COSTING SAMPLE DATA
+    // ═══════════════════════════════════════════════════════════════════════
+    laborEntries: [
+        // Downtown Lobby Renovation - Recent labor entries
+        { id: 'LE-001', projectId: 1, workerId: 1, workerName: 'Derek Morrison', role: 'lead', phase: 'install', date: '2024-12-12', regularHours: 8, overtimeHours: 0, regularRate: 55, overtimeRate: 82.5, totalCost: 440, notes: 'Tile installation in main lobby', approvedBy: 'System', approvedAt: '2024-12-12' },
+        { id: 'LE-002', projectId: 1, workerId: 2, workerName: 'Tony Martinez', role: 'installer', phase: 'install', date: '2024-12-12', regularHours: 8, overtimeHours: 2, regularRate: 45, overtimeRate: 67.5, totalCost: 495, notes: 'Tile installation - stayed late to finish section' },
+        { id: 'LE-003', projectId: 1, workerId: 3, workerName: 'James Wilson', role: 'helper', phase: 'install', date: '2024-12-12', regularHours: 8, overtimeHours: 0, regularRate: 28, overtimeRate: 42, totalCost: 224, notes: 'Material handling and cleanup' },
+        { id: 'LE-004', projectId: 1, workerId: 1, workerName: 'Derek Morrison', role: 'lead', phase: 'install', date: '2024-12-11', regularHours: 8, overtimeHours: 0, regularRate: 55, overtimeRate: 82.5, totalCost: 440, notes: 'Subfloor leveling complete' },
+        { id: 'LE-005', projectId: 1, workerId: 2, workerName: 'Tony Martinez', role: 'installer', phase: 'install', date: '2024-12-11', regularHours: 8, overtimeHours: 0, regularRate: 45, overtimeRate: 67.5, totalCost: 360, notes: 'Subfloor prep and leveling' },
+        { id: 'LE-006', projectId: 1, workerId: 3, workerName: 'James Wilson', role: 'helper', phase: 'prep', date: '2024-12-11', regularHours: 8, overtimeHours: 0, regularRate: 28, overtimeRate: 42, totalCost: 224, notes: 'Demo cleanup and prep work' },
+        // Oakridge Medical - Labor
+        { id: 'LE-007', projectId: 2, workerId: 4, workerName: 'Sarah Chen', role: 'lead', phase: 'prep', date: '2024-12-12', regularHours: 6, overtimeHours: 0, regularRate: 52, overtimeRate: 78, totalCost: 312, notes: 'Subfloor assessment in exam rooms' },
+        { id: 'LE-008', projectId: 2, workerId: 5, workerName: 'Marcus Johnson', role: 'installer', phase: 'prep', date: '2024-12-12', regularHours: 6, overtimeHours: 0, regularRate: 42, overtimeRate: 63, totalCost: 252, notes: 'Moisture testing completed' },
+        { id: 'LE-009', projectId: 2, workerId: 6, workerName: 'Kyle Patterson', role: 'helper', phase: 'prep', date: '2024-12-12', regularHours: 4, overtimeHours: 0, regularRate: 26, overtimeRate: 39, totalCost: 104, notes: 'Clearing furniture from work area' },
+        { id: 'LE-010', projectId: 2, workerId: 4, workerName: 'Sarah Chen', role: 'lead', phase: 'demo', date: '2024-12-10', regularHours: 8, overtimeHours: 1, regularRate: 52, overtimeRate: 78, totalCost: 494, notes: 'Discovered asbestos tile - halted work' }
+    ],
+    subcontractors: [
+        { id: 1, name: 'Mike Rodriguez', company: 'Rodriguez Heavy Demo', trade: 'Demolition', phone: '(555) 444-1111', email: 'mike@rodriguezdemo.com', hourlyRate: 85, rating: 4.5, totalJobsCompleted: 12, insuranceExpiry: '2025-06-15', licenseNumber: 'DEM-2024-1122', notes: 'Excellent for large demo jobs, has own dumpsters' },
+        { id: 2, name: 'Lisa Chang', company: 'Premium Floor Prep LLC', trade: 'Subfloor Prep', phone: '(555) 444-2222', email: 'lisa@premiumfloorprep.com', hourlyRate: 75, rating: 4.8, totalJobsCompleted: 28, insuranceExpiry: '2025-03-20', licenseNumber: 'PREP-2023-5544', notes: 'Specializes in commercial concrete prep, self-leveling' },
+        { id: 3, name: 'Environmental Solutions Inc', company: 'Environmental Solutions Inc', trade: 'Asbestos Abatement', phone: '(555) 444-3333', email: 'ops@envsolutions.com', hourlyRate: 150, rating: 5.0, totalJobsCompleted: 8, insuranceExpiry: '2025-08-01', licenseNumber: 'HAZ-2024-0099', notes: 'Licensed for asbestos, lead, mold - REQUIRED for hazmat' },
+        { id: 4, name: 'Carlos Gutierrez', company: 'CG Tile Masters', trade: 'Tile Installation', phone: '(555) 444-4444', email: 'carlos@cgtile.com', hourlyRate: 65, rating: 4.2, totalJobsCompleted: 6, insuranceExpiry: '2025-01-30', licenseNumber: 'TILE-2024-7788' }
+    ],
+    subcontractorInvoices: [
+        {
+            id: 'INV-001',
+            invoiceNumber: 'RHD-2024-0089',
+            subcontractorId: 1,
+            subcontractorName: 'Rodriguez Heavy Demo',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            status: 'paid',
+            items: [
+                { id: 'item-001', description: 'Carpet removal - 2400sf', quantity: 2400, rate: 0.75, total: 1800, phase: 'demo' },
+                { id: 'item-002', description: 'Tile demo - lobby entrance', quantity: 200, rate: 2.50, total: 500, phase: 'demo' },
+                { id: 'item-003', description: 'Dumpster rental (2x)', quantity: 2, rate: 450, total: 900, phase: 'demo' },
+                { id: 'item-004', description: 'Haul-away labor', quantity: 8, rate: 85, total: 680, phase: 'demo' }
+            ],
+            subtotal: 3880,
+            tax: 0,
+            total: 3880,
+            invoiceDate: '2024-11-20',
+            dueDate: '2024-12-05',
+            submittedDate: '2024-11-20',
+            approvedDate: '2024-11-21',
+            approvedBy: 'Derek Morrison',
+            paidDate: '2024-12-01',
+            notes: 'Demo completed on schedule'
+        },
+        {
+            id: 'INV-002',
+            invoiceNumber: 'ENV-2024-0034',
+            subcontractorId: 3,
+            subcontractorName: 'Environmental Solutions Inc',
+            projectId: 2,
+            projectName: 'Oakridge Medical Remodel',
+            status: 'approved',
+            items: [
+                { id: 'item-005', description: 'Asbestos testing & assessment', quantity: 1, rate: 850, total: 850, phase: 'demo' },
+                { id: 'item-006', description: 'Asbestos tile removal - 400sf', quantity: 400, rate: 8.50, total: 3400, phase: 'demo' },
+                { id: 'item-007', description: 'Hazmat disposal & certification', quantity: 1, rate: 1200, total: 1200, phase: 'demo' },
+                { id: 'item-008', description: 'Clearance testing', quantity: 1, rate: 450, total: 450, phase: 'demo' }
+            ],
+            subtotal: 5900,
+            tax: 0,
+            total: 5900,
+            invoiceDate: '2024-12-11',
+            dueDate: '2024-12-26',
+            submittedDate: '2024-12-11',
+            approvedDate: '2024-12-12',
+            approvedBy: 'Derek Morrison',
+            notes: 'Urgent - asbestos abatement for Oakridge'
+        },
+        {
+            id: 'INV-003',
+            invoiceNumber: 'PFP-2024-0156',
+            subcontractorId: 2,
+            subcontractorName: 'Premium Floor Prep LLC',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            status: 'pending-approval',
+            items: [
+                { id: 'item-009', description: 'Concrete grinding - lobby', quantity: 800, rate: 1.25, total: 1000, phase: 'prep' },
+                { id: 'item-010', description: 'Self-leveling compound', quantity: 25, rate: 45, total: 1125, phase: 'prep' },
+                { id: 'item-011', description: 'Application labor', quantity: 12, rate: 75, total: 900, phase: 'prep' }
+            ],
+            subtotal: 3025,
+            tax: 0,
+            total: 3025,
+            invoiceDate: '2024-12-13',
+            dueDate: '2024-12-28',
+            submittedDate: '2024-12-13',
+            notes: 'Additional leveling required per engineer specs'
+        },
+        {
+            id: 'INV-004',
+            invoiceNumber: 'CGT-2024-0022',
+            subcontractorId: 4,
+            subcontractorName: 'CG Tile Masters',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            status: 'draft',
+            items: [
+                { id: 'item-012', description: 'Tile installation assist - elevator area', quantity: 100, rate: 4.50, total: 450, phase: 'install' }
+            ],
+            subtotal: 450,
+            tax: 0,
+            total: 450,
+            invoiceDate: '2024-12-14',
+            dueDate: '2024-12-29',
+            notes: 'Draft - waiting for work completion'
+        }
+    ],
+    projectBudgets: [
+        {
+            projectId: 1,
+            contractValue: 45200,
+            approvedCOs: 2450,
+            totalRevenue: 47650,
+            estimatedCost: 28450,
+            actualCost: 24890,
+            projectedCost: 31200,
+            currentMargin: 47.8,
+            projectedMargin: 34.5,
+            targetMargin: 37,
+            phaseBudgets: [
+                { phase: 'demo', estimatedLabor: 1500, estimatedMaterials: 0, estimatedSubcontractors: 4000, estimatedOther: 200, estimatedTotal: 5700, actualLabor: 0, actualMaterials: 0, actualSubcontractors: 3880, actualOther: 150, actualTotal: 4030, variance: -1670, variancePercent: -29.3, status: 'on-budget' },
+                { phase: 'prep', estimatedLabor: 2400, estimatedMaterials: 1200, estimatedSubcontractors: 1500, estimatedOther: 100, estimatedTotal: 5200, actualLabor: 2100, actualMaterials: 1150, actualSubcontractors: 3025, actualOther: 80, actualTotal: 6355, variance: 1155, variancePercent: 22.2, status: 'over-budget' },
+                { phase: 'install', estimatedLabor: 8000, estimatedMaterials: 9800, estimatedSubcontractors: 500, estimatedOther: 200, estimatedTotal: 18500, actualLabor: 4500, actualMaterials: 7500, actualSubcontractors: 0, actualOther: 120, actualTotal: 12120, variance: -6380, variancePercent: -34.5, status: 'on-budget' },
+                { phase: 'punch', estimatedLabor: 800, estimatedMaterials: 200, estimatedSubcontractors: 0, estimatedOther: 50, estimatedTotal: 1050, actualLabor: 0, actualMaterials: 0, actualSubcontractors: 0, actualOther: 0, actualTotal: 0, variance: -1050, variancePercent: -100, status: 'on-budget' },
+                { phase: 'closeout', estimatedLabor: 400, estimatedMaterials: 0, estimatedSubcontractors: 0, estimatedOther: 100, estimatedTotal: 500, actualLabor: 0, actualMaterials: 0, actualSubcontractors: 0, actualOther: 0, actualTotal: 0, variance: -500, variancePercent: -100, status: 'on-budget' }
+            ],
+            lineItems: [],
+            lastUpdated: '2024-12-14'
+        },
+        {
+            projectId: 2,
+            contractValue: 28750,
+            approvedCOs: 5200,
+            totalRevenue: 33950,
+            estimatedCost: 16400,
+            actualCost: 7420,
+            projectedCost: 23200,
+            currentMargin: 78.1,
+            projectedMargin: 31.7,
+            targetMargin: 43,
+            phaseBudgets: [
+                { phase: 'demo', estimatedLabor: 1200, estimatedMaterials: 0, estimatedSubcontractors: 800, estimatedOther: 100, estimatedTotal: 2100, actualLabor: 494, actualMaterials: 0, actualSubcontractors: 5900, actualOther: 85, actualTotal: 6479, variance: 4379, variancePercent: 208.5, status: 'over-budget' },
+                { phase: 'prep', estimatedLabor: 2000, estimatedMaterials: 800, estimatedSubcontractors: 0, estimatedOther: 100, estimatedTotal: 2900, actualLabor: 668, actualMaterials: 450, actualSubcontractors: 0, actualOther: 0, actualTotal: 1118, variance: -1782, variancePercent: -61.4, status: 'on-budget' },
+                { phase: 'acclimation', estimatedLabor: 200, estimatedMaterials: 0, estimatedSubcontractors: 0, estimatedOther: 50, estimatedTotal: 250, actualLabor: 0, actualMaterials: 0, actualSubcontractors: 0, actualOther: 0, actualTotal: 0, variance: -250, variancePercent: -100, status: 'on-budget' },
+                { phase: 'install', estimatedLabor: 5500, estimatedMaterials: 8500, estimatedSubcontractors: 0, estimatedOther: 150, estimatedTotal: 14150, actualLabor: 0, actualMaterials: 0, actualSubcontractors: 0, actualOther: 0, actualTotal: 0, variance: -14150, variancePercent: -100, status: 'on-budget' },
+                { phase: 'punch', estimatedLabor: 500, estimatedMaterials: 100, estimatedSubcontractors: 0, estimatedOther: 50, estimatedTotal: 650, actualLabor: 0, actualMaterials: 0, actualSubcontractors: 0, actualOther: 0, actualTotal: 0, variance: -650, variancePercent: -100, status: 'on-budget' }
+            ],
+            lineItems: [],
+            lastUpdated: '2024-12-14'
+        }
+    ],
+    profitLeakAlerts: [
+        {
+            id: 'ALERT-001',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            type: 'sub-overrun',
+            severity: 'warning',
+            title: 'Subcontractor costs exceeding budget',
+            description: 'Prep phase subcontractor costs are 102% over estimate due to additional leveling work.',
+            impact: 1525,
+            impactPercent: 22.2,
+            phase: 'prep',
+            recommendation: 'Review remaining subcontractor scope. Consider negotiating fixed-price for punch work.',
+            createdAt: '2024-12-13T10:30:00'
+        },
+        {
+            id: 'ALERT-002',
+            projectId: 2,
+            projectName: 'Oakridge Medical Remodel',
+            type: 'labor-overrun',
+            severity: 'critical',
+            title: 'Asbestos abatement exceeds budget by 637%',
+            description: 'Unexpected asbestos discovery required licensed abatement. Demo phase budget blown.',
+            impact: 5100,
+            impactPercent: 637.5,
+            phase: 'demo',
+            recommendation: 'Change order already approved for $5,200. Monitor to ensure no additional scope creep.',
+            createdAt: '2024-12-10T14:15:00',
+            acknowledgedAt: '2024-12-10T15:00:00',
+            acknowledgedBy: 'Derek Morrison'
+        },
+        {
+            id: 'ALERT-003',
+            projectId: 2,
+            projectName: 'Oakridge Medical Remodel',
+            type: 'margin-erosion',
+            severity: 'warning',
+            title: 'Projected margin below target',
+            description: 'Current projection shows 31.7% margin vs 43% target. $3,840 profit at risk.',
+            impact: 3840,
+            impactPercent: 11.3,
+            recommendation: 'Optimize installation labor. Consider value engineering on trim materials.',
+            createdAt: '2024-12-14T08:00:00'
+        },
+        {
+            id: 'ALERT-004',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            type: 'change-order-pending',
+            severity: 'info',
+            title: 'Pending CO awaiting approval',
+            description: 'CO-002 for premium tile upgrade ($3,800) awaiting client decision since Dec 11.',
+            impact: 3800,
+            impactPercent: 0,
+            recommendation: 'Follow up with client. Decision needed before tile installation continues.',
+            createdAt: '2024-12-14T09:00:00'
+        }
+    ],
+    walkthroughSessions: [
+        // Project 1 - Downtown Lobby
+        {
+            id: 'WS-001',
+            projectId: 1,
+            type: 'pre-install',
+            status: 'completed',
+            scheduledDate: '2024-11-14',
+            scheduledTime: '9:00 AM',
+            startedAt: '2024-11-14T09:05:00',
+            completedAt: '2024-11-14T10:30:00',
+            attendees: [
+                { name: 'John Smith', role: 'client', email: 'john@downtown.com', phone: '555-0101' },
+                { name: 'Derek Morrison', role: 'pm', email: 'derek@floorops.com' },
+                { name: 'Mike Johnson', role: 'lead', phone: '555-0102' }
+            ],
+            punchItemsCreated: [],
+            notes: 'Initial site walkthrough before demo. Documented existing conditions and confirmed scope with client.',
+            overallRating: 5,
+            clientFeedback: 'Great walkthrough! Clear communication about the project timeline.',
+            areasReviewed: ['Main Lobby', 'Elevator Area', 'Hallway', 'Reception', 'Break Room'],
+            createdBy: 'Derek Morrison',
+            weather: '☀️',
+            photos: ['Existing Conditions 1', 'Existing Conditions 2', 'Subfloor Condition']
+        },
+        {
+            id: 'WS-002',
+            projectId: 1,
+            type: 'mid-project',
+            status: 'completed',
+            scheduledDate: '2024-12-12',
+            scheduledTime: '2:00 PM',
+            startedAt: '2024-12-12T14:05:00',
+            completedAt: '2024-12-12T14:45:00',
+            attendees: [
+                { name: 'John Smith', role: 'client', email: 'john@downtown.com', phone: '555-0101' },
+                { name: 'Derek Morrison', role: 'pm', email: 'derek@floorops.com' }
+            ],
+            punchItemsCreated: [1, 2],
+            notes: 'Client very pleased with tile progress. Identified grout color issue near elevator and loose transition strip.',
+            overallRating: 4,
+            clientFeedback: 'Looking great! Just need those couple items fixed before final.',
+            areasReviewed: ['Main Lobby', 'Elevator Area', 'Hallway'],
+            createdBy: 'Derek Morrison',
+            weather: '☀️',
+            photos: ['Tile Progress', 'Grout Issue', 'Transition Strip']
+        },
+        {
+            id: 'WS-003',
+            projectId: 1,
+            type: 'final',
+            status: 'scheduled',
+            scheduledDate: '2024-12-19',
+            scheduledTime: '10:00 AM',
+            attendees: [
+                { name: 'John Smith', role: 'client', email: 'john@downtown.com', phone: '555-0101' },
+                { name: 'Derek Morrison', role: 'pm' },
+                { name: 'Sarah Wilson', role: 'architect' },
+                { name: 'Building Manager', role: 'other' }
+            ],
+            punchItemsCreated: [],
+            areasReviewed: [],
+            createdBy: 'Derek Morrison',
+            photos: []
+        },
+        // Project 2 - Oakridge Medical
+        {
+            id: 'WS-004',
+            projectId: 2,
+            type: 'pre-install',
+            status: 'completed',
+            scheduledDate: '2024-12-01',
+            scheduledTime: '8:00 AM',
+            startedAt: '2024-12-01T08:00:00',
+            completedAt: '2024-12-01T09:15:00',
+            attendees: [
+                { name: 'Dr. Emily Chen', role: 'client', email: 'echen@oakridgemedical.com', phone: '555-0200' },
+                { name: 'Derek Morrison', role: 'pm' },
+                { name: 'Carlos Rodriguez', role: 'installer' }
+            ],
+            punchItemsCreated: [],
+            notes: 'Pre-installation walkthrough for medical facility. Discussed noise restrictions and after-hours work requirements.',
+            overallRating: 5,
+            clientFeedback: 'Very professional. Appreciate the attention to our operational needs.',
+            areasReviewed: ['Reception', 'Exam Room 1', 'Exam Room 2', 'Lab', 'Waiting Area'],
+            createdBy: 'Derek Morrison',
+            weather: '🌧️',
+            photos: ['Medical Reception', 'Exam Rooms Overview']
+        },
+        {
+            id: 'WS-005',
+            projectId: 2,
+            type: 'punch',
+            status: 'scheduled',
+            scheduledDate: '2024-12-20',
+            scheduledTime: '6:00 PM',
+            attendees: [
+                { name: 'Dr. Emily Chen', role: 'client', email: 'echen@oakridgemedical.com' },
+                { name: 'Derek Morrison', role: 'pm' },
+                { name: 'Mike Johnson', role: 'lead' }
+            ],
+            punchItemsCreated: [],
+            areasReviewed: [],
+            createdBy: 'Derek Morrison',
+            notes: 'After-hours punch walk to minimize disruption to medical practice.',
+            photos: []
+        },
+        // Project 3 - Riverside Estates
+        {
+            id: 'WS-006',
+            projectId: 3,
+            type: 'mid-project',
+            status: 'completed',
+            scheduledDate: '2024-12-10',
+            scheduledTime: '11:00 AM',
+            startedAt: '2024-12-10T11:00:00',
+            completedAt: '2024-12-10T12:30:00',
+            attendees: [
+                { name: 'Michael Rivers', role: 'client', email: 'mrivers@riverside.com', phone: '555-0300' },
+                { name: 'Lisa Rivers', role: 'client' },
+                { name: 'Derek Morrison', role: 'pm' },
+                { name: 'Interior Designer', role: 'architect' }
+            ],
+            punchItemsCreated: [5, 6],
+            notes: 'Homeowners walkthrough of hardwood installation. Minor concerns about color variation - explained natural wood characteristics.',
+            overallRating: 3,
+            clientFeedback: 'Some concerns about wood grain variation. Need reassurance this is normal.',
+            areasReviewed: ['Living Room', 'Dining Room', 'Master Bedroom', 'Kitchen'],
+            createdBy: 'Derek Morrison',
+            weather: '⛅',
+            photos: ['Hardwood Installation', 'Grain Variation Sample']
+        },
+        // Project 4 - Harbor View
+        {
+            id: 'WS-007',
+            projectId: 4,
+            type: 'pre-install',
+            status: 'completed',
+            scheduledDate: '2024-12-08',
+            scheduledTime: '3:00 PM',
+            startedAt: '2024-12-08T15:00:00',
+            completedAt: '2024-12-08T16:00:00',
+            attendees: [
+                { name: 'Property Manager', role: 'gc', email: 'pm@harborview.com' },
+                { name: 'Derek Morrison', role: 'pm' }
+            ],
+            punchItemsCreated: [],
+            notes: 'COA meeting and pre-install coordination. Discussed elevator access and material staging.',
+            overallRating: 4,
+            clientFeedback: 'Well organized. Please ensure minimal hallway disruption.',
+            areasReviewed: ['Unit 1201', 'Common Hallway', 'Elevator Lobby'],
+            createdBy: 'Derek Morrison',
+            weather: '☀️',
+            photos: ['Unit Entry', 'Common Areas']
+        },
+        {
+            id: 'WS-008',
+            projectId: 4,
+            type: 'mid-project',
+            status: 'in-progress',
+            scheduledDate: '2024-12-15',
+            scheduledTime: '2:00 PM',
+            startedAt: '2024-12-15T14:05:00',
+            attendees: [
+                { name: 'Property Manager', role: 'gc' },
+                { name: 'Unit Owner', role: 'client', phone: '555-0400' },
+                { name: 'Derek Morrison', role: 'pm' }
+            ],
+            punchItemsCreated: [7],
+            areasReviewed: ['Unit 1201'],
+            createdBy: 'Derek Morrison',
+            notes: 'In progress - reviewing LVP installation in condo unit.',
+            photos: []
+        }
+    ],
+    completionCertificates: [
+        {
+            id: 'CERT-001',
+            projectId: 3,
+            projectName: 'Riverside Estates - Rivers Residence',
+            clientName: 'Michael & Lisa Rivers',
+            clientAddress: '789 Riverside Drive',
+            contractValue: 28500,
+            changeOrdersTotal: 1200,
+            finalValue: 29700,
+            completionDate: '2024-12-14',
+            generatedDate: '2024-12-14',
+            allPunchItemsClosed: true,
+            finalWalkthroughComplete: true,
+            qaChecklistsComplete: true,
+            photosDocumented: true,
+            outstandingItems: [],
+            warrantyStartDate: '2024-12-14',
+            warrantyEndDate: '2025-12-14',
+            warrantyTerms: '1 year parts and labor warranty on all installed hardwood flooring. Excludes damage from moisture, pets, or improper maintenance.',
+            notes: 'Beautiful installation. Client very satisfied with final result after initial concerns addressed.',
+            status: 'pending-signature',
+            clientSignature: {
+                signature: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+                signedBy: 'Michael Rivers',
+                signedAt: '2024-12-14T16:30:00',
+                title: 'Homeowner'
+            }
+        }
+    ],
+    teamMembers: [
+        { id: 1, name: 'Derek Morrison', role: 'pm', phone: '555-0100', email: 'derek@floorops.com' },
+        { id: 2, name: 'Mike Johnson', role: 'lead', phone: '555-0102', email: 'mike@floorops.com' },
+        { id: 3, name: 'Carlos Rodriguez', role: 'installer', phone: '555-0103', email: 'carlos@floorops.com' },
+        { id: 4, name: 'James Taylor', role: 'installer', phone: '555-0104', email: 'james@floorops.com' },
+        { id: 5, name: 'Kevin Brown', role: 'helper', phone: '555-0105' },
+        { id: 6, name: 'Ryan Chen', role: 'apprentice', phone: '555-0106' },
+        { id: 7, name: 'Sarah Martinez', role: 'installer', phone: '555-0107', email: 'sarah@floorops.com' },
+        { id: 8, name: 'David Kim', role: 'lead', phone: '555-0108', email: 'david@floorops.com' },
+        { id: 9, name: 'Tony Nguyen', role: 'helper', phone: '555-0109' },
+        { id: 10, name: 'Marcus Williams', role: 'apprentice', phone: '555-0110' }
     ]
 };
