@@ -53,6 +53,7 @@ function SidebarContent() {
         {
             title: 'Finance',
             items: [
+                { href: '/invoices', label: 'Invoices', icon: <FileText className="w-5 h-5" />, badge: (data.clientInvoices || []).filter(inv => inv.status === 'sent' || inv.status === 'partial').length || undefined },
                 { href: '/budget', label: 'Job Costing', icon: <LayoutDashboard className="w-5 h-5" />, badge: (data.profitLeakAlerts || []).filter(a => !a.resolvedAt && a.severity === 'critical').length || undefined },
                 { href: '/subcontractors', label: 'Subcontractors', icon: <Store className="w-5 h-5" />, badge: (data.subcontractorInvoices || []).filter(inv => inv.status === 'pending-approval' || inv.status === 'submitted').length || undefined },
             ]

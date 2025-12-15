@@ -23,6 +23,13 @@ import {
     CompletionCertificateModal,
     WalkthroughManager
 } from '@/components/walkthrough-modals';
+import {
+    CreateInvoiceModal,
+    InvoiceDetailModal,
+    RecordPaymentModal,
+    InvoiceStatusBadge,
+    ProjectInvoiceSummaryCard
+} from '@/components/invoice-modals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +37,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { ChangeOrder, DailyLog, PunchItem, PhotoCapture, QAChecklistType, PHASE_CONFIGS, WalkthroughSession, CompletionCertificate, SignatureData } from '@/lib/data';
+import { ChangeOrder, DailyLog, PunchItem, PhotoCapture, QAChecklistType, PHASE_CONFIGS, WalkthroughSession, CompletionCertificate, SignatureData, ClientInvoice, ClientInvoiceType } from '@/lib/data';
 import { Progress } from '@/components/ui/progress';
 import {
     ArrowLeft,
@@ -45,10 +52,11 @@ import {
     Download,
     ClipboardCheck,
     FileSignature,
-    Star
+    Star,
+    FileText
 } from 'lucide-react';
 
-type TabType = 'overview' | 'timeline' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials' | 'walkthrough';
+type TabType = 'overview' | 'timeline' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials' | 'invoices' | 'walkthrough';
 
 const statusConfig = {
     active: { label: 'Active', className: 'bg-success/10 text-success border-success/20' },
@@ -92,7 +100,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         updateCompletionCertificate,
         addSignature,
         getCertificateByProject,
-        getTeamMembers
+        getTeamMembers,
+        // Client Invoicing
+        getClientInvoicesByProject,
+        getProjectInvoiceSummary,
+        sendClientInvoice,
+        recordPayment
     } = useData();
 
     const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -124,6 +137,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [showWalkthroughManager, setShowWalkthroughManager] = useState(false);
     const [showClientWalkthrough, setShowClientWalkthrough] = useState<WalkthroughSession | null>(null);
     const [showCompletionCert, setShowCompletionCert] = useState(false);
+
+    // Invoice modal states
+    const [showCreateInvoice, setShowCreateInvoice] = useState(false);
+    const [showInvoiceDetail, setShowInvoiceDetail] = useState<ClientInvoice | null>(null);
+    const [showRecordPayment, setShowRecordPayment] = useState<ClientInvoice | null>(null);
+    const [suggestedInvoiceType, setSuggestedInvoiceType] = useState<ClientInvoiceType | undefined>(undefined);
 
     const project = getProject(parseInt(id));
 
@@ -421,6 +440,14 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         <TabsTrigger value="materials">📦 Materials</TabsTrigger>
                         <TabsTrigger value="changeorders">🔄 Change Orders</TabsTrigger>
                         <TabsTrigger value="financials">💰 Financials</TabsTrigger>
+                        <TabsTrigger value="invoices" className="relative">
+                            🧾 Invoices
+                            {getClientInvoicesByProject(project.id).filter(inv => inv.status === 'sent' || inv.status === 'partial').length > 0 && (
+                                <Badge className="ml-1 h-5 px-1.5 bg-amber-500 text-white text-xs">
+                                    {getClientInvoicesByProject(project.id).filter(inv => inv.status === 'sent' || inv.status === 'partial').length}
+                                </Badge>
+                            )}
+                        </TabsTrigger>
                         <TabsTrigger value="walkthrough" className="relative">
                             ✅ Walkthrough
                             {getWalkthroughsByProject(project.id).filter(w => w.status === 'scheduled').length > 0 && (
@@ -1238,6 +1265,131 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         </Card>
                     </TabsContent>
 
+                    {/* Invoices Tab */}
+                    <TabsContent value="invoices" className="mt-0 space-y-6">
+                        {(() => {
+                            const invoiceSummary = getProjectInvoiceSummary(project.id);
+                            const projectInvoices = getClientInvoicesByProject(project.id);
+
+                            return (
+                                <>
+                                    {/* Invoice Summary Card */}
+                                    <div className="grid lg:grid-cols-3 gap-6">
+                                        <div className="lg:col-span-1">
+                                            <ProjectInvoiceSummaryCard
+                                                summary={invoiceSummary}
+                                                onCreateInvoice={(type) => {
+                                                    setSuggestedInvoiceType(type);
+                                                    setShowCreateInvoice(true);
+                                                }}
+                                            />
+                                        </div>
+
+                                        {/* Invoice List */}
+                                        <div className="lg:col-span-2">
+                                            <Card>
+                                                <CardHeader className="flex flex-row items-center justify-between">
+                                                    <CardTitle className="text-base">Project Invoices</CardTitle>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => setShowCreateInvoice(true)}
+                                                    >
+                                                        <Plus className="w-4 h-4 mr-1" />
+                                                        New Invoice
+                                                    </Button>
+                                                </CardHeader>
+                                                <CardContent className="p-0">
+                                                    {projectInvoices.length > 0 ? (
+                                                        <div className="divide-y">
+                                                            {projectInvoices.map(invoice => (
+                                                                <div
+                                                                    key={invoice.id}
+                                                                    className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                                                                    onClick={() => setShowInvoiceDetail(invoice)}
+                                                                >
+                                                                    <div>
+                                                                        <div className="flex items-center gap-2 mb-1">
+                                                                            <span className="font-mono font-medium">{invoice.invoiceNumber}</span>
+                                                                            <InvoiceStatusBadge status={invoice.status} />
+                                                                            <Badge variant="outline" className="text-xs capitalize">{invoice.type}</Badge>
+                                                                        </div>
+                                                                        <div className="text-sm text-muted-foreground">
+                                                                            Due: {invoice.dueDate}
+                                                                            {invoice.retainageAmount > 0 && (
+                                                                                <span className="text-blue-500 ml-2">
+                                                                                    +${invoice.retainageAmount.toLocaleString()} retainage
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="text-right">
+                                                                        <div className="text-lg font-bold">${invoice.total.toLocaleString()}</div>
+                                                                        {invoice.balance > 0 && invoice.balance < invoice.total && (
+                                                                            <div className="text-sm text-amber-600">
+                                                                                Balance: ${invoice.balance.toLocaleString()}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center py-12 text-muted-foreground">
+                                                            <FileText className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                                                            <p className="font-medium">No invoices yet</p>
+                                                            <p className="text-sm mb-4">Create your first invoice for this project</p>
+                                                            <Button onClick={() => setShowCreateInvoice(true)}>
+                                                                <Plus className="w-4 h-4 mr-2" />
+                                                                Create Invoice
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                            </Card>
+                                        </div>
+                                    </div>
+
+                                    {/* Payment History */}
+                                    {projectInvoices.some(inv => inv.payments.length > 0) && (
+                                        <Card>
+                                            <CardHeader>
+                                                <CardTitle className="text-base">💳 Recent Payments</CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="space-y-2">
+                                                    {projectInvoices
+                                                        .flatMap(inv => inv.payments.map(p => ({ ...p, invoiceNumber: inv.invoiceNumber })))
+                                                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                                                        .slice(0, 5)
+                                                        .map(payment => (
+                                                            <div key={payment.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="p-2 rounded-full bg-green-500/10">
+                                                                        <CheckCircle2 className="w-4 h-4 text-green-500" />
+                                                                    </div>
+                                                                    <div>
+                                                                        <div className="font-medium">${payment.amount.toLocaleString()}</div>
+                                                                        <div className="text-xs text-muted-foreground">
+                                                                            {payment.invoiceNumber} • {payment.method.toUpperCase()}
+                                                                            {payment.reference && ` • ${payment.reference}`}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                <div className="text-right text-sm text-muted-foreground">
+                                                                    {payment.date}
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                </>
+                            );
+                        })()}
+                    </TabsContent>
+
                     {/* Walkthrough Tab */}
                     <TabsContent value="walkthrough" className="mt-0 space-y-6">
                         {/* Action Buttons */}
@@ -1615,6 +1767,33 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         addSignature(cert.id, type, signature);
                     }
                 }}
+            />
+
+            {/* Invoice Modals */}
+            <CreateInvoiceModal
+                open={showCreateInvoice}
+                onClose={() => {
+                    setShowCreateInvoice(false);
+                    setSuggestedInvoiceType(undefined);
+                }}
+                project={project}
+                suggestedType={suggestedInvoiceType}
+            />
+
+            <InvoiceDetailModal
+                open={!!showInvoiceDetail}
+                onClose={() => setShowInvoiceDetail(null)}
+                invoice={showInvoiceDetail}
+                onRecordPayment={(invoice) => {
+                    setShowInvoiceDetail(null);
+                    setShowRecordPayment(invoice);
+                }}
+            />
+
+            <RecordPaymentModal
+                open={!!showRecordPayment}
+                onClose={() => setShowRecordPayment(null)}
+                invoice={showRecordPayment}
             />
         </>
     );

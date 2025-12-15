@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useCallback } from 'react';
-import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog, PhotoCapture, QAChecklist, PurchaseOrder, Delivery, MaterialLot, AcclimationEntry, AcclimationReading, DeliveryPhoto, LotWarning, LaborEntry, Subcontractor, SubcontractorInvoice, ProjectBudget, ProfitLeakAlert, JobPhase, WorkerRole, WalkthroughSession, CompletionCertificate, TeamMember, SignatureData } from '@/lib/data';
+import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog, PhotoCapture, QAChecklist, PurchaseOrder, Delivery, MaterialLot, AcclimationEntry, AcclimationReading, DeliveryPhoto, LotWarning, LaborEntry, Subcontractor, SubcontractorInvoice, ProjectBudget, ProfitLeakAlert, JobPhase, WorkerRole, WalkthroughSession, CompletionCertificate, TeamMember, SignatureData, ClientInvoice, PaymentRecord, ProjectInvoiceSummary, ClientInvoiceType } from '@/lib/data';
 import { useLocalStorage } from '@/lib/storage';
 
 interface DataContextType {
@@ -92,6 +92,21 @@ interface DataContextType {
 
     // Team members
     getTeamMembers: () => TeamMember[];
+
+    // Client Invoicing & Payments operations
+    getClientInvoices: () => ClientInvoice[];
+    getClientInvoicesByProject: (projectId: number) => ClientInvoice[];
+    getClientInvoice: (invoiceId: string) => ClientInvoice | undefined;
+    createClientInvoice: (invoice: Omit<ClientInvoice, 'id'>) => string;
+    updateClientInvoice: (invoiceId: string, updates: Partial<ClientInvoice>) => void;
+    deleteClientInvoice: (invoiceId: string) => void;
+    sendClientInvoice: (invoiceId: string) => void;
+    recordPayment: (invoiceId: string, payment: Omit<PaymentRecord, 'id'>) => void;
+    voidClientInvoice: (invoiceId: string, reason?: string) => void;
+    getProjectInvoiceSummary: (projectId: number) => ProjectInvoiceSummary;
+    generateInvoiceNumber: () => string;
+    getOutstandingInvoices: () => ClientInvoice[];
+    getOverdueInvoices: () => ClientInvoice[];
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -645,6 +660,217 @@ export function DataProvider({ children }: { children: ReactNode }) {
         return data.teamMembers || [];
     }, [data.teamMembers]);
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // CLIENT INVOICING & PAYMENTS OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const getClientInvoices = useCallback(() => {
+        return data.clientInvoices || [];
+    }, [data.clientInvoices]);
+
+    const getClientInvoicesByProject = useCallback((projectId: number) => {
+        return (data.clientInvoices || []).filter(inv => inv.projectId === projectId);
+    }, [data.clientInvoices]);
+
+    const getClientInvoice = useCallback((invoiceId: string) => {
+        return (data.clientInvoices || []).find(inv => inv.id === invoiceId);
+    }, [data.clientInvoices]);
+
+    const generateInvoiceNumber = useCallback(() => {
+        const year = new Date().getFullYear();
+        const invoices = data.clientInvoices || [];
+        const yearInvoices = invoices.filter(inv => inv.invoiceNumber.includes(String(year)));
+        const nextNumber = yearInvoices.length + 1;
+        return `INV-${year}-${String(nextNumber).padStart(4, '0')}`;
+    }, [data.clientInvoices]);
+
+    const createClientInvoice = useCallback((invoice: Omit<ClientInvoice, 'id'>) => {
+        const newId = `CINV-${String((data.clientInvoices?.length || 0) + 1).padStart(3, '0')}`;
+        const newInvoice: ClientInvoice = {
+            ...invoice,
+            id: newId,
+            createdAt: new Date().toISOString()
+        };
+        saveData({ ...data, clientInvoices: [...(data.clientInvoices || []), newInvoice] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateClientInvoice = useCallback((invoiceId: string, updates: Partial<ClientInvoice>) => {
+        const newInvoices = (data.clientInvoices || []).map(inv =>
+            inv.id === invoiceId ? { ...inv, ...updates, lastModified: new Date().toISOString() } : inv
+        );
+        saveData({ ...data, clientInvoices: newInvoices });
+    }, [data, saveData]);
+
+    const deleteClientInvoice = useCallback((invoiceId: string) => {
+        const invoice = (data.clientInvoices || []).find(inv => inv.id === invoiceId);
+        if (invoice && invoice.status !== 'draft') {
+            console.error('Cannot delete non-draft invoice');
+            return;
+        }
+        const newInvoices = (data.clientInvoices || []).filter(inv => inv.id !== invoiceId);
+        saveData({ ...data, clientInvoices: newInvoices });
+    }, [data, saveData]);
+
+    const sendClientInvoice = useCallback((invoiceId: string) => {
+        const now = new Date().toISOString();
+        const newInvoices = (data.clientInvoices || []).map(inv =>
+            inv.id === invoiceId ? {
+                ...inv,
+                status: 'sent' as const,
+                sentDate: now.split('T')[0],
+                lastModified: now
+            } : inv
+        );
+        saveData({ ...data, clientInvoices: newInvoices });
+    }, [data, saveData]);
+
+    const recordPayment = useCallback((invoiceId: string, payment: Omit<PaymentRecord, 'id'>) => {
+        const now = new Date().toISOString();
+        const newPayment: PaymentRecord = {
+            ...payment,
+            id: `pmt-${Date.now()}`,
+            recordedAt: now
+        };
+
+        const newInvoices = (data.clientInvoices || []).map(inv => {
+            if (inv.id === invoiceId) {
+                const newPayments = [...(inv.payments || []), newPayment];
+                const totalPaid = newPayments.reduce((sum, p) => sum + p.amount, 0);
+                const balance = inv.total - totalPaid;
+
+                let status = inv.status;
+                let paidDate: string | undefined = inv.paidDate;
+
+                if (balance <= 0) {
+                    status = 'paid';
+                    paidDate = now.split('T')[0];
+                } else if (totalPaid > 0) {
+                    status = 'partial';
+                }
+
+                return {
+                    ...inv,
+                    payments: newPayments,
+                    amountPaid: totalPaid,
+                    balance,
+                    status,
+                    paidDate,
+                    lastModified: now
+                };
+            }
+            return inv;
+        });
+        saveData({ ...data, clientInvoices: newInvoices });
+    }, [data, saveData]);
+
+    const voidClientInvoice = useCallback((invoiceId: string, reason?: string) => {
+        const now = new Date().toISOString();
+        const newInvoices = (data.clientInvoices || []).map(inv =>
+            inv.id === invoiceId ? {
+                ...inv,
+                status: 'void' as const,
+                notes: reason ? `${inv.notes || ''}\nVOIDED: ${reason}` : inv.notes,
+                lastModified: now
+            } : inv
+        );
+        saveData({ ...data, clientInvoices: newInvoices });
+    }, [data, saveData]);
+
+    const getOutstandingInvoices = useCallback(() => {
+        return (data.clientInvoices || []).filter(inv =>
+            inv.status === 'sent' || inv.status === 'viewed' || inv.status === 'partial'
+        );
+    }, [data.clientInvoices]);
+
+    const getOverdueInvoices = useCallback(() => {
+        const today = new Date().toISOString().split('T')[0];
+        return (data.clientInvoices || []).filter(inv =>
+            (inv.status === 'sent' || inv.status === 'viewed' || inv.status === 'partial') &&
+            inv.dueDate < today
+        );
+    }, [data.clientInvoices]);
+
+    const getProjectInvoiceSummary = useCallback((projectId: number): ProjectInvoiceSummary => {
+        const project = data.projects.find(p => p.id === projectId);
+        const invoices = (data.clientInvoices || []).filter(inv => inv.projectId === projectId && inv.status !== 'void');
+        const changeOrders = project?.changeOrders || [];
+
+        const approvedCOValue = changeOrders
+            .filter(co => co.status === 'approved' || co.status === 'executed')
+            .reduce((sum, co) => sum + co.costImpact, 0);
+
+        const contractValue = project?.financials?.contract || project?.value || 0;
+        const totalContractValue = contractValue + approvedCOValue;
+
+        const totalInvoiced = invoices.reduce((sum, inv) => sum + inv.total, 0);
+        const totalPaid = invoices.reduce((sum, inv) => sum + inv.amountPaid, 0);
+        const totalOutstanding = invoices.reduce((sum, inv) => sum + inv.balance, 0);
+
+        const retainageHeld = invoices
+            .filter(inv => !inv.retainageReleased)
+            .reduce((sum, inv) => sum + inv.retainageAmount, 0);
+        const retainageReleased = invoices
+            .filter(inv => inv.retainageReleased)
+            .reduce((sum, inv) => sum + inv.retainageAmount, 0);
+
+        const today = new Date().toISOString().split('T')[0];
+        const overdueInvoices = invoices.filter(inv =>
+            inv.balance > 0 && inv.dueDate < today && inv.status !== 'paid'
+        );
+
+        const depositInvoice = invoices.find(inv => inv.type === 'deposit');
+        const progressInvoices = invoices.filter(inv => inv.type === 'progress');
+        const finalInvoice = invoices.find(inv => inv.type === 'final');
+
+        // Generate suggested next invoice
+        let suggestedNextInvoice: ProjectInvoiceSummary['suggestedNextInvoice'];
+        const percentInvoiced = totalContractValue > 0 ? (totalInvoiced / totalContractValue) * 100 : 0;
+
+        if (!depositInvoice) {
+            suggestedNextInvoice = {
+                type: 'deposit',
+                reason: 'No deposit invoice created yet',
+                estimatedAmount: Math.round(contractValue * 0.3)
+            };
+        } else if (project?.progress && project.progress >= 95 && !finalInvoice) {
+            suggestedNextInvoice = {
+                type: 'final',
+                reason: 'Project near completion - create final invoice with retainage release',
+                estimatedAmount: totalContractValue - totalInvoiced + retainageHeld
+            };
+        } else if (project?.progress && project.progress > percentInvoiced + 15) {
+            suggestedNextInvoice = {
+                type: 'progress',
+                reason: `Work completed (${project.progress}%) exceeds invoiced (${percentInvoiced.toFixed(0)}%)`,
+                estimatedAmount: Math.round((project.progress - percentInvoiced) / 100 * totalContractValue)
+            };
+        }
+
+        return {
+            projectId,
+            contractValue,
+            approvedChangeOrders: approvedCOValue,
+            totalContractValue,
+            totalInvoiced,
+            totalPaid,
+            totalOutstanding,
+            retainageHeld,
+            retainageReleased,
+            retainageBalance: retainageHeld - retainageReleased,
+            percentInvoiced,
+            percentCollected: totalContractValue > 0 ? (totalPaid / totalContractValue) * 100 : 0,
+            invoiceCount: invoices.length,
+            overdueCount: overdueInvoices.length,
+            overdueAmount: overdueInvoices.reduce((sum, inv) => sum + inv.balance, 0),
+            depositInvoice,
+            progressInvoices,
+            finalInvoice,
+            nextInvoiceNumber: generateInvoiceNumber(),
+            suggestedNextInvoice
+        };
+    }, [data.clientInvoices, data.projects, generateInvoiceNumber]);
+
     return (
         <DataContext.Provider value={{
             data,
@@ -705,6 +931,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
             addSignature,
             getCertificateByProject,
             getTeamMembers,
+            // Client Invoicing operations
+            getClientInvoices,
+            getClientInvoicesByProject,
+            getClientInvoice,
+            createClientInvoice,
+            updateClientInvoice,
+            deleteClientInvoice,
+            sendClientInvoice,
+            recordPayment,
+            voidClientInvoice,
+            getProjectInvoiceSummary,
+            generateInvoiceNumber,
+            getOutstandingInvoices,
+            getOverdueInvoices,
         }}>
             {children}
         </DataContext.Provider>
@@ -738,7 +978,8 @@ export function useData(): DataContextType {
             profitLeakAlerts: [],
             walkthroughSessions: [],
             completionCertificates: [],
-            teamMembers: []
+            teamMembers: [],
+            clientInvoices: []
         };
         return {
             data: emptyData,
@@ -799,6 +1040,26 @@ export function useData(): DataContextType {
             addSignature: () => { },
             getCertificateByProject: () => undefined,
             getTeamMembers: () => [],
+            // Client Invoicing operations
+            getClientInvoices: () => [],
+            getClientInvoicesByProject: () => [],
+            getClientInvoice: () => undefined,
+            createClientInvoice: () => '',
+            updateClientInvoice: () => { },
+            deleteClientInvoice: () => { },
+            sendClientInvoice: () => { },
+            recordPayment: () => { },
+            voidClientInvoice: () => { },
+            getProjectInvoiceSummary: () => ({
+                projectId: 0, contractValue: 0, approvedChangeOrders: 0, totalContractValue: 0,
+                totalInvoiced: 0, totalPaid: 0, totalOutstanding: 0, retainageHeld: 0,
+                retainageReleased: 0, retainageBalance: 0, percentInvoiced: 0, percentCollected: 0,
+                invoiceCount: 0, overdueCount: 0, overdueAmount: 0, progressInvoices: [],
+                nextInvoiceNumber: ''
+            }),
+            generateInvoiceNumber: () => '',
+            getOutstandingInvoices: () => [],
+            getOverdueInvoices: () => [],
         };
     }
     return context;

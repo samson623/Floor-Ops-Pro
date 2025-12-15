@@ -343,6 +343,8 @@ export interface Database {
     walkthroughSessions: WalkthroughSession[];
     completionCertificates: CompletionCertificate[];
     teamMembers: TeamMember[];
+    // Client Invoicing & Payments
+    clientInvoices: ClientInvoice[];
 }
 
 // Offline Mode Support
@@ -794,6 +796,118 @@ export interface MarginAnalysis {
     profitLeakAlerts: ProfitLeakAlert[];
     trend: 'improving' | 'stable' | 'declining';
     projectedFinalMargin: number;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// CLIENT INVOICING & PAYMENTS TYPES
+// ══════════════════════════════════════════════════════════════════
+
+export type ClientInvoiceType = 'deposit' | 'progress' | 'final' | 'change-order';
+export type ClientInvoiceStatus = 'draft' | 'sent' | 'viewed' | 'partial' | 'paid' | 'overdue' | 'void';
+export type PaymentMethod = 'check' | 'ach' | 'credit-card' | 'wire' | 'cash' | 'other';
+
+export interface InvoiceLineItem {
+    id: string;
+    description: string;
+    quantity: number;
+    rate: number;
+    total: number;
+    phase?: JobPhase;
+}
+
+export interface PaymentRecord {
+    id: string;
+    date: string;
+    amount: number;
+    method: PaymentMethod;
+    reference?: string; // Check number, transaction ID, etc.
+    notes?: string;
+    recordedBy?: string;
+    recordedAt?: string;
+}
+
+export interface ClientInvoice {
+    id: string;
+    invoiceNumber: string;
+    projectId: number;
+    projectName: string;
+    type: ClientInvoiceType;
+    status: ClientInvoiceStatus;
+
+    // Client info
+    clientName: string;
+    clientAddress: string;
+    clientEmail?: string;
+    clientPhone?: string;
+
+    // Invoice details
+    lineItems: InvoiceLineItem[];
+    subtotal: number;
+    taxRate: number;
+    tax: number;
+
+    // Retainage (for commercial projects)
+    retainagePercent: number;
+    retainageAmount: number;
+    retainageReleased: boolean; // True for final invoices that release retainage
+
+    // Totals
+    total: number;
+    amountPaid: number;
+    balance: number;
+
+    // Dates
+    invoiceDate: string;
+    dueDate: string;
+    sentDate?: string;
+    viewedDate?: string;
+    paidDate?: string;
+
+    // Payment tracking
+    payments: PaymentRecord[];
+
+    // Related documents
+    relatedCOIds?: string[]; // Change orders included in this invoice
+    notes?: string;
+    terms?: string; // Payment terms (e.g., "Net 30")
+
+    // Metadata
+    createdBy?: string;
+    createdAt?: string;
+    lastModified?: string;
+}
+
+export interface ProjectInvoiceSummary {
+    projectId: number;
+    contractValue: number;
+    approvedChangeOrders: number;
+    totalContractValue: number;
+
+    totalInvoiced: number;
+    totalPaid: number;
+    totalOutstanding: number;
+
+    retainageHeld: number;
+    retainageReleased: number;
+    retainageBalance: number;
+
+    percentInvoiced: number;
+    percentCollected: number;
+
+    invoiceCount: number;
+    overdueCount: number;
+    overdueAmount: number;
+
+    depositInvoice?: ClientInvoice;
+    progressInvoices: ClientInvoice[];
+    finalInvoice?: ClientInvoice;
+
+    nextInvoiceNumber: string;
+    suggestedNextInvoice?: {
+        type: ClientInvoiceType;
+        reason: string;
+        estimatedAmount: number;
+    };
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -1909,5 +2023,252 @@ export const initialData: Database = {
         { id: 8, name: 'David Kim', role: 'lead', phone: '555-0108', email: 'david@floorops.com' },
         { id: 9, name: 'Tony Nguyen', role: 'helper', phone: '555-0109' },
         { id: 10, name: 'Marcus Williams', role: 'apprentice', phone: '555-0110' }
+    ],
+    clientInvoices: [
+        // Downtown Lobby Renovation - Commercial project with retainage
+        {
+            id: 'CINV-001',
+            invoiceNumber: 'INV-2024-0001',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            type: 'deposit',
+            status: 'paid',
+            clientName: 'Downtown Properties LLC',
+            clientAddress: '123 Main Street',
+            clientEmail: 'ap@downtownproperties.com',
+            clientPhone: '555-0101',
+            lineItems: [
+                { id: 'li-001', description: 'Project Deposit - 30% of Contract Value', quantity: 1, rate: 13560, total: 13560 }
+            ],
+            subtotal: 13560,
+            taxRate: 0,
+            tax: 0,
+            retainagePercent: 0,
+            retainageAmount: 0,
+            retainageReleased: false,
+            total: 13560,
+            amountPaid: 13560,
+            balance: 0,
+            invoiceDate: '2024-11-12',
+            dueDate: '2024-11-19',
+            sentDate: '2024-11-12',
+            viewedDate: '2024-11-12',
+            paidDate: '2024-11-14',
+            payments: [
+                { id: 'pmt-001', date: '2024-11-14', amount: 13560, method: 'check', reference: 'CHK #4521', notes: 'Deposit received', recordedBy: 'Derek Morrison', recordedAt: '2024-11-14T10:30:00' }
+            ],
+            notes: 'Deposit invoice for Downtown Lobby Renovation project',
+            terms: 'Due upon receipt',
+            createdBy: 'Derek Morrison',
+            createdAt: '2024-11-12T09:00:00'
+        },
+        {
+            id: 'CINV-002',
+            invoiceNumber: 'INV-2024-0002',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            type: 'progress',
+            status: 'paid',
+            clientName: 'Downtown Properties LLC',
+            clientAddress: '123 Main Street',
+            clientEmail: 'ap@downtownproperties.com',
+            lineItems: [
+                { id: 'li-002', description: 'Demo Complete - Phase 1', quantity: 1, rate: 4520, total: 4520, phase: 'demo' },
+                { id: 'li-003', description: 'Subfloor Prep Complete - Phase 2', quantity: 1, rate: 6780, total: 6780, phase: 'prep' },
+                { id: 'li-004', description: 'Material procurement', quantity: 1, rate: 8500, total: 8500 }
+            ],
+            subtotal: 19800,
+            taxRate: 0,
+            tax: 0,
+            retainagePercent: 10,
+            retainageAmount: 1980,
+            retainageReleased: false,
+            total: 17820,
+            amountPaid: 17820,
+            balance: 0,
+            invoiceDate: '2024-12-01',
+            dueDate: '2024-12-15',
+            sentDate: '2024-12-01',
+            viewedDate: '2024-12-02',
+            paidDate: '2024-12-08',
+            payments: [
+                { id: 'pmt-002', date: '2024-12-08', amount: 17820, method: 'ach', reference: 'ACH-78542', notes: 'Progress payment 1', recordedBy: 'Derek Morrison', recordedAt: '2024-12-08T14:15:00' }
+            ],
+            notes: 'Progress billing #1 - Demo and prep phases complete',
+            terms: 'Net 15',
+            createdBy: 'Derek Morrison',
+            createdAt: '2024-12-01T08:00:00'
+        },
+        {
+            id: 'CINV-003',
+            invoiceNumber: 'INV-2024-0003',
+            projectId: 1,
+            projectName: 'Downtown Lobby Renovation',
+            type: 'progress',
+            status: 'sent',
+            clientName: 'Downtown Properties LLC',
+            clientAddress: '123 Main Street',
+            clientEmail: 'ap@downtownproperties.com',
+            lineItems: [
+                { id: 'li-005', description: 'Tile Installation - 65% Complete', quantity: 1, rate: 9040, total: 9040, phase: 'install' },
+                { id: 'li-006', description: 'Approved CO #1 - Waterproof membrane', quantity: 1, rate: 2450, total: 2450 }
+            ],
+            subtotal: 11490,
+            taxRate: 0,
+            tax: 0,
+            retainagePercent: 10,
+            retainageAmount: 1149,
+            retainageReleased: false,
+            total: 10341,
+            amountPaid: 0,
+            balance: 10341,
+            invoiceDate: '2024-12-13',
+            dueDate: '2024-12-28',
+            sentDate: '2024-12-13',
+            viewedDate: '2024-12-14',
+            payments: [],
+            relatedCOIds: ['CO-001'],
+            notes: 'Progress billing #2 - Tile installation ongoing, includes approved change order',
+            terms: 'Net 15',
+            createdBy: 'Derek Morrison',
+            createdAt: '2024-12-13T10:00:00'
+        },
+        // Riverside Estates - Residential (no retainage)
+        {
+            id: 'CINV-004',
+            invoiceNumber: 'INV-2024-0004',
+            projectId: 3,
+            projectName: 'Riverside Estates - Rivers Residence',
+            type: 'deposit',
+            status: 'paid',
+            clientName: 'Michael & Lisa Rivers',
+            clientAddress: '789 Riverside Drive',
+            clientEmail: 'mrivers@riverside.com',
+            clientPhone: '555-0300',
+            lineItems: [
+                { id: 'li-007', description: 'Project Deposit - 50% of Contract Value', quantity: 1, rate: 14250, total: 14250 }
+            ],
+            subtotal: 14250,
+            taxRate: 0,
+            tax: 0,
+            retainagePercent: 0,
+            retainageAmount: 0,
+            retainageReleased: false,
+            total: 14250,
+            amountPaid: 14250,
+            balance: 0,
+            invoiceDate: '2024-11-20',
+            dueDate: '2024-11-27',
+            sentDate: '2024-11-20',
+            paidDate: '2024-11-22',
+            payments: [
+                { id: 'pmt-003', date: '2024-11-22', amount: 14250, method: 'check', reference: 'Personal Check #1089', recordedBy: 'Derek Morrison', recordedAt: '2024-11-22T11:00:00' }
+            ],
+            notes: 'Residential deposit - 50% upfront',
+            terms: 'Due upon receipt',
+            createdBy: 'Derek Morrison',
+            createdAt: '2024-11-20T09:30:00'
+        },
+        {
+            id: 'CINV-005',
+            invoiceNumber: 'INV-2024-0005',
+            projectId: 3,
+            projectName: 'Riverside Estates - Rivers Residence',
+            type: 'final',
+            status: 'partial',
+            clientName: 'Michael & Lisa Rivers',
+            clientAddress: '789 Riverside Drive',
+            clientEmail: 'mrivers@riverside.com',
+            lineItems: [
+                { id: 'li-008', description: 'Final Payment - Remaining Balance', quantity: 1, rate: 14250, total: 14250 },
+                { id: 'li-009', description: 'Change Order - Extended hallway installation', quantity: 1, rate: 1200, total: 1200 }
+            ],
+            subtotal: 15450,
+            taxRate: 0,
+            tax: 0,
+            retainagePercent: 0,
+            retainageAmount: 0,
+            retainageReleased: false,
+            total: 15450,
+            amountPaid: 10000,
+            balance: 5450,
+            invoiceDate: '2024-12-14',
+            dueDate: '2024-12-21',
+            sentDate: '2024-12-14',
+            viewedDate: '2024-12-14',
+            payments: [
+                { id: 'pmt-004', date: '2024-12-15', amount: 10000, method: 'credit-card', reference: 'CC-ending-4521', notes: 'Partial payment received', recordedBy: 'Derek Morrison', recordedAt: '2024-12-15T09:00:00' }
+            ],
+            notes: 'Final invoice - awaiting remaining balance',
+            terms: 'Due upon completion',
+            createdBy: 'Derek Morrison',
+            createdAt: '2024-12-14T16:00:00'
+        },
+        // Oakridge Medical - Commercial with retainage
+        {
+            id: 'CINV-006',
+            invoiceNumber: 'INV-2024-0006',
+            projectId: 2,
+            projectName: 'Oakridge Medical Remodel',
+            type: 'deposit',
+            status: 'paid',
+            clientName: 'Oakridge Medical Partners',
+            clientAddress: '456 Healthcare Blvd',
+            clientEmail: 'billing@oakridgemedical.com',
+            lineItems: [
+                { id: 'li-010', description: 'Project Deposit - 25% of Contract Value', quantity: 1, rate: 9500, total: 9500 }
+            ],
+            subtotal: 9500,
+            taxRate: 0,
+            tax: 0,
+            retainagePercent: 0,
+            retainageAmount: 0,
+            retainageReleased: false,
+            total: 9500,
+            amountPaid: 9500,
+            balance: 0,
+            invoiceDate: '2024-11-28',
+            dueDate: '2024-12-05',
+            sentDate: '2024-11-28',
+            paidDate: '2024-12-02',
+            payments: [
+                { id: 'pmt-005', date: '2024-12-02', amount: 9500, method: 'ach', reference: 'ACH-MED-9821', recordedBy: 'Derek Morrison', recordedAt: '2024-12-02T10:30:00' }
+            ],
+            notes: 'Medical facility deposit',
+            terms: 'Due upon receipt',
+            createdBy: 'Derek Morrison',
+            createdAt: '2024-11-28T08:00:00'
+        },
+        {
+            id: 'CINV-007',
+            invoiceNumber: 'INV-2024-0007',
+            projectId: 2,
+            projectName: 'Oakridge Medical Remodel',
+            type: 'change-order',
+            status: 'draft',
+            clientName: 'Oakridge Medical Partners',
+            clientAddress: '456 Healthcare Blvd',
+            clientEmail: 'billing@oakridgemedical.com',
+            lineItems: [
+                { id: 'li-011', description: 'CO #1 - Asbestos tile removal and abatement', quantity: 1, rate: 5200, total: 5200 }
+            ],
+            subtotal: 5200,
+            taxRate: 0,
+            tax: 0,
+            retainagePercent: 10,
+            retainageAmount: 520,
+            retainageReleased: false,
+            total: 4680,
+            amountPaid: 0,
+            balance: 4680,
+            invoiceDate: '2024-12-15',
+            dueDate: '2024-12-30',
+            payments: [],
+            relatedCOIds: ['CO-004'],
+            notes: 'Draft invoice for approved asbestos abatement change order',
+            terms: 'Net 15',
+            createdBy: 'Derek Morrison',
+            createdAt: '2024-12-15T08:00:00'
+        }
     ]
 };
