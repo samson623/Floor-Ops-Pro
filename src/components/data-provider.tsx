@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useCallback } from 'react';
-import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog, PhotoCapture, QAChecklist, PurchaseOrder, Delivery, MaterialLot, AcclimationEntry, AcclimationReading, DeliveryPhoto, LotWarning, LaborEntry, Subcontractor, SubcontractorInvoice, ProjectBudget, ProfitLeakAlert, JobPhase, WorkerRole, WalkthroughSession, CompletionCertificate, TeamMember, SignatureData, ClientInvoice, PaymentRecord, ProjectInvoiceSummary, ClientInvoiceType } from '@/lib/data';
+import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog, PhotoCapture, QAChecklist, PurchaseOrder, Delivery, MaterialLot, AcclimationEntry, AcclimationReading, DeliveryPhoto, LotWarning, LaborEntry, Subcontractor, SubcontractorInvoice, ProjectBudget, ProfitLeakAlert, JobPhase, WorkerRole, WalkthroughSession, CompletionCertificate, TeamMember, SignatureData, ClientInvoice, PaymentRecord, ProjectInvoiceSummary, ClientInvoiceType, Message, Notification } from '@/lib/data';
 import { useLocalStorage } from '@/lib/storage';
 
 interface DataContextType {
@@ -34,6 +34,13 @@ interface DataContextType {
     getTotalPipeline: () => number;
     getOpenPunchCount: () => number;
     getUnreadMessageCount: () => number;
+
+    // Messaging & Communication
+    getProjectMessages: (projectId: number) => Message[];
+    sendMessage: (msg: Omit<Message, 'id' | 'timestamp' | 'unread' | 'time'>) => void;
+    markMessageRead: (messageId: number) => void;
+    getNotifications: () => Notification[];
+    markNotificationRead: (id: string) => void;
 
     // Purchase Order operations
     createPO: (po: Omit<PurchaseOrder, 'id'>) => string;
@@ -297,6 +304,73 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const getUnreadMessageCount = useCallback(() => {
         return data.messages.filter(m => m.unread).length;
     }, [data.messages]);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MESSAGING & COMMUNICATION OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const getProjectMessages = useCallback((projectId: number) => {
+        return data.messages.filter(m => m.projectId === projectId).sort((a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+    }, [data.messages]);
+
+    const sendMessage = useCallback((msg: Omit<Message, 'id' | 'timestamp' | 'unread' | 'time'>) => {
+        const id = Math.max(0, ...data.messages.map(m => m.id)) + 1;
+        const now = new Date();
+        const newMessage: Message = {
+            ...msg,
+            id,
+            unread: true,
+            timestamp: now.toISOString(),
+            time: now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }),
+            preview: msg.content.substring(0, 50) + (msg.content.length > 50 ? '...' : '')
+        };
+
+        const newMessages = [...data.messages, newMessage];
+
+        // Create notifications for mentions
+        let newNotifications = data.notifications || [];
+        if (msg.mentions && msg.mentions.length > 0) {
+            msg.mentions.forEach(username => {
+                // Mock user ID generation/lookup
+                const notification: Notification = {
+                    id: `notif-${Date.now()}-${Math.random()}`,
+                    userId: username, // In real app, map username to ID
+                    type: 'mention',
+                    title: `New mention in ${msg.projectId ? 'Project' : 'Chat'}`,
+                    message: `${msg.from} mentioned you: "${msg.content.substring(0, 30)}..."`,
+                    link: `/projects/${msg.projectId}?tab=communication`,
+                    read: false,
+                    createdAt: now.toISOString(),
+                    projectId: msg.projectId
+                };
+                newNotifications = [...newNotifications, notification];
+            });
+        }
+
+        saveData({ ...data, messages: newMessages, notifications: newNotifications });
+    }, [data, saveData]);
+
+    const markMessageRead = useCallback((messageId: number) => {
+        const newMessages = data.messages.map(m =>
+            m.id === messageId ? { ...m, unread: false } : m
+        );
+        saveData({ ...data, messages: newMessages });
+    }, [data, saveData]);
+
+    const getNotifications = useCallback(() => {
+        return (data.notifications || []).sort((a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+    }, [data.notifications]);
+
+    const markNotificationRead = useCallback((id: string) => {
+        const newNotifications = (data.notifications || []).map(n =>
+            n.id === id ? { ...n, read: true } : n
+        );
+        saveData({ ...data, notifications: newNotifications });
+    }, [data, saveData]);
 
     // ═══════════════════════════════════════════════════════════════════════
     // PURCHASE ORDER OPERATIONS
@@ -941,13 +1015,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
             sendClientInvoice,
             recordPayment,
             voidClientInvoice,
+            // Client Invoicing
             getProjectInvoiceSummary,
             generateInvoiceNumber,
             getOutstandingInvoices,
             getOverdueInvoices,
+
+            // Messaging
+            getProjectMessages,
+            sendMessage,
+            markMessageRead,
+            getNotifications,
+            markNotificationRead
         }}>
             {children}
-        </DataContext.Provider>
+        </DataContext.Provider >
     );
 }
 
@@ -961,6 +1043,7 @@ export function useData(): DataContextType {
             inventory: [],
             globalSchedule: [],
             messages: [],
+            notifications: [],
             estimates: [],
             offlineQueue: [],
             crews: [],
@@ -998,6 +1081,14 @@ export function useData(): DataContextType {
             getTotalPipeline: () => 0,
             getOpenPunchCount: () => 0,
             getUnreadMessageCount: () => 0,
+
+            // Messaging
+            getProjectMessages: () => [],
+            sendMessage: () => { },
+            markMessageRead: () => { },
+            getNotifications: () => [],
+            markNotificationRead: () => { },
+
             // Materials operations
             createPO: () => '',
             updatePO: () => { },

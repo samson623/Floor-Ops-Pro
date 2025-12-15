@@ -29,6 +29,15 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
                     teamMembers: parsed.teamMembers?.length > 0
                         ? parsed.teamMembers
                         : initialData.teamMembers,
+                    // Migrate messages to include new fields
+                    messages: (parsed.messages || initialData.messages).map((m: any) => ({
+                        ...m,
+                        content: m.content || m.preview || '',
+                        timestamp: m.timestamp || new Date().toISOString(),
+                        type: m.type || 'text',
+                        senderRole: m.senderRole || 'system'
+                    })),
+                    notifications: parsed.notifications || initialData.notifications,
                 };
                 setData(merged);
             }

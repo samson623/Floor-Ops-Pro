@@ -31,6 +31,8 @@ import {
     InvoiceStatusBadge,
     ProjectInvoiceSummaryCard
 } from '@/components/invoice-modals';
+import { MessageFeed } from '@/components/message-feed';
+import { ClientUpdateModal } from '@/components/client-update-modal';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,10 +56,11 @@ import {
     ClipboardCheck,
     FileSignature,
     Star,
-    FileText
+    FileText,
+    MessageSquare
 } from 'lucide-react';
 
-type TabType = 'overview' | 'timeline' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials' | 'invoices' | 'walkthrough';
+type TabType = 'overview' | 'timeline' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials' | 'invoices' | 'walkthrough' | 'communication';
 
 const statusConfig = {
     active: { label: 'Active', className: 'bg-success/10 text-success border-success/20' },
@@ -117,6 +120,8 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [showCODetail, setShowCODetail] = useState<ChangeOrder | null>(null);
     const [showNewPunch, setShowNewPunch] = useState(false);
     const [showNewLog, setShowNewLog] = useState(false);
+    const [showCertificate, setShowCertificate] = useState(false);
+    const [showClientUpdate, setShowClientUpdate] = useState(false);
     const [showCapture, setShowCapture] = useState(false);
     const [executionSuccess, setExecutionSuccess] = useState<{
         coId: string;
@@ -464,6 +469,12 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 </Badge>
                             )}
                         </TabsTrigger>
+                        <TabsTrigger value="communication" className="relative">
+                            <div className="flex items-center gap-2">
+                                <MessageSquare className="w-4 h-4" />
+                                <span>Communication</span>
+                            </div>
+                        </TabsTrigger>
                     </TabsList>
 
                     {/* Overview Tab */}
@@ -587,6 +598,67 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 </CardContent>
                             </Card>
                         )}
+                    </TabsContent>
+
+
+
+                    {/* Communication Tab */}
+                    <TabsContent value="communication" className="space-y-6 mt-0">
+                        <div className="grid lg:grid-cols-3 gap-6">
+                            <div className="lg:col-span-2 space-y-6">
+                                {/* Main Message Feed */}
+                                <MessageFeed projectId={project.id} />
+                            </div>
+
+                            <div className="space-y-6">
+                                {/* Communication Actions */}
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-base">Actions</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        <Button
+                                            className="w-full justify-start gap-2"
+                                            onClick={() => setShowClientUpdate(true)}
+                                            variant="secondary"
+                                        >
+                                            <FileText className="w-4 h-4" />
+                                            Generate Client Update
+                                        </Button>
+                                    </CardContent>
+                                </Card>
+
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-base">Team</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs">PM</div>
+                                                <div>
+                                                    <div className="text-sm font-medium">Samson (You)</div>
+                                                    <div className="text-xs text-muted-foreground">Project Manager</div>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-muted-foreground font-bold text-xs">CL</div>
+                                                <div>
+                                                    <div className="text-sm font-medium">{project.client}</div>
+                                                    <div className="text-xs text-muted-foreground">Client</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+
+                        <ClientUpdateModal
+                            isOpen={showClientUpdate}
+                            onClose={() => setShowClientUpdate(false)}
+                            projectId={project.id}
+                        />
                     </TabsContent>
 
                     {/* Timeline Tab */}
@@ -1633,22 +1705,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         </Card>
                     </TabsContent>
                 </Tabs>
-            </div>
+            </div >
 
             {/* Modals */}
-            {showCODetail && (
-                <CODetailModal
-                    open={!!showCODetail}
-                    onClose={() => setShowCODetail(null)}
-                    project={project}
-                    changeOrder={showCODetail}
-                    onSubmit={handleSubmitCO}
-                    onApprove={handleApproveCO}
-                    onReject={handleRejectCO}
-                    onExecute={handleExecuteCO}
-                    onDelete={handleDeleteCO}
-                />
-            )}
+            {
+                showCODetail && (
+                    <CODetailModal
+                        open={!!showCODetail}
+                        onClose={() => setShowCODetail(null)}
+                        project={project}
+                        changeOrder={showCODetail}
+                        onSubmit={handleSubmitCO}
+                        onApprove={handleApproveCO}
+                        onReject={handleRejectCO}
+                        onExecute={handleExecuteCO}
+                        onDelete={handleDeleteCO}
+                    />
+                )
+            }
 
             <NewCOModal
                 open={showNewCO}
@@ -1677,23 +1751,27 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 onProcess={handleProcessCapture}
             />
 
-            {executionSuccess && (
-                <ExecutionSuccessModal
-                    open={!!executionSuccess}
-                    onClose={() => setExecutionSuccess(null)}
-                    {...executionSuccess}
-                />
-            )}
+            {
+                executionSuccess && (
+                    <ExecutionSuccessModal
+                        open={!!executionSuccess}
+                        onClose={() => setExecutionSuccess(null)}
+                        {...executionSuccess}
+                    />
+                )
+            }
 
-            {captureSuccess && (
-                <CaptureSuccessModal
-                    open={!!captureSuccess}
-                    onClose={() => setCaptureSuccess(null)}
-                    projectName={project.name}
-                    log={captureSuccess.log}
-                    extractedPunch={captureSuccess.extractedPunch}
-                />
-            )}
+            {
+                captureSuccess && (
+                    <CaptureSuccessModal
+                        open={!!captureSuccess}
+                        onClose={() => setCaptureSuccess(null)}
+                        projectName={project.name}
+                        log={captureSuccess.log}
+                        extractedPunch={captureSuccess.extractedPunch}
+                    />
+                )
+            }
 
             <PhotoCaptureModal
                 open={showPhotoCapture}
@@ -1707,19 +1785,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 }}
             />
 
-            {showQAChecklist && (
-                <QAChecklistModal
-                    open={!!showQAChecklist}
-                    onClose={() => setShowQAChecklist(null)}
-                    projectId={project.id}
-                    type={showQAChecklist}
-                    onSave={(checklist) => {
-                        const typeName = checklist.type.charAt(0).toUpperCase() + checklist.type.slice(1);
-                        const completed = checklist.completedAt ? ' (Complete)' : '';
-                        toast.success(`${typeName} Checklist${completed} saved!`);
-                    }}
-                />
-            )}
+            {
+                showQAChecklist && (
+                    <QAChecklistModal
+                        open={!!showQAChecklist}
+                        onClose={() => setShowQAChecklist(null)}
+                        projectId={project.id}
+                        type={showQAChecklist}
+                        onSave={(checklist) => {
+                            const typeName = checklist.type.charAt(0).toUpperCase() + checklist.type.slice(1);
+                            const completed = checklist.completedAt ? ' (Complete)' : '';
+                            toast.success(`${typeName} Checklist${completed} saved!`);
+                        }}
+                    />
+                )
+            }
 
             {/* Walkthrough Modals */}
             <EnhancedPunchModal
@@ -1746,22 +1826,24 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 }}
             />
 
-            {showClientWalkthrough && (
-                <ClientWalkthroughMode
-                    open={!!showClientWalkthrough}
-                    onClose={() => setShowClientWalkthrough(null)}
-                    project={project}
-                    session={showClientWalkthrough}
-                    onAddPunchItem={handleCreatePunch}
-                    onComplete={(rating, feedback) => {
-                        completeWalkthrough(showClientWalkthrough.id, rating, feedback);
-                    }}
-                    onUpdateSession={(updates) => {
-                        updateWalkthroughSession(showClientWalkthrough.id, updates);
-                    }}
-                    teamMembers={getTeamMembers()}
-                />
-            )}
+            {
+                showClientWalkthrough && (
+                    <ClientWalkthroughMode
+                        open={!!showClientWalkthrough}
+                        onClose={() => setShowClientWalkthrough(null)}
+                        project={project}
+                        session={showClientWalkthrough}
+                        onAddPunchItem={handleCreatePunch}
+                        onComplete={(rating, feedback) => {
+                            completeWalkthrough(showClientWalkthrough.id, rating, feedback);
+                        }}
+                        onUpdateSession={(updates) => {
+                            updateWalkthroughSession(showClientWalkthrough.id, updates);
+                        }}
+                        teamMembers={getTeamMembers()}
+                    />
+                )
+            }
 
             <CompletionCertificateModal
                 open={showCompletionCert}

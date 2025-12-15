@@ -165,13 +165,47 @@ export interface InventoryItem {
     reserved: number;
 }
 
+export interface MessageReaction {
+    emoji: string;
+    by: string;
+}
+
+export interface MessageAttachment {
+    id: string;
+    type: 'image' | 'file';
+    url: string;
+    name: string;
+    size?: number;
+}
+
 export interface Message {
     id: number;
-    from: string;
-    preview: string;
-    time: string;
     projectId: number;
+    from: string;
+    senderRole?: 'pm' | 'client' | 'crew' | 'office' | 'system';
+    content: string; // The full content
+    preview: string; // Deprecated but kept for backward compatibility (slice of content)
+    time: string;
+    timestamp: string; // ISO string for sorting
     unread: boolean;
+    threadId?: number; // Parent message ID if this is a reply
+    replyCount?: number;
+    reactions?: MessageReaction[];
+    attachments?: MessageAttachment[];
+    mentions?: string[]; // Usernames
+    type: 'text' | 'system' | 'update' | 'alert';
+}
+
+export interface Notification {
+    id: string;
+    userId: string;
+    type: 'mention' | 'reply' | 'update' | 'alert';
+    title: string;
+    message: string;
+    link?: string;
+    read: boolean;
+    createdAt: string;
+    projectId?: number;
 }
 
 export interface EstimateRoom {
@@ -320,6 +354,7 @@ export interface Database {
     inventory: InventoryItem[];
     globalSchedule: ScheduleItem[];
     messages: Message[];
+    notifications: Notification[];
     estimates: Estimate[];
     // Offline queue for syncing
     offlineQueue: OfflineQueueItem[];
@@ -1116,10 +1151,44 @@ export const initialData: Database = {
         { id: 4, time: '4:00 PM', title: 'Lakeside - Material Delivery', subtitle: '48 boxes LVP', type: 'muted', projectId: 3 }
     ],
     messages: [
-        { id: 1, from: 'Sarah (PM)', preview: 'Client loved the progress!', time: '2h ago', projectId: 1, unread: true },
-        { id: 2, from: 'Mike (Lead)', preview: 'Need more transition strips', time: '5h ago', projectId: 1, unread: true },
-        { id: 3, from: 'Shaw Flooring', preview: 'Order shipped - tracking attached', time: '1d ago', projectId: 3, unread: false }
+        {
+            id: 1,
+            from: 'Sarah (PM)',
+            content: 'Client loved the progress!',
+            preview: 'Client loved the progress!',
+            time: '2h ago',
+            timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+            projectId: 1,
+            unread: true,
+            type: 'text',
+            senderRole: 'pm'
+        },
+        {
+            id: 2,
+            from: 'Mike (Lead)',
+            content: 'Need more transition strips',
+            preview: 'Need more transition strips',
+            time: '5h ago',
+            timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
+            projectId: 1,
+            unread: true,
+            type: 'text',
+            senderRole: 'crew'
+        },
+        {
+            id: 3,
+            from: 'Shaw Flooring',
+            content: 'Order shipped - tracking attached',
+            preview: 'Order shipped - tracking attached',
+            time: '1d ago',
+            timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+            projectId: 3,
+            unread: false,
+            type: 'text',
+            senderRole: 'system'
+        }
     ],
+    notifications: [],
     estimates: [
         {
             id: 1,
