@@ -229,6 +229,11 @@ export interface Database {
     estimates: Estimate[];
     // Offline queue for syncing
     offlineQueue: OfflineQueueItem[];
+    // Scheduling system
+    crews: Crew[];
+    crewAvailability: CrewAvailability[];
+    scheduleEntries: ScheduleEntry[];
+    blockers: ProjectBlocker[];
 }
 
 // Offline Mode Support
@@ -240,6 +245,119 @@ export interface OfflineQueueItem {
     payload: unknown;
     timestamp: string;
     synced: boolean;
+}
+
+// ══════════════════════════════════════════════════════════════════
+// SCHEDULING & CREW MANAGEMENT TYPES
+// ══════════════════════════════════════════════════════════════════
+
+// Crew Management
+export interface CrewMember {
+    id: number;
+    name: string;
+    role: 'lead' | 'installer' | 'helper';
+    certifications: string[];
+    hourlyRate: number;
+    phone?: string;
+}
+
+export interface Crew {
+    id: string;
+    name: string;
+    color: string; // For calendar display
+    members: CrewMember[];
+    homeBase: string;
+    maxDailyCapacity: number; // hours
+}
+
+export interface CrewAvailability {
+    crewId: string;
+    date: string;
+    available: boolean;
+    hoursBooked: number;
+    notes?: string;
+}
+
+// Job Phases with Dependencies
+export type JobPhase = 'demo' | 'prep' | 'acclimation' | 'install' | 'cure' | 'punch' | 'closeout';
+
+export interface PhaseConfig {
+    phase: JobPhase;
+    label: string;
+    estimatedHours: number;
+    requiredCrew: number;
+    dependencies: JobPhase[];
+    materialRequired: boolean;
+    weatherSensitive: boolean;
+    cureTime?: number; // hours
+    acclimationTime?: number; // hours
+    icon: string;
+}
+
+export const PHASE_CONFIGS: Record<JobPhase, Omit<PhaseConfig, 'phase'>> = {
+    demo: { label: 'Demo', estimatedHours: 8, requiredCrew: 2, dependencies: [], materialRequired: false, weatherSensitive: false, icon: '🔨' },
+    prep: { label: 'Subfloor Prep', estimatedHours: 12, requiredCrew: 2, dependencies: ['demo'], materialRequired: false, weatherSensitive: false, icon: '🧹' },
+    acclimation: { label: 'Acclimation', estimatedHours: 0, requiredCrew: 0, dependencies: ['prep'], materialRequired: true, weatherSensitive: true, acclimationTime: 48, icon: '⏳' },
+    install: { label: 'Installation', estimatedHours: 24, requiredCrew: 3, dependencies: ['acclimation'], materialRequired: true, weatherSensitive: true, icon: '🔧' },
+    cure: { label: 'Cure Time', estimatedHours: 0, requiredCrew: 0, dependencies: ['install'], materialRequired: false, weatherSensitive: true, cureTime: 24, icon: '⏰' },
+    punch: { label: 'Punch List', estimatedHours: 4, requiredCrew: 1, dependencies: ['cure'], materialRequired: false, weatherSensitive: false, icon: '✓' },
+    closeout: { label: 'Closeout', estimatedHours: 2, requiredCrew: 1, dependencies: ['punch'], materialRequired: false, weatherSensitive: false, icon: '📋' }
+};
+
+export interface ProjectPhase {
+    phase: JobPhase;
+    status: 'not-started' | 'in-progress' | 'blocked' | 'completed';
+    scheduledStart?: string;
+    scheduledEnd?: string;
+    actualStart?: string;
+    actualEnd?: string;
+    assignedCrewId?: string;
+    estimatedHours: number;
+    actualHours?: number;
+    blockerIds: string[];
+}
+
+export interface ProjectBlocker {
+    id: string;
+    type: 'dependency' | 'material' | 'weather' | 'crew' | 'inspection' | 'other';
+    description: string;
+    blockingPhases: JobPhase[];
+    createdAt: string;
+    resolvedAt?: string;
+    resolvedBy?: string;
+    priority: 'high' | 'medium' | 'low';
+}
+
+// Schedule Entries
+export interface ScheduleEntry {
+    id: string;
+    projectId: number;
+    phase: JobPhase;
+    crewId: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    travelMinutes: number;
+    status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
+    notes?: string;
+}
+
+// Daily Planning
+export interface DailyPlanItem {
+    projectId: number;
+    projectName: string;
+    projectAddress: string;
+    phase: JobPhase;
+    phaseLabel: string;
+    priority: 'high' | 'medium' | 'low';
+    readyToStart: boolean;
+    blockers: ProjectBlocker[];
+    estimatedHours: number;
+    requiredCrew: number;
+    materialReady: boolean;
+    weatherOk: boolean;
+    recommendedCrewId?: string;
+    travelMinutes?: number;
 }
 
 // ══════════════════════════════════════════════════════════════════
@@ -563,5 +681,119 @@ export const initialData: Database = {
             notes: 'Historic preservation project. Extra care required. Client approved premium materials.'
         }
     ],
-    offlineQueue: []
+    offlineQueue: [],
+    crews: [
+        {
+            id: 'crew-a',
+            name: 'Team Alpha',
+            color: '#6366f1',
+            homeBase: 'Downtown Office',
+            maxDailyCapacity: 8,
+            members: [
+                { id: 1, name: 'Derek Morrison', role: 'lead', certifications: ['LVP', 'Tile', 'Hardwood', 'Epoxy'], hourlyRate: 55, phone: '(555) 111-2222' },
+                { id: 2, name: 'Tony Martinez', role: 'installer', certifications: ['LVP', 'Tile', 'Carpet'], hourlyRate: 45, phone: '(555) 111-3333' },
+                { id: 3, name: 'James Wilson', role: 'helper', certifications: ['General'], hourlyRate: 28, phone: '(555) 111-4444' }
+            ]
+        },
+        {
+            id: 'crew-b',
+            name: 'Team Bravo',
+            color: '#10b981',
+            homeBase: 'North Warehouse',
+            maxDailyCapacity: 8,
+            members: [
+                { id: 4, name: 'Sarah Chen', role: 'lead', certifications: ['LVP', 'Tile', 'Carpet', 'Vinyl Sheet'], hourlyRate: 52, phone: '(555) 222-1111' },
+                { id: 5, name: 'Marcus Johnson', role: 'installer', certifications: ['LVP', 'Carpet'], hourlyRate: 42, phone: '(555) 222-2222' },
+                { id: 6, name: 'Kyle Patterson', role: 'helper', certifications: ['General'], hourlyRate: 26, phone: '(555) 222-3333' }
+            ]
+        }
+    ],
+    crewAvailability: [
+        { crewId: 'crew-a', date: '2024-12-16', available: true, hoursBooked: 8 },
+        { crewId: 'crew-a', date: '2024-12-17', available: true, hoursBooked: 6 },
+        { crewId: 'crew-a', date: '2024-12-18', available: true, hoursBooked: 0 },
+        { crewId: 'crew-a', date: '2024-12-19', available: true, hoursBooked: 4 },
+        { crewId: 'crew-a', date: '2024-12-20', available: false, hoursBooked: 0, notes: 'Holiday - Off' },
+        { crewId: 'crew-b', date: '2024-12-16', available: true, hoursBooked: 4 },
+        { crewId: 'crew-b', date: '2024-12-17', available: true, hoursBooked: 8 },
+        { crewId: 'crew-b', date: '2024-12-18', available: true, hoursBooked: 0 },
+        { crewId: 'crew-b', date: '2024-12-19', available: true, hoursBooked: 6 },
+        { crewId: 'crew-b', date: '2024-12-20', available: false, hoursBooked: 0, notes: 'Holiday - Off' }
+    ],
+    scheduleEntries: [
+        {
+            id: 'sched-001',
+            projectId: 1,
+            phase: 'install',
+            crewId: 'crew-a',
+            date: '2024-12-16',
+            startTime: '07:00',
+            endTime: '15:30',
+            travelMinutes: 25,
+            status: 'scheduled',
+            notes: 'Continue tile installation in main lobby'
+        },
+        {
+            id: 'sched-002',
+            projectId: 2,
+            phase: 'prep',
+            crewId: 'crew-b',
+            date: '2024-12-16',
+            startTime: '08:00',
+            endTime: '12:00',
+            travelMinutes: 35,
+            status: 'scheduled',
+            notes: 'Subfloor prep in exam rooms'
+        },
+        {
+            id: 'sched-003',
+            projectId: 1,
+            phase: 'install',
+            crewId: 'crew-a',
+            date: '2024-12-17',
+            startTime: '07:00',
+            endTime: '13:00',
+            travelMinutes: 25,
+            status: 'scheduled',
+            notes: 'Complete carpet installation'
+        },
+        {
+            id: 'sched-004',
+            projectId: 2,
+            phase: 'install',
+            crewId: 'crew-b',
+            date: '2024-12-17',
+            startTime: '07:00',
+            endTime: '15:30',
+            travelMinutes: 35,
+            status: 'scheduled',
+            notes: 'LVP installation begins'
+        }
+    ],
+    blockers: [
+        {
+            id: 'blocker-001',
+            type: 'material',
+            description: 'Waiting on transition strips delivery - ETA Dec 15',
+            blockingPhases: ['install'],
+            createdAt: '2024-12-10',
+            priority: 'medium'
+        },
+        {
+            id: 'blocker-002',
+            type: 'inspection',
+            description: 'Building inspector required for asbestos clearance',
+            blockingPhases: ['install'],
+            createdAt: '2024-12-12',
+            priority: 'high'
+        },
+        {
+            id: 'blocker-003',
+            type: 'weather',
+            description: 'High humidity forecast - may affect LVP acclimation',
+            blockingPhases: ['acclimation', 'install'],
+            createdAt: '2024-12-14',
+            priority: 'low'
+        }
+    ]
 };

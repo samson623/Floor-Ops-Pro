@@ -1,166 +1,230 @@
 'use client';
 
-import { TopBar } from '@/components/top-bar';
-import { ScheduleItemCard } from '@/components/schedule-item';
-import { useData } from '@/components/data-provider';
+import { useState } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
-import { Plus, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils';
+import { useData } from '@/components/data-provider';
+import { CalendarView } from '@/components/calendar-view';
+import { DailyPlanning } from '@/components/daily-planning';
+import { CrewManagement } from '@/components/crew-management';
+import { PhaseTimeline } from '@/components/phase-timeline';
+import {
+    Calendar,
+    Target,
+    Users,
+    LayoutGrid,
+    Clock,
+    TrendingUp,
+    AlertTriangle,
+    CheckCircle2,
+    Zap
+} from 'lucide-react';
 
 export default function SchedulePage() {
-    const router = useRouter();
     const { data } = useData();
+    const [activeTab, setActiveTab] = useState('daily');
 
-    // Get current date info
-    const today = new Date();
-    const dateString = today.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-
-    // Group schedule by project
-    const scheduleByProject = data.globalSchedule.reduce((acc, item) => {
-        const project = data.projects.find(p => p.id === item.projectId);
-        const projectName = project?.name || 'Unassigned';
-        if (!acc[projectName]) acc[projectName] = [];
-        acc[projectName].push(item);
-        return acc;
-    }, {} as Record<string, typeof data.globalSchedule>);
+    // Quick stats
+    const activeProjects = data.projects.filter(p => p.status === 'active' || p.status === 'scheduled');
+    const todayEntries = data.scheduleEntries.filter(
+        e => e.date === new Date().toISOString().split('T')[0] && e.status !== 'cancelled'
+    );
+    const activeBlockers = data.blockers.filter(b => !b.resolvedAt);
 
     return (
-        <>
-            <TopBar
-                title="Master Schedule"
-                breadcrumb="All Crews"
-                showNewProject={false}
-            >
-                <Button onClick={() => toast.info('Add schedule entry coming soon')} size="sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Entry
-                </Button>
-            </TopBar>
-
-            <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
-                {/* Date Navigation */}
-                <Card>
-                    <CardContent className="pt-6">
-                        <div className="flex items-center justify-between">
-                            <Button variant="ghost" size="icon" onClick={() => toast.info('Previous day')}>
-                                <ChevronLeft className="w-5 h-5" />
-                            </Button>
-                            <div className="text-center">
-                                <div className="flex items-center justify-center gap-2 text-lg font-semibold">
-                                    <Calendar className="w-5 h-5 text-primary" />
-                                    {dateString}
+        <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+            {/* Hero Header */}
+            <div className="border-b bg-gradient-to-r from-primary/10 via-transparent to-chart-2/10">
+                <div className="max-w-[1800px] mx-auto px-6 py-8">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className="p-3 rounded-2xl bg-gradient-to-br from-primary via-primary to-chart-1 text-primary-foreground shadow-lg shadow-primary/30">
+                                    <Calendar className="w-8 h-8" />
                                 </div>
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    {data.globalSchedule.length} scheduled items • 2 crews active
-                                </p>
+                                <div>
+                                    <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                                        Master Schedule
+                                    </h1>
+                                    <p className="text-muted-foreground">
+                                        Crew scheduling, job dependencies, and intelligent daily planning
+                                    </p>
+                                </div>
                             </div>
-                            <Button variant="ghost" size="icon" onClick={() => toast.info('Next day')}>
-                                <ChevronRight className="w-5 h-5" />
-                            </Button>
                         </div>
-                    </CardContent>
-                </Card>
 
-                {/* Timeline View */}
-                <div className="grid lg:grid-cols-2 gap-6">
-                    {/* All Schedule Items */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Today&apos;s Timeline</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-3">
-                            {data.globalSchedule.length > 0 ? (
-                                data.globalSchedule.map(item => (
-                                    <ScheduleItemCard
-                                        key={item.id}
-                                        item={item}
-                                        onClick={() => {
-                                            if (item.projectId) router.push(`/projects/${item.projectId}?tab=schedule`);
-                                        }}
-                                    />
-                                ))
-                            ) : (
-                                <p className="text-muted-foreground text-center py-8">No scheduled items today.</p>
-                            )}
-                        </CardContent>
-                    </Card>
+                        {/* Quick Stats */}
+                        <div className="flex items-center gap-4 flex-wrap">
+                            <QuickStat
+                                icon={<Clock className="w-5 h-5 text-primary" />}
+                                value={todayEntries.length}
+                                label="Today's Jobs"
+                                trend="+2 from yesterday"
+                            />
+                            <QuickStat
+                                icon={<Users className="w-5 h-5 text-chart-2" />}
+                                value={data.crews.length}
+                                label="Active Crews"
+                            />
+                            <QuickStat
+                                icon={<AlertTriangle className="w-5 h-5 text-warning" />}
+                                value={activeBlockers.length}
+                                label="Blockers"
+                                variant="warning"
+                            />
+                            <QuickStat
+                                icon={<CheckCircle2 className="w-5 h-5 text-success" />}
+                                value={activeProjects.length}
+                                label="Active Projects"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                    {/* By Project */}
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">By Project</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {Object.entries(scheduleByProject).map(([projectName, items]) => (
-                                <div key={projectName}>
-                                    <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">
-                                        {projectName}
-                                    </h4>
-                                    <div className="space-y-2">
-                                        {items.map(item => (
-                                            <ScheduleItemCard
-                                                key={item.id}
-                                                item={item}
-                                                onClick={() => {
-                                                    if (item.projectId) router.push(`/projects/${item.projectId}?tab=schedule`);
-                                                }}
-                                            />
-                                        ))}
+            {/* Main Content */}
+            <div className="max-w-[1800px] mx-auto px-6 py-6">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+                    <TabsList className="bg-muted/50 p-1.5 h-auto flex-wrap gap-1">
+                        <TabsTrigger
+                            value="daily"
+                            className="gap-2 px-4 py-2.5 data-[state=active]:shadow-lg data-[state=active]:bg-background"
+                        >
+                            <Target className="w-4 h-4" />
+                            <span className="hidden sm:inline">Daily Plan</span>
+                            <Badge variant="secondary" className="ml-1 text-[10px] h-5">
+                                Smart
+                            </Badge>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="calendar"
+                            className="gap-2 px-4 py-2.5 data-[state=active]:shadow-lg data-[state=active]:bg-background"
+                        >
+                            <Calendar className="w-4 h-4" />
+                            <span className="hidden sm:inline">Calendar</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="crews"
+                            className="gap-2 px-4 py-2.5 data-[state=active]:shadow-lg data-[state=active]:bg-background"
+                        >
+                            <Users className="w-4 h-4" />
+                            <span className="hidden sm:inline">Crews</span>
+                        </TabsTrigger>
+                        <TabsTrigger
+                            value="gantt"
+                            className="gap-2 px-4 py-2.5 data-[state=active]:shadow-lg data-[state=active]:bg-background"
+                        >
+                            <LayoutGrid className="w-4 h-4" />
+                            <span className="hidden sm:inline">Project Timelines</span>
+                        </TabsTrigger>
+                    </TabsList>
+
+                    {/* Daily Planning Tab */}
+                    <TabsContent value="daily" className="m-0">
+                        <DailyPlanning />
+                    </TabsContent>
+
+                    {/* Calendar Tab */}
+                    <TabsContent value="calendar" className="m-0">
+                        <CalendarView />
+                    </TabsContent>
+
+                    {/* Crews Tab */}
+                    <TabsContent value="crews" className="m-0">
+                        <CrewManagement />
+                    </TabsContent>
+
+                    {/* Gantt / Timeline Tab */}
+                    <TabsContent value="gantt" className="m-0">
+                        <div className="space-y-6">
+                            {/* Header */}
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 rounded-2xl bg-gradient-to-br from-chart-3 to-chart-3/80 text-white shadow-lg shadow-chart-3/30">
+                                        <LayoutGrid className="w-7 h-7" />
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-bold">Project Timelines</h2>
+                                        <p className="text-sm text-muted-foreground">
+                                            Phase dependencies and progress for all active projects
+                                        </p>
                                     </div>
                                 </div>
-                            ))}
-                        </CardContent>
-                    </Card>
-                </div>
+                            </div>
 
-                {/* Crew Assignments */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-base">Crew Assignments</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {['Team A', 'Team B', 'Team C'].map((team, i) => {
-                                const teamProjects = data.projects.filter(p => p.crew === team && p.status === 'active');
-                                return (
-                                    <div
-                                        key={team}
-                                        className={`p-4 rounded-xl border-2 ${i === 2 ? 'border-dashed border-muted' : 'border-primary/20 bg-primary/5'}`}
-                                    >
-                                        <div className="flex items-center gap-2 mb-3">
-                                            <div className={`w-3 h-3 rounded-full ${i === 2 ? 'bg-muted' : 'bg-success'}`} />
-                                            <span className="font-semibold">{team}</span>
-                                            <span className="text-xs text-muted-foreground ml-auto">
-                                                {i === 2 ? 'Available' : 'Active'}
-                                            </span>
-                                        </div>
-                                        {teamProjects.length > 0 ? (
-                                            teamProjects.map(p => (
-                                                <div
-                                                    key={p.id}
-                                                    className="text-sm py-1 cursor-pointer hover:text-primary transition-colors"
-                                                    onClick={() => router.push(`/projects/${p.id}`)}
-                                                >
-                                                    📍 {p.name}
-                                                </div>
-                                            ))
-                                        ) : (
-                                            <p className="text-sm text-muted-foreground">No active projects</p>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            {/* Project Timelines */}
+                            <div className="space-y-6">
+                                {activeProjects.map((project) => (
+                                    <PhaseTimeline
+                                        key={project.id}
+                                        project={project}
+                                        blockers={data.blockers}
+                                    />
+                                ))}
+
+                                {activeProjects.length === 0 && (
+                                    <Card className="border-dashed">
+                                        <CardContent className="p-12 text-center">
+                                            <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
+                                                <LayoutGrid className="w-8 h-8 text-muted-foreground" />
+                                            </div>
+                                            <h3 className="text-lg font-semibold">No Active Projects</h3>
+                                            <p className="text-sm text-muted-foreground mt-1">
+                                                Start by creating a new project or converting an estimate.
+                                            </p>
+                                        </CardContent>
+                                    </Card>
+                                )}
+                            </div>
                         </div>
-                    </CardContent>
-                </Card>
+                    </TabsContent>
+                </Tabs>
             </div>
-        </>
+        </div>
+    );
+}
+
+// Quick Stat Component
+function QuickStat({
+    icon,
+    value,
+    label,
+    trend,
+    variant = 'default'
+}: {
+    icon: React.ReactNode;
+    value: number | string;
+    label: string;
+    trend?: string;
+    variant?: 'default' | 'warning' | 'success';
+}) {
+    return (
+        <div className={cn(
+            'flex items-center gap-3 px-4 py-3 rounded-xl border bg-background/80 backdrop-blur',
+            variant === 'warning' && 'border-warning/30',
+            variant === 'success' && 'border-success/30'
+        )}>
+            <div className={cn(
+                'p-2 rounded-lg',
+                variant === 'warning' && 'bg-warning/10',
+                variant === 'success' && 'bg-success/10',
+                variant === 'default' && 'bg-primary/10'
+            )}>
+                {icon}
+            </div>
+            <div>
+                <p className="text-2xl font-bold">{value}</p>
+                <p className="text-xs text-muted-foreground">{label}</p>
+                {trend && (
+                    <p className="text-[10px] text-success flex items-center gap-1 mt-0.5">
+                        <TrendingUp className="w-3 h-3" />
+                        {trend}
+                    </p>
+                )}
+            </div>
+        </div>
     );
 }

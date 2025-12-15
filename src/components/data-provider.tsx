@@ -245,7 +245,11 @@ export function useData(): DataContextType {
             globalSchedule: [],
             messages: [],
             estimates: [],
-            offlineQueue: []
+            offlineQueue: [],
+            crews: [],
+            crewAvailability: [],
+            scheduleEntries: [],
+            blockers: []
         };
         return {
             data: emptyData,
