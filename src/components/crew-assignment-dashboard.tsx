@@ -18,6 +18,11 @@ export function CrewAssignmentDashboard() {
     const [selectedCell, setSelectedCell] = useState<{ crewId: string; date: Date } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
+    // Generate 7 days - must be before conditional returns (React hooks rules)
+    const days = useMemo(() =>
+        Array.from({ length: 7 }, (_, i) => addDays(startDate, i)),
+        [startDate]);
+
     // Check permissions - wait for isLoaded first
     if (!isLoaded) {
         return null; // Loading state - parent component should handle
@@ -30,11 +35,6 @@ export function CrewAssignmentDashboard() {
             </Card>
         );
     }
-
-    // Generate 7 days
-    const days = useMemo(() =>
-        Array.from({ length: 7 }, (_, i) => addDays(startDate, i)),
-        [startDate]);
 
     // Calculate utilization for each crew
     const getUtilizationForCell = (crewId: string, date: Date) => {
