@@ -9,12 +9,23 @@ import { startOfWeek, addDays, format, isSameDay, subWeeks, addWeeks } from 'dat
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight, Users, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { ScheduleEntryModal } from './schedule-entry-modal';
+import { usePermissions } from '@/components/permission-context';
 
 export function CrewAssignmentDashboard() {
     const { data } = useData();
+    const { can } = usePermissions();
     const [startDate, setStartDate] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 })); // Start on Monday
     const [selectedCell, setSelectedCell] = useState<{ crewId: string; date: Date } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Check permissions
+    if (!can('VIEW_CREW_DETAILS')) {
+        return (
+            <Card className="p-8 text-center">
+                <p className="text-muted-foreground">You do not have permission to view crew details.</p>
+            </Card>
+        );
+    }
 
     // Generate 7 days
     const days = useMemo(() =>
@@ -46,6 +57,7 @@ export function CrewAssignmentDashboard() {
     };
 
     const handleCellClick = (crewId: string, date: Date) => {
+        if (!can('EDIT_SCHEDULE')) return; // Require edit permission to assign
         setSelectedCell({ crewId, date });
         setIsModalOpen(true);
     };
