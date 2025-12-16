@@ -38,7 +38,7 @@ type ViewMode = 'month' | 'week' | 'day';
 
 export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps) {
     const { data, addScheduleEntry, updateScheduleEntry, deleteScheduleEntry, getScheduleConflicts } = useData();
-    const { can } = usePermissions();
+    const { can, isLoaded } = usePermissions();
     // Use a static date for SSR to avoid hydration mismatch
     const [currentDate, setCurrentDate] = useState(() => new Date('2024-12-16'));
     const [viewMode, setViewMode] = useState<ViewMode>('month');
@@ -51,14 +51,14 @@ export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps)
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
 
     const handleNewEntry = () => {
-        if (!can('EDIT_SCHEDULE')) return;
+        if (!isLoaded || !can('EDIT_SCHEDULE')) return;
         setSelectedEntry(undefined);
         setSelectedDate(currentDate);
         setIsModalOpen(true);
     };
 
     const handleSelectDate = (dateStr: string) => {
-        if (!can('EDIT_SCHEDULE')) return;
+        if (!isLoaded || !can('EDIT_SCHEDULE')) return;
         const date = new Date(dateStr + 'T12:00:00'); // Midday to avoid timezone issues
         setSelectedDate(date);
         setSelectedEntry(undefined);
@@ -213,7 +213,7 @@ export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps)
                     </div>
 
                     <div className="flex items-center gap-2">
-                        {can('EDIT_SCHEDULE') && (
+                        {isLoaded && can('EDIT_SCHEDULE') && (
                             <Button onClick={handleNewEntry} className="gap-2 mr-2">
                                 <Plus className="w-4 h-4" />
                                 New Entry

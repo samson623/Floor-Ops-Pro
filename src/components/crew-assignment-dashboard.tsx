@@ -13,12 +13,16 @@ import { usePermissions } from '@/components/permission-context';
 
 export function CrewAssignmentDashboard() {
     const { data } = useData();
-    const { can } = usePermissions();
+    const { can, isLoaded } = usePermissions();
     const [startDate, setStartDate] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 })); // Start on Monday
     const [selectedCell, setSelectedCell] = useState<{ crewId: string; date: Date } | null>(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Check permissions
+    // Check permissions - wait for isLoaded first
+    if (!isLoaded) {
+        return null; // Loading state - parent component should handle
+    }
+
     if (!can('VIEW_CREW_DETAILS')) {
         return (
             <Card className="p-8 text-center">
