@@ -2811,36 +2811,37 @@ export const initialData: Database = {
         { crewId: 'crew-b', date: '2024-12-20', available: false, hoursBooked: 0, notes: 'Holiday - Off' }
     ],
     scheduleEntries: [
+        // Week of Dec 15-21, 2025 - Team Alpha
         {
             id: 'sched-001',
             projectId: 1,
             phase: 'install',
             crewId: 'crew-a',
-            date: '2024-12-16',
+            date: '2025-12-15',
             startTime: '07:00',
-            endTime: '15:30',
+            endTime: '15:00',
             travelMinutes: 25,
-            status: 'scheduled',
-            notes: 'Continue tile installation in main lobby'
+            status: 'completed',
+            notes: 'Tile installation in main lobby'
         },
         {
             id: 'sched-002',
-            projectId: 2,
-            phase: 'prep',
-            crewId: 'crew-b',
-            date: '2024-12-16',
-            startTime: '08:00',
-            endTime: '12:00',
-            travelMinutes: 35,
+            projectId: 1,
+            phase: 'install',
+            crewId: 'crew-a',
+            date: '2025-12-16',
+            startTime: '07:00',
+            endTime: '16:00',
+            travelMinutes: 25,
             status: 'scheduled',
-            notes: 'Subfloor prep in exam rooms'
+            notes: 'Continue tile installation - lobby area'
         },
         {
             id: 'sched-003',
             projectId: 1,
             phase: 'install',
             crewId: 'crew-a',
-            date: '2024-12-17',
+            date: '2025-12-17',
             startTime: '07:00',
             endTime: '13:00',
             travelMinutes: 25,
@@ -2849,15 +2850,100 @@ export const initialData: Database = {
         },
         {
             id: 'sched-004',
+            projectId: 1,
+            phase: 'punch',
+            crewId: 'crew-a',
+            date: '2025-12-18',
+            startTime: '08:00',
+            endTime: '12:00',
+            travelMinutes: 25,
+            status: 'scheduled',
+            notes: 'Punch list items and final touches'
+        },
+        {
+            id: 'sched-005',
+            projectId: 1,
+            phase: 'closeout',
+            crewId: 'crew-a',
+            date: '2025-12-19',
+            startTime: '08:00',
+            endTime: '14:00',
+            travelMinutes: 25,
+            status: 'scheduled',
+            notes: 'Final cleanup and walkthrough prep'
+        },
+        // Week of Dec 15-21, 2025 - Team Bravo
+        {
+            id: 'sched-006',
+            projectId: 2,
+            phase: 'prep',
+            crewId: 'crew-b',
+            date: '2025-12-15',
+            startTime: '08:00',
+            endTime: '12:00',
+            travelMinutes: 35,
+            status: 'completed',
+            notes: 'Subfloor prep in exam rooms'
+        },
+        {
+            id: 'sched-007',
+            projectId: 2,
+            phase: 'acclimation',
+            crewId: 'crew-b',
+            date: '2025-12-16',
+            startTime: '09:00',
+            endTime: '11:00',
+            travelMinutes: 35,
+            status: 'scheduled',
+            notes: 'Material acclimation check'
+        },
+        {
+            id: 'sched-008',
             projectId: 2,
             phase: 'install',
             crewId: 'crew-b',
-            date: '2024-12-17',
+            date: '2025-12-17',
             startTime: '07:00',
-            endTime: '15:30',
+            endTime: '16:00',
             travelMinutes: 35,
             status: 'scheduled',
-            notes: 'LVP installation begins'
+            notes: 'LVP installation begins - exam rooms'
+        },
+        {
+            id: 'sched-009',
+            projectId: 2,
+            phase: 'install',
+            crewId: 'crew-b',
+            date: '2025-12-18',
+            startTime: '07:00',
+            endTime: '16:00',
+            travelMinutes: 35,
+            status: 'scheduled',
+            notes: 'LVP installation continues - corridors'
+        },
+        {
+            id: 'sched-010',
+            projectId: 2,
+            phase: 'install',
+            crewId: 'crew-b',
+            date: '2025-12-19',
+            startTime: '07:00',
+            endTime: '15:00',
+            travelMinutes: 35,
+            status: 'scheduled',
+            notes: 'LVP installation - waiting area'
+        },
+        {
+            id: 'sched-011',
+            projectId: 2,
+            phase: 'punch',
+            crewId: 'crew-b',
+            date: '2025-12-20',
+            startTime: '08:00',
+            endTime: '12:00',
+            travelMinutes: 35,
+            status: 'scheduled',
+            notes: 'Punch list and final inspection'
         }
     ],
     blockers: [

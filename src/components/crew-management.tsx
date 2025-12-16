@@ -8,6 +8,10 @@ import { cn } from '@/lib/utils';
 import { useData } from './data-provider';
 import { Crew, CrewMember } from '@/lib/data';
 import { getCrewUtilization } from '@/lib/scheduling-engine';
+import { CrewMemberModal } from './crew-member-modal';
+import { CrewAvailabilityModal } from './crew-availability-modal';
+import { ScheduleEntryModal } from './schedule-entry-modal';
+import { toast } from 'sonner';
 import {
     Users,
     Phone,
@@ -24,8 +28,15 @@ import {
 } from 'lucide-react';
 
 export function CrewManagement() {
-    const { data } = useData();
+    const { data, updateProject } = useData();
     const [selectedCrew, setSelectedCrew] = useState<string | null>(null);
+
+    // Modal states
+    const [memberModalOpen, setMemberModalOpen] = useState(false);
+    const [availabilityModalOpen, setAvailabilityModalOpen] = useState(false);
+    const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+    const [editingMember, setEditingMember] = useState<CrewMember | undefined>(undefined);
+    const [activeCrewId, setActiveCrewId] = useState<string>('');
 
     // Calculate utilization for current week
     const today = new Date();
@@ -36,6 +47,36 @@ export function CrewManagement() {
 
     const startStr = weekStart.toISOString().split('T')[0];
     const endStr = weekEnd.toISOString().split('T')[0];
+
+    const handleAddMember = (crewId: string) => {
+        setActiveCrewId(crewId);
+        setEditingMember(undefined);
+        setMemberModalOpen(true);
+    };
+
+    const handleEditMember = (crewId: string, member: CrewMember) => {
+        setActiveCrewId(crewId);
+        setEditingMember(member);
+        setMemberModalOpen(true);
+    };
+
+    const handleSetAvailability = (crewId: string) => {
+        setActiveCrewId(crewId);
+        setAvailabilityModalOpen(true);
+    };
+
+    const handleViewSchedule = (crewId: string) => {
+        setActiveCrewId(crewId);
+        setScheduleModalOpen(true);
+    };
+
+    const handleSaveMember = (crewId: string, member: CrewMember) => {
+        // In a real app, this would update the database
+        // For now, we just show a success message
+        toast.success(`Member ${member.name} saved!`);
+    };
+
+    const activeCrew = data.crews.find(c => c.id === activeCrewId);
 
     return (
         <div className="space-y-6">
@@ -77,10 +118,40 @@ export function CrewManagement() {
                             onToggle={() => setSelectedCrew(
                                 selectedCrew === crew.id ? null : crew.id
                             )}
+                            onAddMember={() => handleAddMember(crew.id)}
+                            onEditMember={(member) => handleEditMember(crew.id, member)}
+                            onSetAvailability={() => handleSetAvailability(crew.id)}
+                            onViewSchedule={() => handleViewSchedule(crew.id)}
                         />
                     );
                 })}
             </div>
+
+            {/* Crew Member Modal */}
+            <CrewMemberModal
+                open={memberModalOpen}
+                onOpenChange={setMemberModalOpen}
+                crewId={activeCrewId}
+                crewName={activeCrew?.name || ''}
+                member={editingMember}
+                onSave={handleSaveMember}
+            />
+
+            {/* Crew Availability Modal */}
+            <CrewAvailabilityModal
+                open={availabilityModalOpen}
+                onOpenChange={setAvailabilityModalOpen}
+                crewId={activeCrewId}
+                crewName={activeCrew?.name || ''}
+            />
+
+            {/* Schedule Entry Modal for View Schedule */}
+            <ScheduleEntryModal
+                open={scheduleModalOpen}
+                onOpenChange={setScheduleModalOpen}
+                initialDate={new Date()}
+                initialCrewId={activeCrewId}
+            />
         </div>
     );
 }
@@ -89,12 +160,20 @@ function CrewCard({
     crew,
     utilization,
     isExpanded,
-    onToggle
+    onToggle,
+    onAddMember,
+    onEditMember,
+    onSetAvailability,
+    onViewSchedule
 }: {
     crew: Crew;
     utilization: { totalHours: number; scheduledHours: number; utilizationPercent: number };
     isExpanded: boolean;
     onToggle: () => void;
+    onAddMember: () => void;
+    onEditMember: (member: CrewMember) => void;
+    onSetAvailability: () => void;
+    onViewSchedule: () => void;
 }) {
     const getUtilizationColor = (percent: number) => {
         if (percent >= 80) return 'text-success';
@@ -275,7 +354,7 @@ function CrewCard({
                                         </p>
                                     </div>
 
-                                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEditMember(member)}>
                                         <Edit className="w-3.5 h-3.5" />
                                     </Button>
                                 </div>
@@ -285,15 +364,15 @@ function CrewCard({
 
                     {/* Quick Actions */}
                     <div className="flex items-center gap-2 mt-4 pt-4 border-t">
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <Button variant="outline" size="sm" className="gap-2" onClick={onViewSchedule}>
                             <Calendar className="w-4 h-4" />
                             View Schedule
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <Button variant="outline" size="sm" className="gap-2" onClick={onAddMember}>
                             <Plus className="w-4 h-4" />
                             Add Member
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-2">
+                        <Button variant="outline" size="sm" className="gap-2" onClick={onSetAvailability}>
                             <Clock className="w-4 h-4" />
                             Set Availability
                         </Button>
