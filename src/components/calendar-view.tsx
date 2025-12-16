@@ -23,8 +23,11 @@ import {
     Clock,
     MapPin,
     Users,
-    Truck
+    Truck,
+    Plus
 } from 'lucide-react';
+import { ScheduleEntryModal } from './schedule-entry-modal';
+import { can } from '@/lib/permissions';
 
 interface CalendarViewProps {
     onSelectEntry?: (entry: ScheduleEntry) => void;
@@ -37,9 +40,36 @@ export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps)
     const { data } = useData();
     // Use a static date for SSR to avoid hydration mismatch
     const [currentDate, setCurrentDate] = useState(() => new Date('2024-12-16'));
-    const [viewMode, setViewMode] = useState<ViewMode>('week');
+    const [viewMode, setViewMode] = useState<ViewMode>('month');
     const [selectedCrewId, setSelectedCrewId] = useState<string | null>(null);
     const [mounted, setMounted] = useState(false);
+
+    // Modal State
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedEntry, setSelectedEntry] = useState<ScheduleEntry | undefined>(undefined);
+    const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+
+    const handleNewEntry = () => {
+        if (!can('owner', 'EDIT_SCHEDULE')) return; // Simple check, ideally use actual user role
+        setSelectedEntry(undefined);
+        setSelectedDate(currentDate);
+        setIsModalOpen(true);
+    };
+
+    const handleSelectDate = (dateStr: string) => {
+        if (!can('owner', 'EDIT_SCHEDULE')) return;
+        const date = new Date(dateStr + 'T12:00:00'); // Midday to avoid timezone issues
+        setSelectedDate(date);
+        setSelectedEntry(undefined);
+        setIsModalOpen(true);
+        onSelectDate?.(dateStr);
+    };
+
+    const handleSelectEntry = (entry: ScheduleEntry) => {
+        setSelectedEntry(entry);
+        setIsModalOpen(true);
+        onSelectEntry?.(entry);
+    };
 
     // Update to real date on client mount
     useEffect(() => {
@@ -182,6 +212,11 @@ export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps)
                     </div>
 
                     <div className="flex items-center gap-2">
+                        <Button onClick={handleNewEntry} className="gap-2 mr-2">
+                            <Plus className="w-4 h-4" />
+                            New Entry
+                        </Button>
+
                         {/* View Mode Toggle */}
                         <div className="flex bg-muted rounded-lg p-1">
                             {(['month', 'week', 'day'] as ViewMode[]).map((mode) => (
@@ -259,7 +294,7 @@ export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps)
                             return (
                                 <div
                                     key={idx}
-                                    onClick={() => onSelectDate?.(dateStr)}
+                                    onClick={() => handleSelectDate(dateStr)}
                                     className={cn(
                                         'min-h-[100px] p-2 border-b border-r cursor-pointer transition-all hover:bg-accent/30',
                                         isToday(date) && 'bg-primary/5',
@@ -281,7 +316,7 @@ export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps)
                                                     key={entry.id}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        onSelectEntry?.(entry);
+                                                        handleSelectEntry(entry);
                                                     }}
                                                     className="px-1.5 py-0.5 text-[10px] font-medium rounded truncate cursor-pointer transition-transform hover:scale-105"
                                                     style={{
@@ -316,7 +351,7 @@ export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps)
                             return (
                                 <div
                                     key={idx}
-                                    onClick={() => onSelectDate?.(dateStr)}
+                                    onClick={() => handleSelectDate(dateStr)}
                                     className={cn(
                                         'p-2 border-r border-b cursor-pointer transition-all hover:bg-accent/20',
                                         isToday(date) && 'bg-primary/5 border-primary/30',
@@ -349,7 +384,7 @@ export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps)
                                                     key={entry.id}
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        onSelectEntry?.(entry);
+                                                        handleSelectEntry(entry);
                                                     }}
                                                     className="group p-2.5 rounded-xl bg-gradient-to-br from-card to-muted/30 border shadow-sm cursor-pointer transition-all hover:shadow-md hover:scale-[1.02]"
                                                     style={{ borderLeftColor: crew?.color, borderLeftWidth: '4px' }}
@@ -399,10 +434,18 @@ export function CalendarView({ onSelectEntry, onSelectDate }: CalendarViewProps)
                         entries={entriesByDate[currentDate.toISOString().split('T')[0]] || []}
                         crews={data.crews}
                         projects={data.projects}
-                        onSelectEntry={onSelectEntry}
+                        onSelectEntry={handleSelectEntry}
                     />
                 )}
             </CardContent>
+
+            <ScheduleEntryModal
+                open={isModalOpen}
+                onOpenChange={setIsModalOpen}
+                initialDate={selectedDate}
+                existingEntry={selectedEntry}
+                initialCrewId={selectedCrewId || undefined}
+            />
 
             {/* Crew Legend */}
             <div className="flex items-center gap-4 p-4 border-t bg-muted/20">

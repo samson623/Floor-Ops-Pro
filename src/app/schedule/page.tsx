@@ -10,6 +10,7 @@ import { useData } from '@/components/data-provider';
 import { CalendarView } from '@/components/calendar-view';
 import { DailyPlanning } from '@/components/daily-planning';
 import { CrewManagement } from '@/components/crew-management';
+import { CrewAssignmentDashboard } from '@/components/crew-assignment-dashboard';
 import { PhaseTimeline } from '@/components/phase-timeline';
 import {
     Calendar,
@@ -133,7 +134,8 @@ export default function SchedulePage() {
                     </TabsContent>
 
                     {/* Crews Tab */}
-                    <TabsContent value="crews" className="m-0">
+                    <TabsContent value="crews" className="m-0 space-y-6">
+                        <CrewAssignmentDashboard />
                         <CrewManagement />
                     </TabsContent>
 

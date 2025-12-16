@@ -160,6 +160,32 @@ interface DataContextType {
     generateInvoiceNumber: () => string;
     getOutstandingInvoices: () => ClientInvoice[];
     getOverdueInvoices: () => ClientInvoice[];
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // CREW SCHEDULING OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    // Schedule Entry Management
+    addScheduleEntry: (entry: Omit<import('@/lib/data').ScheduleEntry, 'id'>) => string;
+    updateScheduleEntry: (id: string, updates: Partial<import('@/lib/data').ScheduleEntry>) => void;
+    deleteScheduleEntry: (id: string) => void;
+    bulkScheduleEntries: (entries: Omit<import('@/lib/data').ScheduleEntry, 'id'>[]) => string[];
+    getCrewSchedule: (crewId: string, startDate: string, endDate: string) => import('@/lib/data').ScheduleEntry[];
+    getProjectSchedule: (projectId: number) => import('@/lib/data').ScheduleEntry[];
+
+    // Crew Availability Management
+    updateCrewAvailability: (crewId: string, date: string, available: boolean, notes?: string, hoursBooked?: number) => void;
+    getCrewCapacity: (crewId: string, date: string) => { available: boolean; hoursRemaining: number; notes?: string };
+
+    // Blocker Management
+    addBlocker: (blocker: Omit<import('@/lib/data').ProjectBlocker, 'id'>) => string;
+    updateBlocker: (id: string, updates: Partial<import('@/lib/data').ProjectBlocker>) => void;
+    resolveBlocker: (blockerId: string, resolvedBy: string) => void;
+    getActiveBlockers: (projectId?: number) => import('@/lib/data').ProjectBlocker[];
+
+    // Schedule Analytics
+    getScheduleConflicts: (crewId?: string, date?: string) => Array<{ entry1: import('@/lib/data').ScheduleEntry; entry2: import('@/lib/data').ScheduleEntry; overlapMinutes: number }>;
+    getCrewUtilizationForRange: (crewId: string, startDate: string, endDate: string) => { date: string; hoursScheduled: number; capacity: number; utilization: number }[];
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -1400,6 +1426,231 @@ export function DataProvider({ children }: { children: ReactNode }) {
         };
     }, [data.clientInvoices, data.projects, generateInvoiceNumber]);
 
+    // ═══════════════════════════════════════════════════════════════════════
+    // CREW SCHEDULING OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const addScheduleEntry = useCallback((entry: Omit<import('@/lib/data').ScheduleEntry, 'id'>) => {
+        const newId = `se-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const newEntry = { ...entry, id: newId };
+        saveData({ ...data, scheduleEntries: [...data.scheduleEntries, newEntry] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateScheduleEntry = useCallback((id: string, updates: Partial<import('@/lib/data').ScheduleEntry>) => {
+        const newEntries = data.scheduleEntries.map(e =>
+            e.id === id ? { ...e, ...updates } : e
+        );
+        saveData({ ...data, scheduleEntries: newEntries });
+    }, [data, saveData]);
+
+    const deleteScheduleEntry = useCallback((id: string) => {
+        saveData({ ...data, scheduleEntries: data.scheduleEntries.filter(e => e.id !== id) });
+    }, [data, saveData]);
+
+    const bulkScheduleEntries = useCallback((entries: Omit<import('@/lib/data').ScheduleEntry, 'id'>[]) => {
+        const newIds: string[] = [];
+        const newEntries = entries.map(entry => {
+            const id = `se-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            newIds.push(id);
+            return { ...entry, id };
+        });
+        saveData({ ...data, scheduleEntries: [...data.scheduleEntries, ...newEntries] });
+        return newIds;
+    }, [data, saveData]);
+
+    const getCrewSchedule = useCallback((crewId: string, startDate: string, endDate: string) => {
+        return data.scheduleEntries.filter(e =>
+            e.crewId === crewId &&
+            e.date >= startDate &&
+            e.date <= endDate &&
+            e.status !== 'cancelled'
+        ).sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return a.startTime.localeCompare(b.startTime);
+        });
+    }, [data.scheduleEntries]);
+
+    const getProjectSchedule = useCallback((projectId: number) => {
+        return data.scheduleEntries.filter(e =>
+            e.projectId === projectId && e.status !== 'cancelled'
+        ).sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return a.startTime.localeCompare(b.startTime);
+        });
+    }, [data.scheduleEntries]);
+
+    const updateCrewAvailability = useCallback((
+        crewId: string,
+        date: string,
+        available: boolean,
+        notes?: string,
+        hoursBooked?: number
+    ) => {
+        const existing = data.crewAvailability.find(a => a.crewId === crewId && a.date === date);
+        if (existing) {
+            const newAvailability = data.crewAvailability.map(a =>
+                (a.crewId === crewId && a.date === date)
+                    ? { ...a, available, notes: notes ?? a.notes, hoursBooked: hoursBooked ?? a.hoursBooked }
+                    : a
+            );
+            saveData({ ...data, crewAvailability: newAvailability });
+        } else {
+            const newEntry = { crewId, date, available, notes, hoursBooked: hoursBooked ?? 0 };
+            saveData({ ...data, crewAvailability: [...data.crewAvailability, newEntry] });
+        }
+    }, [data, saveData]);
+
+    const getCrewCapacity = useCallback((crewId: string, date: string) => {
+        const crew = data.crews.find(c => c.id === crewId);
+        const availability = data.crewAvailability.find(a => a.crewId === crewId && a.date === date);
+        const dailyCapacity = crew?.maxDailyCapacity ?? 8;
+
+        // Calculate hours already scheduled for this day
+        const scheduledEntries = data.scheduleEntries.filter(e =>
+            e.crewId === crewId && e.date === date && e.status !== 'cancelled'
+        );
+        const scheduledHours = scheduledEntries.reduce((sum, e) => {
+            const start = parseFloat(e.startTime.replace(':', '.'));
+            const end = parseFloat(e.endTime.replace(':', '.'));
+            return sum + (end - start);
+        }, 0);
+
+        const hoursRemaining = dailyCapacity - scheduledHours - (availability?.hoursBooked || 0);
+
+        return {
+            available: availability?.available !== false && hoursRemaining > 0,
+            hoursRemaining: Math.max(0, hoursRemaining),
+            notes: availability?.notes
+        };
+    }, [data.crews, data.crewAvailability, data.scheduleEntries]);
+
+    const addBlocker = useCallback((blocker: Omit<import('@/lib/data').ProjectBlocker, 'id'>) => {
+        const newId = `blocker-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const newBlocker = { ...blocker, id: newId };
+        saveData({ ...data, blockers: [...data.blockers, newBlocker] });
+        return newId;
+    }, [data, saveData]);
+
+    const updateBlocker = useCallback((id: string, updates: Partial<import('@/lib/data').ProjectBlocker>) => {
+        const newBlockers = data.blockers.map(b =>
+            b.id === id ? { ...b, ...updates } : b
+        );
+        saveData({ ...data, blockers: newBlockers });
+    }, [data, saveData]);
+
+    const resolveBlocker = useCallback((blockerId: string, resolvedBy: string) => {
+        const now = new Date().toISOString();
+        const newBlockers = data.blockers.map(b =>
+            b.id === blockerId
+                ? { ...b, resolvedAt: now, resolvedBy }
+                : b
+        );
+        saveData({ ...data, blockers: newBlockers });
+    }, [data, saveData]);
+
+    const getActiveBlockers = useCallback((projectId?: number) => {
+        return data.blockers.filter(b => {
+            if (b.resolvedAt) return false;
+            if (projectId !== undefined) {
+                // Check if blocker affects this project
+                return data.projects.some(p => {
+                    if (p.id !== projectId) return false;
+                    // Check if any of the blocking phases are in this project's current work
+                    return true; // For now, return all unresolved blockers
+                });
+            }
+            return true;
+        }).sort((a, b) => {
+            // Sort by priority then by created date
+            const priorityOrder = { high: 0, medium: 1, low: 2 };
+            if (a.priority !== b.priority) {
+                return priorityOrder[a.priority] - priorityOrder[b.priority];
+            }
+            return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        });
+    }, [data.blockers, data.projects]);
+
+    const getScheduleConflicts = useCallback((crewId?: string, date?: string) => {
+        const conflicts: Array<{ entry1: import('@/lib/data').ScheduleEntry; entry2: import('@/lib/data').ScheduleEntry; overlapMinutes: number }> = [];
+
+        let entries = data.scheduleEntries.filter(e => e.status !== 'cancelled');
+        if (crewId) entries = entries.filter(e => e.crewId === crewId);
+        if (date) entries = entries.filter(e => e.date === date);
+
+        // Group by crew and date
+        const grouped: Record<string, typeof entries> = {};
+        entries.forEach(e => {
+            const key = `${e.crewId}-${e.date}`;
+            if (!grouped[key]) grouped[key] = [];
+            grouped[key].push(e);
+        });
+
+        // Check each group for overlaps
+        Object.values(grouped).forEach(group => {
+            if (group.length < 2) return;
+
+            for (let i = 0; i < group.length; i++) {
+                for (let j = i + 1; j < group.length; j++) {
+                    const e1 = group[i];
+                    const e2 = group[j];
+
+                    // Parse times to minutes
+                    const e1Start = parseInt(e1.startTime.split(':')[0]) * 60 + parseInt(e1.startTime.split(':')[1] || '0');
+                    const e1End = parseInt(e1.endTime.split(':')[0]) * 60 + parseInt(e1.endTime.split(':')[1] || '0');
+                    const e2Start = parseInt(e2.startTime.split(':')[0]) * 60 + parseInt(e2.startTime.split(':')[1] || '0');
+                    const e2End = parseInt(e2.endTime.split(':')[0]) * 60 + parseInt(e2.endTime.split(':')[1] || '0');
+
+                    // Check for overlap
+                    const overlapStart = Math.max(e1Start, e2Start);
+                    const overlapEnd = Math.min(e1End, e2End);
+                    const overlapMinutes = overlapEnd - overlapStart;
+
+                    if (overlapMinutes > 0) {
+                        conflicts.push({ entry1: e1, entry2: e2, overlapMinutes });
+                    }
+                }
+            }
+        });
+
+        return conflicts;
+    }, [data.scheduleEntries]);
+
+    const getCrewUtilizationForRange = useCallback((crewId: string, startDate: string, endDate: string) => {
+        const crew = data.crews.find(c => c.id === crewId);
+        const dailyCapacity = crew?.maxDailyCapacity ?? 8;
+
+        const result: { date: string; hoursScheduled: number; capacity: number; utilization: number }[] = [];
+
+        // Generate each date in range
+        const start = new Date(startDate);
+        const end = new Date(endDate);
+        for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+            const dateStr = d.toISOString().split('T')[0];
+
+            // Get scheduled hours for this date
+            const entries = data.scheduleEntries.filter(e =>
+                e.crewId === crewId && e.date === dateStr && e.status !== 'cancelled'
+            );
+            const hoursScheduled = entries.reduce((sum, e) => {
+                const startParts = e.startTime.split(':');
+                const endParts = e.endTime.split(':');
+                const startHr = parseInt(startParts[0]) + parseInt(startParts[1] || '0') / 60;
+                const endHr = parseInt(endParts[0]) + parseInt(endParts[1] || '0') / 60;
+                return sum + (endHr - startHr);
+            }, 0);
+
+            result.push({
+                date: dateStr,
+                hoursScheduled,
+                capacity: dailyCapacity,
+                utilization: dailyCapacity > 0 ? (hoursScheduled / dailyCapacity) * 100 : 0
+            });
+        }
+
+        return result;
+    }, [data.crews, data.scheduleEntries]);
+
     return (
         <DataContext.Provider value={{
             data,
@@ -1497,7 +1748,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
             sendMessage,
             markMessageRead,
             getNotifications,
-            markNotificationRead
+            markNotificationRead,
+            // Crew Scheduling operations
+            addScheduleEntry,
+            updateScheduleEntry,
+            deleteScheduleEntry,
+            bulkScheduleEntries,
+            getCrewSchedule,
+            getProjectSchedule,
+            updateCrewAvailability,
+            getCrewCapacity,
+            addBlocker,
+            updateBlocker,
+            resolveBlocker,
+            getActiveBlockers,
+            getScheduleConflicts,
+            getCrewUtilizationForRange
         }}>
             {children}
         </DataContext.Provider >
@@ -1655,6 +1921,21 @@ export function useData(): DataContextType {
             generateInvoiceNumber: () => '',
             getOutstandingInvoices: () => [],
             getOverdueInvoices: () => [],
+            // Crew Scheduling operations
+            addScheduleEntry: () => '',
+            updateScheduleEntry: () => { },
+            deleteScheduleEntry: () => { },
+            bulkScheduleEntries: () => [],
+            getCrewSchedule: () => [],
+            getProjectSchedule: () => [],
+            updateCrewAvailability: () => { },
+            getCrewCapacity: () => ({ available: false, hoursRemaining: 0 }),
+            addBlocker: () => '',
+            updateBlocker: () => { },
+            resolveBlocker: () => { },
+            getActiveBlockers: () => [],
+            getScheduleConflicts: () => [],
+            getCrewUtilizationForRange: () => [],
         };
     }
     return context;
