@@ -21,12 +21,12 @@ const ROLE_CAPABILITIES: Record<UserRole, { description: string; highlights: str
         highlights: ['All financial data & margins', 'User management', 'All projects', 'System settings'],
         icon: <Shield className="w-5 h-5" />
     },
-    project_manager: {
+    pm: {
         description: 'Manage projects end-to-end with budget oversight and team coordination',
         highlights: ['Project budgets', 'Schedule management', 'Change orders', 'Client communication'],
         icon: <Briefcase className="w-5 h-5" />
     },
-    lead_installer: {
+    foreman: {
         description: 'Field leadership with crew management and quality oversight',
         highlights: ['Crew assignments', 'Punch lists', 'Quality checklists', 'Photo documentation'],
         icon: <HardHat className="w-5 h-5" />
@@ -45,6 +45,11 @@ const ROLE_CAPABILITIES: Record<UserRole, { description: string; highlights: str
         description: 'Project visibility with approval workflows and communication',
         highlights: ['Project status', 'Photo gallery', 'Approvals', 'Messages'],
         icon: <Building2 className="w-5 h-5" />
+    },
+    sub: {
+        description: 'External contractor access to assigned tasks and documents',
+        highlights: ['Assigned projects', 'Schedule view', 'Communication', 'Safety reports'],
+        icon: <Briefcase className="w-5 h-5" />
     }
 };
 
