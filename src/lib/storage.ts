@@ -30,6 +30,12 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
                             siteConditions: p.siteConditions || initialProject?.siteConditions || [],
                             safetyIncidents: p.safetyIncidents || initialProject?.safetyIncidents || [],
                             complianceChecklists: p.complianceChecklists || initialProject?.complianceChecklists || [],
+                            // Ensure contract scope is present if missing
+                            contractScope: p.contractScope || initialProject?.contractScope || undefined,
+                            // Ensure schedule phases are present
+                            schedulePhases: p.schedulePhases || initialProject?.schedulePhases || [],
+                            materialDeliveries: p.materialDeliveries || initialProject?.materialDeliveries || [],
+                            phasePhotos: p.phasePhotos || initialProject?.phasePhotos || [],
                         };
                     }),
                     // Ensure new walkthrough fields use initialData if not in localStorage
