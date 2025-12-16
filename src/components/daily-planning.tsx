@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { useData } from './data-provider';
+import { toast } from 'sonner';
 import {
     PHASE_CONFIGS,
     DailyPlanItem,
@@ -287,7 +288,26 @@ export function DailyPlanning({ onScheduleWork }: DailyPlanningProps) {
                     ))}
                 </div>
 
-                <Button className="gap-2 shadow-lg shadow-primary/20" disabled={stats.ready === 0}>
+                <Button
+                    className="gap-2 shadow-lg shadow-primary/20"
+                    disabled={stats.ready === 0}
+                    onClick={() => {
+                        const result = autoScheduleDate(selectedDate, data);
+                        if (result.length > 0) {
+                            const projectNames = result.map(r => {
+                                const project = data.projects.find(p => p.id === r.projectId);
+                                return project?.name || `Project ${r.projectId}`;
+                            });
+                            toast.success(`Auto-scheduled ${result.length} work item${result.length > 1 ? 's' : ''}!`, {
+                                description: projectNames.join(', ')
+                            });
+                        } else {
+                            toast.info('No items could be auto-scheduled', {
+                                description: 'All crews may be at capacity or work items have blockers.'
+                            });
+                        }
+                    }}
+                >
                     <Sparkles className="w-4 h-4" />
                     Auto-Schedule Ready Work
                 </Button>
