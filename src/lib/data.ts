@@ -1955,7 +1955,7 @@ export const initialData: Database = {
                 {
                     id: 'dl-001',
                     projectId: 1,
-                    date: '2024-12-12',
+                    date: '2025-12-12',
                     crewMembers: [
                         { id: 'cm-001', userId: 3, name: 'Mike Rodriguez', role: 'lead', hoursWorked: 8 },
                         { id: 'cm-002', userId: 4, name: 'James Wilson', role: 'installer', hoursWorked: 8 },
@@ -1973,7 +1973,7 @@ export const initialData: Database = {
                     hasDelays: false,
                     totalDelayMinutes: 0,
                     photos: [
-                        { id: 'dlp-001', url: '/photos/lobby-progress.jpg', caption: 'Tile installation progress', timestamp: '2024-12-12T14:00:00Z', takenBy: 'Mike Rodriguez', type: 'progress', location: 'Main Lobby' }
+                        { id: 'dlp-001', url: '/photos/lobby-progress.jpg', caption: 'Tile installation progress', timestamp: '2025-12-12T14:00:00Z', takenBy: 'Mike Rodriguez', type: 'progress', location: 'Main Lobby' }
                     ],
                     materialsUsed: [
                         { materialName: 'Ceramic Entry Tile', quantityUsed: 320, unit: 'sf' }
@@ -1984,10 +1984,10 @@ export const initialData: Database = {
                     clientNotes: 'Walkthrough went well, client pleased with progress',
                     signedBy: 'Mike Rodriguez',
                     signedByUserId: 3,
-                    signedAt: '2024-12-12T16:30:00Z',
+                    signedAt: '2025-12-12T16:30:00Z',
                     createdBy: 'Mike Rodriguez',
                     createdByUserId: 3,
-                    createdAt: '2024-12-12T16:30:00Z',
+                    createdAt: '2025-12-12T16:30:00Z',
                     submittedOffline: false,
                     // Legacy compat
                     crew: 3, hours: 24, notes: 'Completed tile installation in main lobby. Client walkthrough at 2 PM went well.'
@@ -1995,7 +1995,7 @@ export const initialData: Database = {
                 {
                     id: 'dl-002',
                     projectId: 1,
-                    date: '2024-12-11',
+                    date: '2025-12-11',
                     crewMembers: [
                         { id: 'cm-004', userId: 3, name: 'Mike Rodriguez', role: 'lead', hoursWorked: 8 },
                         { id: 'cm-005', userId: 4, name: 'James Wilson', role: 'installer', hoursWorked: 8 },
@@ -2016,7 +2016,7 @@ export const initialData: Database = {
                             description: 'Transition strips not delivered - supplier backorder',
                             duration: 60,
                             responsibleParty: 'supplier',
-                            documentedAt: '2024-12-11T14:00:00Z'
+                            documentedAt: '2025-12-11T14:00:00Z'
                         }
                     ],
                     hasDelays: true,
@@ -2029,10 +2029,10 @@ export const initialData: Database = {
                     clientOnSite: false,
                     signedBy: 'Mike Rodriguez',
                     signedByUserId: 3,
-                    signedAt: '2024-12-11T16:30:00Z',
+                    signedAt: '2025-12-11T16:30:00Z',
                     createdBy: 'Mike Rodriguez',
                     createdByUserId: 3,
-                    createdAt: '2024-12-11T16:30:00Z',
+                    createdAt: '2025-12-11T16:30:00Z',
                     submittedOffline: false,
                     // Legacy compat
                     crew: 3, hours: 24, notes: 'Good progress on subfloor leveling. Waiting on transition strips.', blockers: 'Waiting on transition strips delivery'

@@ -30,6 +30,8 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
                             siteConditions: p.siteConditions || initialProject?.siteConditions || [],
                             safetyIncidents: p.safetyIncidents || initialProject?.safetyIncidents || [],
                             complianceChecklists: p.complianceChecklists || initialProject?.complianceChecklists || [],
+                            // Ensure daily logs are present if missing (fix for empty logs bug)
+                            dailyLogs: (p.dailyLogs && p.dailyLogs.length > 0) ? p.dailyLogs : (initialProject?.dailyLogs || []),
                             // Ensure contract scope is present if missing
                             contractScope: p.contractScope || initialProject?.contractScope || undefined,
                             // Ensure schedule phases are present
