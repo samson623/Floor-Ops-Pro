@@ -35,6 +35,7 @@ export default function DailyLogsPage() {
     const [filterHasDelays, setFilterHasDelays] = useState<string>('all');
     const [showQuickAdd, setShowQuickAdd] = useState(false);
     const [selectedProjectForAdd, setSelectedProjectForAdd] = useState<{ id: number; name: string } | null>(null);
+    const [selectedLog, setSelectedLog] = useState<DailyLog | null>(null);
 
     const allLogs = getAllDailyLogs();
     const analytics = getDailyLogAnalytics();
@@ -95,7 +96,14 @@ export default function DailyLogsPage() {
     }, [filteredLogs]);
 
     const handleAddLog = (projectId: number, projectName: string) => {
+        setSelectedLog(null);
         setSelectedProjectForAdd({ id: projectId, name: projectName });
+        setShowQuickAdd(true);
+    };
+
+    const handleViewLog = (log: DailyLog) => {
+        setSelectedProjectForAdd(null);
+        setSelectedLog(log);
         setShowQuickAdd(true);
     };
 
@@ -304,10 +312,12 @@ export default function DailyLogsPage() {
                             </div>
                             <div className="space-y-3">
                                 {logs.map(log => (
-                                    <Card key={log.id} className={cn(
-                                        "hover:shadow-md transition-shadow cursor-pointer",
-                                        log.hasDelays && "border-l-4 border-l-amber-500"
-                                    )}>
+                                    <Card key={log.id}
+                                        onClick={() => handleViewLog(log)}
+                                        className={cn(
+                                            "hover:shadow-md transition-shadow cursor-pointer",
+                                            log.hasDelays && "border-l-4 border-l-amber-500"
+                                        )}>
                                         <CardContent className="p-4">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1 min-w-0">
@@ -367,15 +377,18 @@ export default function DailyLogsPage() {
             </div>
 
             {/* Quick Add Modal */}
-            {selectedProjectForAdd && (
+            {/* Quick Add / View Modal */}
+            {(selectedProjectForAdd || selectedLog) && (
                 <DailyLogQuickAddModal
                     open={showQuickAdd}
                     onClose={() => {
                         setShowQuickAdd(false);
                         setSelectedProjectForAdd(null);
+                        setSelectedLog(null);
                     }}
-                    projectId={selectedProjectForAdd.id}
-                    projectName={selectedProjectForAdd.name}
+                    projectId={selectedLog ? selectedLog.projectId : selectedProjectForAdd!.id}
+                    projectName={selectedLog ? projectLookup[selectedLog.projectId] : selectedProjectForAdd!.name}
+                    initialData={selectedLog || undefined}
                 />
             )}
         </div>

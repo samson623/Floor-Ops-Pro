@@ -14,11 +14,11 @@ import { cn } from '@/lib/utils';
 import {
     Sun, Cloud, CloudRain, Snowflake, Wind, Thermometer,
     Clock, Users, Hammer, Camera, AlertTriangle, Plus, X,
-    CheckCircle2, FileText, ChevronDown, ChevronUp
+    CheckCircle2, FileText, ChevronDown, ChevronUp, Package
 } from 'lucide-react';
 import {
     DailyLog, WeatherCondition, DelayType, CrewMemberLog,
-    DailyLogDelay, DailyLogPhoto, PhaseType
+    DailyLogDelay, DailyLogPhoto, PhaseType, MaterialUsageLog
 } from '@/lib/data';
 
 interface DailyLogQuickAddModalProps {
@@ -26,6 +26,7 @@ interface DailyLogQuickAddModalProps {
     onClose: () => void;
     projectId: number;
     projectName: string;
+    initialData?: DailyLog;
 }
 
 const WEATHER_OPTIONS: { value: WeatherCondition; icon: React.ReactNode; label: string }[] = [
@@ -72,8 +73,8 @@ const PHASES: { value: PhaseType; label: string }[] = [
     { value: 'closeout', label: 'Closeout' },
 ];
 
-export function DailyLogQuickAddModal({ open, onClose, projectId, projectName }: DailyLogQuickAddModalProps) {
-    const { addDailyLog, getTeamMembers } = useData();
+export function DailyLogQuickAddModal({ open, onClose, projectId, projectName, initialData }: DailyLogQuickAddModalProps) {
+    const { addDailyLog, updateDailyLog, getTeamMembers } = useData();
     const teamMembers = getTeamMembers();
 
     const today = new Date().toISOString().split('T')[0];
@@ -99,10 +100,55 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName }:
     const [newDelayDuration, setNewDelayDuration] = useState(30);
     const [newDelayResponsible, setNewDelayResponsible] = useState<'client' | 'supplier' | 'weather' | 'subcontractor' | 'internal' | 'gc' | 'other'>('supplier');
 
+    // Material state
+    const [materials, setMaterials] = useState<MaterialUsageLog[]>([]);
+    const [showMaterialSection, setShowMaterialSection] = useState(false);
+    const [newMaterialName, setNewMaterialName] = useState('');
+    const [newMaterialQty, setNewMaterialQty] = useState(0);
+    const [newMaterialUnit, setNewMaterialUnit] = useState('units');
+
     // Additional
     const [clientOnSite, setClientOnSite] = useState(false);
     const [safetyNotes, setSafetyNotes] = useState('');
     const [siteConditions, setSiteConditions] = useState('');
+
+    // Load initial data if provided
+    useMemo(() => {
+        if (open && initialData) {
+            setDate(initialData.date);
+            setWeather(initialData.weather);
+            setTemperature(initialData.temperature || 70);
+            setPhase(initialData.phase || 'install');
+            setWorkCompleted(initialData.workCompleted || initialData.notes || '');
+            setSqftCompleted(initialData.sqftCompleted || 0);
+            setAreasWorked(initialData.areasWorked?.join(', ') || '');
+            setCrewMembers(initialData.crewMembers || []);
+            setDelays(initialData.delays || []);
+            setMaterials(initialData.materialsUsed || []);
+            setClientOnSite(initialData.clientOnSite || false);
+            setSafetyNotes(initialData.safetyNotes || '');
+            setSiteConditions(initialData.siteConditions || '');
+            setShowDelaySection((initialData.delays?.length || 0) > 0);
+            setShowMaterialSection((initialData.materialsUsed?.length || 0) > 0);
+        } else if (open && !initialData) {
+            // Reset to defaults if opening fresh
+            setDate(today);
+            setWeather('sunny');
+            setTemperature(70);
+            setPhase('install');
+            setWorkCompleted('');
+            setSqftCompleted(0);
+            setAreasWorked('');
+            setCrewMembers([]);
+            setDelays([]);
+            setMaterials([]);
+            setClientOnSite(false);
+            setSafetyNotes('');
+            setSiteConditions('');
+            setShowDelaySection(false);
+            setShowMaterialSection(false);
+        }
+    }, [open, initialData, today]);
 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -153,6 +199,22 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName }:
         setDelays(delays.filter((_, i) => i !== index));
     };
 
+    const addMaterial = () => {
+        if (!newMaterialName.trim()) return;
+        const material: MaterialUsageLog = {
+            materialName: newMaterialName,
+            quantityUsed: newMaterialQty,
+            unit: newMaterialUnit
+        };
+        setMaterials([...materials, material]);
+        setNewMaterialName('');
+        setNewMaterialQty(0);
+    };
+
+    const removeMaterial = (index: number) => {
+        setMaterials(materials.filter((_, i) => i !== index));
+    };
+
     const handleSubmit = async () => {
         setIsSubmitting(true);
 
@@ -160,7 +222,7 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName }:
             const now = new Date().toISOString();
             const areasArray = areasWorked.split(',').map(a => a.trim()).filter(Boolean);
 
-            const log: Omit<DailyLog, 'id'> = {
+            const logData: Omit<DailyLog, 'id'> = {
                 projectId,
                 date,
                 crewMembers,
@@ -175,25 +237,29 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName }:
                 delays,
                 hasDelays: delays.length > 0,
                 totalDelayMinutes: delays.reduce((sum, d) => sum + d.duration, 0),
-                photos: [],
-                materialsUsed: [],
-                incidentReported: false,
+                photos: initialData?.photos || [],
+                materialsUsed: materials,
+                incidentReported: initialData?.incidentReported || false,
                 clientOnSite,
                 safetyNotes: safetyNotes || undefined,
                 siteConditions: siteConditions || undefined,
-                signedBy: 'Current User', // TODO: Get from auth
-                signedAt: now,
-                createdBy: 'Current User', // TODO: Get from auth
-                createdByUserId: 0,
-                createdAt: now,
-                submittedOffline: false,
+                signedBy: initialData?.signedBy || 'Current User', // TODO: Get from auth
+                signedAt: initialData?.signedAt || now,
+                createdBy: initialData?.createdBy || 'Current User', // TODO: Get from auth
+                createdByUserId: initialData?.createdByUserId || 0,
+                createdAt: initialData?.createdAt || now,
+                submittedOffline: initialData?.submittedOffline || false,
                 // Legacy compat
                 crew: crewMembers.length,
                 hours: totalHours,
                 notes: workCompleted,
             };
 
-            addDailyLog(projectId, log);
+            if (initialData) {
+                updateDailyLog(projectId, initialData.id, logData);
+            } else {
+                addDailyLog(projectId, logData);
+            }
             onClose();
 
             // Reset form
@@ -219,7 +285,7 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName }:
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <FileText className="h-5 w-5 text-primary" />
-                        New Daily Log
+                        {initialData ? 'Edit Daily Log' : 'New Daily Log'}
                     </DialogTitle>
                     <DialogDescription>
                         {projectName} • {new Date(date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
@@ -544,7 +610,7 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName }:
                             ) : (
                                 <span className="flex items-center gap-2">
                                     <CheckCircle2 className="h-4 w-4" />
-                                    Save Log
+                                    {initialData ? 'Update Log' : 'Save Log'}
                                 </span>
                             )}
                         </Button>

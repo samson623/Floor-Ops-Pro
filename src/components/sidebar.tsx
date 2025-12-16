@@ -8,7 +8,8 @@ import { usePermissions } from './permission-context';
 import { getRoleInfo, Permission } from '@/lib/permissions';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import {
     LayoutDashboard,
     FolderKanban,
@@ -215,6 +216,9 @@ export function Sidebar() {
                         </Button>
                     </SheetTrigger>
                     <SheetContent side="left" className="w-64 p-0">
+                        <VisuallyHidden>
+                            <SheetTitle>Navigation Menu</SheetTitle>
+                        </VisuallyHidden>
                         <SidebarContent />
                     </SheetContent>
                 </Sheet>
