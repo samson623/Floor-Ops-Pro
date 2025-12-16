@@ -9,23 +9,195 @@ export interface Milestone {
     status: 'completed' | 'current' | 'upcoming';
 }
 
+// ══════════════════════════════════════════════════════════════════
+// PUNCH LIST MANAGEMENT TYPES
+// Enterprise-grade accountability, tracking, and analytics
+// ══════════════════════════════════════════════════════════════════
+
+export type PunchItemPriority = 'critical' | 'high' | 'medium' | 'low';
+export type PunchItemStatus = 'open' | 'assigned' | 'in-progress' | 'needs-verification' | 'completed' | 'on-hold';
+export type PunchItemCategory = 'flooring' | 'transition' | 'grout' | 'baseboard' | 'damage' | 'installation' | 'cleanup' | 'touch-up' | 'other';
+export type PunchItemTradeType = 'flooring' | 'carpentry' | 'paint' | 'tile' | 'general';
+
+export interface PunchItemPhoto {
+    id: string;
+    url: string;
+    thumbnailUrl?: string;
+    caption?: string;
+    timestamp: string;
+    takenBy: string;
+    type: 'before' | 'during' | 'after' | 'issue' | 'verification';
+}
+
+export interface PunchItemHistoryEntry {
+    id: string;
+    timestamp: string;
+    userId?: number;
+    userName: string;
+    action: 'created' | 'assigned' | 'updated' | 'prioritized' | 'completed' | 'verified' | 'reopened' | 'photo-added' | 'note-added';
+    field?: string;
+    oldValue?: string;
+    newValue?: string;
+    notes?: string;
+}
+
 export interface PunchItem {
     id: number;
     text: string;
-    priority: 'high' | 'medium' | 'low';
+    priority: PunchItemPriority | 'high' | 'medium' | 'low'; // Backward compatible
     reporter: string;
+    reportedDate?: string;
     due: string;
+    dueTime?: string;
     completed: boolean;
-    // Enhanced fields for walkthrough & sign-off
+
+    // Enhanced status workflow
+    status?: PunchItemStatus;
+
+    // Accountability & Assignment
     assignedTo?: string;
+    assignedToUserId?: number;
     assignedDate?: string;
-    location?: string; // Room/area within project
-    photos?: string[]; // Photo documentation of the issue
-    notes?: string;
+    assignedBy?: string;
+
+    // Location & Context
+    location?: string;
+    room?: string;
+    area?: string;
+
+    // Photo Documentation (enhanced)
+    photos?: string[] | PunchItemPhoto[];
+    beforePhotos?: PunchItemPhoto[];
+    afterPhotos?: PunchItemPhoto[];
+
+    // Completion Tracking
     completedBy?: string;
+    completedByUserId?: number;
     completedDate?: string;
-    walkthroughSessionId?: string; // Link to walkthrough session
-    category?: 'flooring' | 'transition' | 'grout' | 'baseboard' | 'damage' | 'installation' | 'other';
+
+    // Verification Workflow
+    verifiedBy?: string;
+    verifiedByUserId?: number;
+    verifiedDate?: string;
+    verificationRequired?: boolean;
+
+    // Details & Communication
+    notes?: string;
+    internalNotes?: string;
+    tags?: string[];
+
+    // Relationships
+    walkthroughSessionId?: string;
+    relatedChangeOrderId?: string;
+    relatedPunchItemIds?: number[];
+
+    // Category & Classification
+    category?: PunchItemCategory | 'flooring' | 'transition' | 'grout' | 'baseboard' | 'damage' | 'installation' | 'other';
+    tradeType?: PunchItemTradeType;
+
+    // Workflow Details
+    blockingReason?: string;
+
+    // Time Tracking
+    estimatedHours?: number;
+    actualHours?: number;
+
+    // Client Visibility
+    visibleToClient?: boolean;
+    clientApprovalRequired?: boolean;
+    clientApprovedBy?: string;
+    clientApprovedDate?: string;
+
+    // Audit Trail
+    createdAt?: string;
+    updatedAt?: string;
+    history?: PunchItemHistoryEntry[];
+}
+
+// ══════════════════════════════════════════════════════════════════
+// PUNCH LIST ANALYTICS & METRICS TYPES
+// ══════════════════════════════════════════════════════════════════
+
+export interface PunchListMetrics {
+    projectId?: number;
+    projectName?: string;
+
+    // Volume Metrics
+    totalItems: number;
+    openItems: number;
+    completedItems: number;
+    overdueItems: number;
+    assignedItems: number;
+    unassignedItems: number;
+
+    // Priority Breakdown
+    criticalItems: number;
+    highPriorityItems: number;
+    mediumPriorityItems: number;
+    lowPriorityItems: number;
+
+    // Time Metrics (in days)
+    avgTimeToClose: number;
+    avgTimeToAssign: number;
+    avgTimeFromAssignToComplete: number;
+
+    // Quality Metrics
+    completionRate: number;
+    onTimeCompletionRate: number;
+    verificationRate: number;
+    reopenRate: number;
+    itemsWithPhotos: number;
+
+    // Category Breakdown
+    itemsByCategory: Record<string, number>;
+
+    // Trend Analytics
+    trendDirection: 'improving' | 'stable' | 'declining';
+    trendPercentage: number;
+    itemsCreatedLast7Days: number;
+    itemsClosedLast7Days: number;
+}
+
+export interface CrewPerformanceMetrics {
+    crewMemberId?: number;
+    crewMemberName: string;
+    role?: string;
+
+    // Volume
+    totalAssigned: number;
+    totalCompleted: number;
+    currentOpen: number;
+    currentOverdue: number;
+
+    // Quality
+    completionRate: number;
+    avgTimeToComplete: number;
+    onTimeCompletionRate: number;
+    reopenRate: number;
+    itemsWithPhotos: number;
+
+    // Issues Created vs Resolved
+    itemsReported: number;
+    itemsResolved: number;
+    netQuality: number;
+
+    // Peer Comparison
+    performanceVsAverage: number;
+    rank: number;
+    totalCrewMembers: number;
+}
+
+export interface RepeatIssueDetection {
+    id: string;
+    issuePattern: string;
+    category: PunchItemCategory;
+    occurrences: number;
+    projects: { id: number; name: string }[];
+    affectedCrewMembers: string[];
+    avgCostImpact: number;
+    recommendation: string;
+    severity: 'low' | 'medium' | 'high';
+    detectedAt: string;
 }
 
 export interface DailyLog {
@@ -321,13 +493,15 @@ export interface Message {
 export interface Notification {
     id: string;
     userId: string;
-    type: 'mention' | 'reply' | 'update' | 'alert';
+    type: 'mention' | 'reply' | 'update' | 'alert' | 'punch-assigned' | 'punch-verification' | 'punch-overdue';
     title: string;
     message: string;
     link?: string;
+    actionUrl?: string;
     read: boolean;
     createdAt: string;
     projectId?: number;
+    timestamp?: string;
 }
 
 export interface EstimateRoom {
@@ -1648,10 +1822,13 @@ export const initialData: Database = {
                 { id: 7, title: 'Project Close', date: 'Dec 20', status: 'upcoming' }
             ],
             punchList: [
-                { id: 1, text: 'Grout color mismatch near elevator', priority: 'high', reporter: 'PM', due: 'Dec 13', completed: false },
-                { id: 2, text: 'Transition strip loose at hallway', priority: 'high', reporter: 'Client', due: 'Dec 14', completed: false },
-                { id: 3, text: 'Minor chip on tile near entrance', priority: 'medium', reporter: 'Derek', due: 'Dec 15', completed: false },
-                { id: 4, text: 'Caulk gap at reception desk', priority: 'low', reporter: 'Derek', due: 'Dec 10', completed: true }
+                { id: 1, text: 'Grout color mismatch near elevator', priority: 'high', reporter: 'Sarah Chen', reportedDate: '2024-12-10', due: '2024-12-18', completed: false, status: 'assigned', assignedTo: 'Mike Rodriguez', assignedToUserId: 3, assignedDate: '2024-12-11', assignedBy: 'Sarah Chen', location: 'Main Lobby', room: 'Elevator Alcove', category: 'grout', tradeType: 'tile', verificationRequired: true, estimatedHours: 2, notes: 'Color batch from different lot - need to remix or order matching batch', visibleToClient: true },
+                { id: 2, text: 'Transition strip loose at hallway', priority: 'critical', reporter: 'Client', reportedDate: '2024-12-12', due: '2024-12-16', completed: false, status: 'in-progress', assignedTo: 'James Wilson', assignedToUserId: 4, assignedDate: '2024-12-12', assignedBy: 'Mike Rodriguez', location: 'Hallway', room: 'Main Corridor', category: 'transition', tradeType: 'flooring', verificationRequired: true, estimatedHours: 1, photos: ['/photos/transition-1.jpg'], notes: 'Safety hazard - client tripped. High priority fix.', visibleToClient: true, clientApprovalRequired: true },
+                { id: 3, text: 'Minor chip on tile near entrance', priority: 'medium', reporter: 'Derek Morrison', reportedDate: '2024-12-11', due: '2024-12-19', completed: false, status: 'open', location: 'Main Entrance', room: 'Lobby', category: 'damage', tradeType: 'tile', estimatedHours: 0.5, notes: 'Small chip - may be able to fill rather than replace', visibleToClient: false },
+                { id: 4, text: 'Caulk gap at reception desk', priority: 'low', reporter: 'Derek Morrison', reportedDate: '2024-12-08', due: '2024-12-10', completed: true, completedBy: 'Mike Rodriguez', completedByUserId: 3, completedDate: '2024-12-09', status: 'completed', assignedTo: 'Mike Rodriguez', location: 'Reception', room: 'Front Desk Area', category: 'installation', tradeType: 'flooring', actualHours: 0.25, verifiedBy: 'Sarah Chen', verifiedDate: '2024-12-10', afterPhotos: [{ id: 'p1', url: '/photos/caulk-after.jpg', type: 'after', timestamp: '2024-12-09', takenBy: 'Mike Rodriguez' }] },
+                { id: 5, text: 'Baseboard not flush with wall at corner', priority: 'medium', reporter: 'Mike Rodriguez', reportedDate: '2024-12-13', due: '2024-12-17', completed: false, status: 'assigned', assignedTo: 'Carlos Martinez', assignedDate: '2024-12-13', location: 'Conference Room', room: 'Meeting Room A', category: 'baseboard', tradeType: 'carpentry', estimatedHours: 1, visibleToClient: true },
+                { id: 6, text: 'Scuff marks on new carpet tiles', priority: 'low', reporter: 'James Wilson', reportedDate: '2024-12-14', due: '2024-12-20', completed: false, status: 'open', location: 'Break Room', category: 'cleanup', tradeType: 'flooring', estimatedHours: 0.5, notes: 'From moving furniture - should clean up easily' },
+                { id: 7, text: 'Grout sealer missing in wet area', priority: 'high', reporter: 'Sarah Chen', reportedDate: '2024-12-12', due: '2024-12-15', completed: false, status: 'needs-verification', assignedTo: 'Mike Rodriguez', completedBy: 'Mike Rodriguez', completedDate: '2024-12-14', location: 'Restroom', room: 'Main Floor Restroom', category: 'grout', tradeType: 'tile', verificationRequired: true, estimatedHours: 1.5, actualHours: 1.5, photos: ['/photos/sealer-1.jpg', '/photos/sealer-2.jpg'], visibleToClient: true }
             ],
             dailyLogs: [
                 { id: 1, date: 'December 12, 2024', crew: 3, hours: 24, weather: '☀️', sqft: 320, notes: 'Completed tile installation in main lobby. Client walkthrough at 2 PM went well.' },
@@ -1977,7 +2154,9 @@ export const initialData: Database = {
                 { id: 5, title: 'Final Walkthrough', date: 'Dec 27', status: 'upcoming' }
             ],
             punchList: [
-                { id: 5, text: 'Verify moisture levels in exam room', priority: 'high', reporter: 'Tony', due: 'Dec 14', completed: false }
+                { id: 1, text: 'Verify moisture levels in exam room', priority: 'high', reporter: 'Tony Martinez', reportedDate: '2024-12-10', due: '2024-12-14', completed: false, status: 'assigned', assignedTo: 'Tony Martinez', location: 'Exam Room 1', category: 'other', tradeType: 'flooring', verificationRequired: true, notes: 'Need moisture test before LVP install - asbestos abatement may have affected subfloor', visibleToClient: true },
+                { id: 2, text: 'Fill expansion gap at doorway threshold', priority: 'medium', reporter: 'Mike Rodriguez', reportedDate: '2024-12-12', due: '2024-12-18', completed: false, status: 'open', location: 'Waiting Room', category: 'installation', tradeType: 'flooring', estimatedHours: 0.5 },
+                { id: 3, text: 'Replace damaged LVP plank near nurse station', priority: 'high', reporter: 'Sarah Chen', reportedDate: '2024-12-14', due: '2024-12-16', completed: false, status: 'assigned', assignedTo: 'Carlos Martinez', location: 'Nurse Station', category: 'damage', tradeType: 'flooring', estimatedHours: 1, photos: ['/photos/damaged-plank.jpg'], notes: 'Plank cracked during furniture move - replacement needed', visibleToClient: false }
             ],
             dailyLogs: [
                 { id: 3, date: 'December 12, 2024', crew: 2, hours: 16, weather: '☀️', sqft: 150, notes: 'Subfloor prep in exam rooms. Working around patient schedule.' }
