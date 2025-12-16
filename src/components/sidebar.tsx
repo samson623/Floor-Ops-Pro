@@ -49,6 +49,8 @@ function SidebarContent() {
             items: [
                 { href: '/', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
                 { href: '/projects', label: 'Projects', icon: <FolderKanban className="w-5 h-5" />, badge: data.projects.length },
+                { href: '/assignments', label: 'My Assignments', icon: <Users className="w-5 h-5" /> },
+                { href: '/punch', label: 'Punch List', icon: <FileText className="w-5 h-5" />, badge: data.projects.reduce((acc, p) => acc + p.punchList.filter(i => !i.completed).length, 0) || undefined },
             ]
         },
         {

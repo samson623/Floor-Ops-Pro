@@ -60,7 +60,7 @@ export default function DashboardPage() {
               change={assignedCount > 0 ? 'Active jobs' : 'No assignments'}
               trend="up"
               variant="success"
-              onClick={() => router.push('/projects')}
+              onClick={() => router.push('/assignments')}
             />
           )}
           <StatCard
@@ -69,10 +69,7 @@ export default function DashboardPage() {
             change={openPunch > 3 ? 'Needs attention' : 'On track'}
             trend={openPunch > 3 ? 'down' : 'up'}
             variant={openPunch > 3 ? 'warning' : 'default'}
-            onClick={() => {
-              const projectWithPunch = data.projects.find(p => p.punchList.some(i => !i.completed));
-              if (projectWithPunch) router.push(`/projects/${projectWithPunch.id}?tab=punch`);
-            }}
+            onClick={() => router.push('/punch')}
           />
           <StatCard
             label="Utilization"
