@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useData } from '@/components/data-provider';
+import { usePermissions } from '@/components/permission-context';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -9,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Send, Hash, AtSign, Paperclip, Sparkles } from 'lucide-react';
+import { Send, Hash, AtSign, Paperclip, Sparkles, Lock } from 'lucide-react';
 import { Message } from '@/lib/data';
 import { format } from 'date-fns';
 
@@ -20,9 +21,14 @@ interface MessageFeedProps {
 
 export function MessageFeed({ projectId, currentUser = 'Samson (PM)' }: MessageFeedProps) {
     const { getProjectMessages, sendMessage, getTeamMembers } = useData();
+    const { can, canAny } = usePermissions();
     const [newMessage, setNewMessage] = useState('');
     const [mentionQuery, setMentionQuery] = useState<string | null>(null);
     const scrollRef = useRef<HTMLDivElement>(null);
+
+    // Permission checks
+    const canViewMessages = canAny(['VIEW_ALL_MESSAGES', 'VIEW_PROJECT_MESSAGES']);
+    const canSendMessages = can('SEND_MESSAGES');
 
     // Sort logic might be in data-provider, but let's ensure it here
     const messages = getProjectMessages(projectId).sort((a, b) =>
@@ -116,8 +122,8 @@ export function MessageFeed({ projectId, currentUser = 'Samson (PM)' }: MessageF
                                             </div>
                                             <div
                                                 className={`px-3 py-2 rounded-lg text-sm ${isMe
-                                                        ? 'bg-primary text-primary-foreground rounded-tr-none'
-                                                        : 'bg-muted rounded-tl-none'
+                                                    ? 'bg-primary text-primary-foreground rounded-tr-none'
+                                                    : 'bg-muted rounded-tl-none'
                                                     } ${msg.type === 'system' ? 'bg-secondary italic' : ''}`}
                                             >
                                                 {msg.content}
@@ -140,34 +146,43 @@ export function MessageFeed({ projectId, currentUser = 'Samson (PM)' }: MessageF
                 </div>
             </ScrollArea>
             <div className="p-4 border-t bg-background">
-                <div className="flex gap-2">
-                    <Button variant="ghost" size="icon" className="shrink-0" title="Attach File">
-                        <Paperclip className="w-4 h-4" />
-                    </Button>
-                    <div className="flex-1 relative">
-                        <Textarea
-                            placeholder="Type a message... Use @ to mention"
-                            className="min-h-[40px] max-h-[120px] resize-none pr-12"
-                            value={newMessage}
-                            onChange={(e) => setNewMessage(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                        />
-                        <Button
-                            className="absolute right-1 bottom-1 h-8 w-8"
-                            size="icon"
-                            variant="ghost"
-                            onClick={() => {
-                                // Trigger AI or client update generator
-                            }}
-                            title="Generate Update"
-                        >
-                            <Sparkles className="w-4 h-4 text-amber-500" />
+                {!canSendMessages ? (
+                    <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg border border-dashed">
+                        <Lock className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                            Read-only access. Contact your administrator to send messages.
+                        </span>
+                    </div>
+                ) : (
+                    <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" className="shrink-0" title="Attach File">
+                            <Paperclip className="w-4 h-4" />
+                        </Button>
+                        <div className="flex-1 relative">
+                            <Textarea
+                                placeholder="Type a message... Use @ to mention"
+                                className="min-h-[40px] max-h-[120px] resize-none pr-12"
+                                value={newMessage}
+                                onChange={(e) => setNewMessage(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                            />
+                            <Button
+                                className="absolute right-1 bottom-1 h-8 w-8"
+                                size="icon"
+                                variant="ghost"
+                                onClick={() => {
+                                    // Trigger AI or client update generator
+                                }}
+                                title="Generate Update"
+                            >
+                                <Sparkles className="w-4 h-4 text-amber-500" />
+                            </Button>
+                        </div>
+                        <Button onClick={handleSend} size="icon" className="shrink-0">
+                            <Send className="w-4 h-4" />
                         </Button>
                     </div>
-                    <Button onClick={handleSend} size="icon" className="shrink-0">
-                        <Send className="w-4 h-4" />
-                    </Button>
-                </div>
+                )}
             </div>
         </Card>
     );

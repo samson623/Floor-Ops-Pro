@@ -33,6 +33,8 @@ import {
 } from '@/components/invoice-modals';
 import { MessageFeed } from '@/components/message-feed';
 import { ClientUpdateModal } from '@/components/client-update-modal';
+import { SafetyComplianceTab } from '@/components/safety-compliance-tab';
+import { AddMoistureTestModal } from '@/components/project-modals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -60,7 +62,7 @@ import {
     MessageSquare
 } from 'lucide-react';
 
-type TabType = 'overview' | 'timeline' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials' | 'invoices' | 'walkthrough' | 'communication';
+type TabType = 'overview' | 'timeline' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials' | 'invoices' | 'walkthrough' | 'safety' | 'communication';
 
 const statusConfig = {
     active: { label: 'Active', className: 'bg-success/10 text-success border-success/20' },
@@ -109,7 +111,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         getClientInvoicesByProject,
         getProjectInvoiceSummary,
         sendClientInvoice,
-        recordPayment
+        recordPayment,
+        // Safety
+        addMoistureTest
     } = useData();
 
     const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -142,6 +146,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
     const [showEnhancedPunch, setShowEnhancedPunch] = useState(false);
     const [showWalkthroughManager, setShowWalkthroughManager] = useState(false);
     const [showClientWalkthrough, setShowClientWalkthrough] = useState<WalkthroughSession | null>(null);
+    const [showMoistureTest, setShowMoistureTest] = useState(false);
     const [showCompletionCert, setShowCompletionCert] = useState(false);
 
     // Invoice modal states
@@ -469,6 +474,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 </Badge>
                             )}
                         </TabsTrigger>
+                        {can('VIEW_SAFETY_RECORDS') && (
+                            <TabsTrigger value="safety" className="relative">
+                                🛡️ Safety
+                                {(project.siteConditions || []).filter(c => c.riskLevel === 'critical' || c.riskLevel === 'high').filter(c => c.status === 'active').length > 0 && (
+                                    <Badge className="ml-1 h-5 px-1.5 bg-red-500 text-white text-xs">
+                                        {(project.siteConditions || []).filter(c => c.riskLevel === 'critical' || c.riskLevel === 'high').filter(c => c.status === 'active').length}
+                                    </Badge>
+                                )}
+                            </TabsTrigger>
+                        )}
                         <TabsTrigger value="communication" className="relative">
                             <div className="flex items-center gap-2">
                                 <MessageSquare className="w-4 h-4" />
@@ -600,6 +615,19 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         )}
                     </TabsContent>
 
+                    {/* Safety & Compliance Tab */}
+                    {can('VIEW_SAFETY_RECORDS') && (
+                        <TabsContent value="safety" className="space-y-6 mt-0">
+                            <SafetyComplianceTab
+                                project={project}
+                                onAddMoistureTest={() => setShowMoistureTest(true)}
+                                onAddSubfloorTest={() => toast.success('Opening subfloor test form...')}
+                                onAddSiteCondition={() => toast.success('Opening site condition form...')}
+                                onReportIncident={() => toast.success('Opening incident report form...')}
+                                onCreateChecklist={() => toast.success('Opening checklist form...')}
+                            />
+                        </TabsContent>
+                    )}
 
 
                     {/* Communication Tab */}
@@ -1884,6 +1912,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 open={!!showRecordPayment}
                 onClose={() => setShowRecordPayment(null)}
                 invoice={showRecordPayment}
+            />
+
+            {/* Moisture Test Modal */}
+            <AddMoistureTestModal
+                open={showMoistureTest}
+                onClose={() => setShowMoistureTest(false)}
+                projectId={project.id}
+                onCreate={(test) => {
+                    addMoistureTest(project.id, test);
+                }}
             />
         </>
     );

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Database, initialData } from './data';
+import { Database, initialData, Project } from './data';
 
 const STORAGE_KEY = 'floorops-pro-data';
 
@@ -19,6 +19,19 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
                 const merged: Database = {
                     ...initialData,
                     ...parsed,
+                    // Migrate projects to ensure new fields are present
+                    projects: (parsed.projects || initialData.projects).map((p: any) => {
+                        const initialProject = initialData.projects.find((ip: Project) => ip.id === p.id);
+                        return {
+                            ...p,
+                            // Ensure safety fields are present if missing
+                            moistureTests: p.moistureTests || initialProject?.moistureTests || [],
+                            subfloorTests: p.subfloorTests || initialProject?.subfloorTests || [],
+                            siteConditions: p.siteConditions || initialProject?.siteConditions || [],
+                            safetyIncidents: p.safetyIncidents || initialProject?.safetyIncidents || [],
+                            complianceChecklists: p.complianceChecklists || initialProject?.complianceChecklists || [],
+                        };
+                    }),
                     // Ensure new walkthrough fields use initialData if not in localStorage
                     walkthroughSessions: parsed.walkthroughSessions?.length > 0
                         ? parsed.walkthroughSessions

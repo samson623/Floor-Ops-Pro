@@ -7,7 +7,7 @@
  * User roles in the flooring operations hierarchy.
  * Each role has distinct responsibilities and access levels.
  */
-export type UserRole = 'owner' | 'pm' | 'foreman' | 'installer' | 'office_admin' | 'sub';
+export type UserRole = 'owner' | 'pm' | 'foreman' | 'installer' | 'office_admin' | 'sub' | 'client';
 
 export interface RoleInfo {
     role: UserRole;
@@ -53,6 +53,12 @@ export const ROLE_DEFINITIONS: Record<UserRole, Omit<RoleInfo, 'role'>> = {
         description: 'External contractor with limited access to assigned work',
         color: 'hsl(199, 89%, 48%)', // Cyan
         icon: '🤝'
+    },
+    client: {
+        label: 'Client',
+        description: 'Project owner with view-only access to progress and photos',
+        color: 'hsl(150, 10%, 40%)', // Grey-Green
+        icon: '👀'
     }
 };
 
@@ -139,7 +145,24 @@ export type Permission =
     // Communication
     | 'VIEW_ALL_MESSAGES'
     | 'VIEW_PROJECT_MESSAGES'
-    | 'SEND_MESSAGES';
+    | 'SEND_MESSAGES'
+
+    // AI & Intelligence
+    | 'VIEW_INTELLIGENCE_CENTER'
+    | 'USE_AI_ASSISTANT'
+
+    // Safety & Compliance
+    | 'VIEW_SAFETY_RECORDS'         // View all safety documentation
+    | 'REPORT_SAFETY_INCIDENT'      // Anyone can report a safety incident (critical for safety culture)
+    | 'MANAGE_SAFETY_INCIDENTS'     // Close/archive incidents, approve corrective actions
+    | 'VIEW_MOISTURE_TESTS'         // View moisture test records
+    | 'CREATE_MOISTURE_TEST'        // Create new moisture tests
+    | 'VIEW_SUBFLOOR_TESTS'         // View subfloor flatness records
+    | 'CREATE_SUBFLOOR_TEST'        // Create subfloor flatness tests
+    | 'VIEW_SITE_CONDITIONS'        // View site conditions and risks
+    | 'MANAGE_SITE_CONDITIONS'      // Create, mitigate, resolve site conditions
+    | 'VIEW_COMPLIANCE_CHECKLISTS'  // View compliance checklists
+    | 'MANAGE_COMPLIANCE_CHECKLISTS'; // Create and complete checklists
 
 /**
  * Permission sets for each role.
@@ -161,7 +184,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_SUB_INVOICES', 'SUBMIT_SUB_INVOICE', 'APPROVE_SUB_INVOICE',
         'VIEW_WALKTHROUGHS', 'CREATE_WALKTHROUGH', 'CONDUCT_WALKTHROUGH', 'SIGN_OFF_PROJECT',
         'VIEW_TEAM', 'MANAGE_USERS', 'ASSIGN_USERS',
-        'VIEW_ALL_MESSAGES', 'SEND_MESSAGES'
+        'VIEW_ALL_MESSAGES', 'SEND_MESSAGES',
+        'VIEW_INTELLIGENCE_CENTER', 'USE_AI_ASSISTANT',
+        // Full safety & compliance access
+        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT', 'MANAGE_SAFETY_INCIDENTS',
+        'VIEW_MOISTURE_TESTS', 'CREATE_MOISTURE_TEST',
+        'VIEW_SUBFLOOR_TESTS', 'CREATE_SUBFLOOR_TEST',
+        'VIEW_SITE_CONDITIONS', 'MANAGE_SITE_CONDITIONS',
+        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS'
     ],
 
     pm: [
@@ -179,7 +209,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_SUB_INVOICES', 'APPROVE_SUB_INVOICE',
         'VIEW_WALKTHROUGHS', 'CREATE_WALKTHROUGH', 'CONDUCT_WALKTHROUGH', 'SIGN_OFF_PROJECT',
         'VIEW_TEAM', 'ASSIGN_USERS',
-        'VIEW_ALL_MESSAGES', 'SEND_MESSAGES'
+        'VIEW_ALL_MESSAGES', 'SEND_MESSAGES',
+        'VIEW_INTELLIGENCE_CENTER', 'USE_AI_ASSISTANT',
+        // Full safety & compliance access
+        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT', 'MANAGE_SAFETY_INCIDENTS',
+        'VIEW_MOISTURE_TESTS', 'CREATE_MOISTURE_TEST',
+        'VIEW_SUBFLOOR_TESTS', 'CREATE_SUBFLOOR_TEST',
+        'VIEW_SITE_CONDITIONS', 'MANAGE_SITE_CONDITIONS',
+        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS'
     ],
 
     foreman: [
@@ -193,7 +230,14 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_MATERIALS', 'RECEIVE_DELIVERY',
         'VIEW_WALKTHROUGHS', 'CONDUCT_WALKTHROUGH',
         'VIEW_TEAM',
-        'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES'
+        'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES',
+        'VIEW_INTELLIGENCE_CENTER', 'USE_AI_ASSISTANT',
+        // Foreman safety access - can create tests and report incidents
+        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT',
+        'VIEW_MOISTURE_TESTS', 'CREATE_MOISTURE_TEST',
+        'VIEW_SUBFLOOR_TESTS', 'CREATE_SUBFLOOR_TEST',
+        'VIEW_SITE_CONDITIONS', 'MANAGE_SITE_CONDITIONS',
+        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS'
     ],
 
     installer: [
@@ -206,7 +250,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_SCHEDULE',
         'VIEW_MATERIALS',
         'VIEW_WALKTHROUGHS', 'CONDUCT_WALKTHROUGH',
-        'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES'
+        'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES',
+        'USE_AI_ASSISTANT',
+        // Installer safety access - view and report
+        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT',
+        'VIEW_MOISTURE_TESTS', 'VIEW_SUBFLOOR_TESTS',
+        'VIEW_SITE_CONDITIONS', 'VIEW_COMPLIANCE_CHECKLISTS'
     ],
 
     office_admin: [
@@ -224,17 +273,35 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_SUB_INVOICES',
         'VIEW_WALKTHROUGHS',
         'VIEW_TEAM',
-        'VIEW_ALL_MESSAGES', 'SEND_MESSAGES'
+        'VIEW_ALL_MESSAGES', 'SEND_MESSAGES',
+        'VIEW_INTELLIGENCE_CENTER', 'USE_AI_ASSISTANT',
+        // Office admin safety access - view and manage checklists/reports
+        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT',
+        'VIEW_MOISTURE_TESTS', 'VIEW_SUBFLOOR_TESTS',
+        'VIEW_SITE_CONDITIONS',
+        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS'
     ],
 
     sub: [
-        // Subcontractor - limited to assigned work
         'VIEW_ASSIGNED_PROJECTS',
         'VIEW_PHOTOS',
         'VIEW_SCHEDULE',
         'VIEW_MATERIALS',
         'VIEW_SUB_INVOICES', 'SUBMIT_SUB_INVOICE',
-        'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES'
+        'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES',
+        // Subs can report safety incidents and view conditions
+        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT', 'VIEW_SITE_CONDITIONS'
+    ],
+    client: [
+        'VIEW_ASSIGNED_PROJECTS',
+        'VIEW_PHOTOS',
+        'VIEW_SCHEDULE',
+        'VIEW_WALKTHROUGHS',
+        'VIEW_PROJECT_MESSAGES',
+        // Client safety access - view only
+        'VIEW_SAFETY_RECORDS',
+        'VIEW_MOISTURE_TESTS', 'VIEW_SUBFLOOR_TESTS',
+        'VIEW_SITE_CONDITIONS', 'VIEW_COMPLIANCE_CHECKLISTS'
     ]
 };
 
@@ -303,7 +370,7 @@ export function getRoleInfo(role: UserRole): RoleInfo {
  * Get all roles sorted by hierarchy level.
  */
 export function getAllRoles(): RoleInfo[] {
-    const order: UserRole[] = ['owner', 'pm', 'foreman', 'installer', 'office_admin', 'sub'];
+    const order: UserRole[] = ['owner', 'pm', 'foreman', 'installer', 'office_admin', 'sub', 'client'];
     return order.map(role => getRoleInfo(role));
 }
 
@@ -395,5 +462,16 @@ export const DEFAULT_USERS: User[] = [
         assignedCrewIds: [],
         active: true,
         createdAt: '2024-03-15T00:00:00Z'
+    },
+    {
+        id: 7,
+        name: 'David (Lakeside HOA)',
+        email: 'david@lakeside.com',
+        phone: '(555) 900-0001',
+        role: 'client',
+        assignedProjectIds: [3],
+        assignedCrewIds: [],
+        active: true,
+        createdAt: '2024-04-01T00:00:00Z'
     }
 ];

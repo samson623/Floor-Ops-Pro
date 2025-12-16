@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePermissions } from '@/components/permission-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -23,9 +24,15 @@ const initialMessages: Message[] = [
 ];
 
 export function AIPanel() {
+    const { can } = usePermissions();
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [input, setInput] = useState('');
     const [isOpen, setIsOpen] = useState(false);
+
+    // Only show AI panel if user has permission
+    if (!can('USE_AI_ASSISTANT')) {
+        return null;
+    }
 
     const handleSend = () => {
         if (!input.trim()) return;

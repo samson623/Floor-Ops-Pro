@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, ReactNode, useCallback } from 'react';
-import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog, PhotoCapture, QAChecklist, PurchaseOrder, Delivery, MaterialLot, AcclimationEntry, AcclimationReading, DeliveryPhoto, LotWarning, LaborEntry, Subcontractor, SubcontractorInvoice, ProjectBudget, ProfitLeakAlert, JobPhase, WorkerRole, WalkthroughSession, CompletionCertificate, TeamMember, SignatureData, ClientInvoice, PaymentRecord, ProjectInvoiceSummary, ClientInvoiceType, Message, Notification } from '@/lib/data';
+import { Database, Project, Estimate, PunchItem, ChangeOrder, DailyLog, PhotoCapture, QAChecklist, PurchaseOrder, Delivery, MaterialLot, AcclimationEntry, AcclimationReading, DeliveryPhoto, LotWarning, LaborEntry, Subcontractor, SubcontractorInvoice, ProjectBudget, ProfitLeakAlert, JobPhase, WorkerRole, WalkthroughSession, CompletionCertificate, TeamMember, SignatureData, ClientInvoice, PaymentRecord, ProjectInvoiceSummary, ClientInvoiceType, Message, Notification, InventoryItem, MoistureTest } from '@/lib/data';
 import { useLocalStorage } from '@/lib/storage';
 
 interface DataContextType {
@@ -11,6 +11,13 @@ interface DataContextType {
     // Project operations  
     getProject: (id: number) => Project | undefined;
     updateProject: (id: number, updates: Partial<Project>) => void;
+    addProject: (project: Omit<Project, 'id'>) => number;
+
+    // Inventory operations
+    addInventoryItem: (item: Omit<InventoryItem, 'id'>) => number;
+
+    // Moisture test operations
+    addMoistureTest: (projectId: number, test: Omit<MoistureTest, 'id'>) => string;
 
     // Punch list operations
     togglePunchItem: (projectId: number, itemId: number) => void;
@@ -130,6 +137,45 @@ export function DataProvider({ children }: { children: ReactNode }) {
             p.id === id ? { ...p, ...updates } : p
         );
         saveData({ ...data, projects: newProjects });
+    }, [data, saveData]);
+
+    const addProject = useCallback((project: Omit<Project, 'id'>) => {
+        const newId = Math.max(0, ...data.projects.map(p => p.id)) + 1;
+        const newProject: Project = { ...project, id: newId };
+        saveData({ ...data, projects: [...data.projects, newProject] });
+        return newId;
+    }, [data, saveData]);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // INVENTORY OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const addInventoryItem = useCallback((item: Omit<InventoryItem, 'id'>) => {
+        const newId = Math.max(0, ...data.inventory.map(i => i.id)) + 1;
+        const newItem: InventoryItem = { ...item, id: newId };
+        saveData({ ...data, inventory: [...data.inventory, newItem] });
+        return newId;
+    }, [data, saveData]);
+
+    // ═══════════════════════════════════════════════════════════════════════
+    // MOISTURE TEST OPERATIONS
+    // ═══════════════════════════════════════════════════════════════════════
+
+    const addMoistureTest = useCallback((projectId: number, test: Omit<MoistureTest, 'id'>) => {
+        const project = data.projects.find(p => p.id === projectId);
+        if (!project) return '';
+
+        const newId = `MT-${String((project.moistureTests?.length || 0) + 1).padStart(3, '0')}`;
+        const newTest: MoistureTest = { ...test, id: newId };
+
+        const newProjects = data.projects.map(p => {
+            if (p.id === projectId) {
+                return { ...p, moistureTests: [...(p.moistureTests || []), newTest] };
+            }
+            return p;
+        });
+        saveData({ ...data, projects: newProjects });
+        return newId;
     }, [data, saveData]);
 
     const togglePunchItem = useCallback((projectId: number, itemId: number) => {
@@ -275,7 +321,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
                 contract: estimate.totals.total,
                 costs: 0,
                 margin: estimate.totals.margin
-            }
+            },
+            moistureTests: [],
+            subfloorTests: [],
+            siteConditions: [],
+            safetyIncidents: [],
+            complianceChecklists: []
         };
 
         saveData({
@@ -951,6 +1002,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
             isLoaded,
             getProject,
             updateProject,
+            addProject,
+            addInventoryItem,
+            addMoistureTest,
             togglePunchItem,
             addPunchItem,
             addChangeOrder,
@@ -1062,13 +1116,21 @@ export function useData(): DataContextType {
             walkthroughSessions: [],
             completionCertificates: [],
             teamMembers: [],
-            clientInvoices: []
+            clientInvoices: [],
+            allMoistureTests: [],
+            allSubfloorTests: [],
+            allSiteConditions: [],
+            allSafetyIncidents: [],
+            allComplianceChecklists: []
         };
         return {
             data: emptyData,
             isLoaded: false,
             getProject: () => undefined,
             updateProject: () => { },
+            addProject: () => 0,
+            addInventoryItem: () => 0,
+            addMoistureTest: () => '',
             togglePunchItem: () => { },
             addPunchItem: () => { },
             addChangeOrder: () => { },

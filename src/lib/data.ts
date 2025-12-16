@@ -147,6 +147,12 @@ export interface Project {
     changeOrders: ChangeOrder[];
     qaChecklists: QAChecklist[];
     financials: ProjectFinancials;
+    // Safety & Compliance
+    moistureTests: MoistureTest[];
+    subfloorTests: SubfloorFlatnessTest[];
+    siteConditions: SiteCondition[];
+    safetyIncidents: SafetyIncident[];
+    complianceChecklists: ComplianceChecklist[];
 }
 
 export interface Vendor {
@@ -348,6 +354,561 @@ export interface TeamMember {
     avatar?: string;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// SITE SAFETY & COMPLIANCE TYPES
+// Industry-standard documentation for warranty protection & liability
+// ══════════════════════════════════════════════════════════════════
+
+// ─────────────────────────────────────────────────────────────────
+// MOISTURE TESTING (ASTM F2170/F1869 Compliant)
+// ─────────────────────────────────────────────────────────────────
+
+export type MoistureTestType = 'rh-probe' | 'calcium-chloride' | 'pin-meter' | 'tramex' | 'other';
+
+export interface MoistureTestReading {
+    location: string;          // e.g., "Living Room - Center", "Kitchen - Near Dishwasher"
+    value: number;             // RH% or lbs/1000sqft
+    depth?: number;            // Probe depth in inches (40% slab depth per ASTM F2170)
+    probeId?: string;          // Serial number for RH probes
+}
+
+export interface MoistureTest {
+    id: string;
+    projectId: number;
+    testDate: string;
+    testType: MoistureTestType;
+
+    // Test readings - multiple locations per test
+    readings: MoistureTestReading[];
+
+    // Environmental conditions at time of test
+    ambientTemp: number;       // °F
+    ambientRH: number;         // %
+    slabTemp?: number;         // °F (important for adhesive selection)
+
+    // Compliance thresholds
+    manufacturerLimit: number; // Max allowable per flooring manufacturer
+    manufacturerName?: string;
+    productName?: string;
+
+    // Results
+    passed: boolean;
+    highestReading: number;
+    averageReading: number;
+
+    // Wait time calculations (for failed tests)
+    estimatedDryTime?: number; // Days until retest recommended
+
+    // Documentation
+    photos: string[];          // Photos of test setup and readings
+    notes?: string;
+
+    // Technician info
+    testedBy: string;
+    certificationNumber?: string; // Moisture testing certification
+
+    // Follow-up
+    retestRequired: boolean;
+    retestDate?: string;
+    retestId?: string;         // Link to follow-up test
+
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Industry-standard moisture limits by flooring type
+export const MOISTURE_LIMITS: Record<string, { rh: number; calciumChloride: number; description: string }> = {
+    'lvp': { rh: 85, calciumChloride: 8, description: 'Luxury Vinyl Plank/Tile' },
+    'hardwood': { rh: 75, calciumChloride: 3, description: 'Solid Hardwood' },
+    'engineered': { rh: 80, calciumChloride: 5, description: 'Engineered Hardwood' },
+    'laminate': { rh: 75, calciumChloride: 3, description: 'Laminate Flooring' },
+    'carpet-glue': { rh: 80, calciumChloride: 5, description: 'Glue-Down Carpet' },
+    'tile': { rh: 90, calciumChloride: 10, description: 'Ceramic/Porcelain Tile' },
+    'epoxy': { rh: 75, calciumChloride: 3, description: 'Epoxy Coatings' },
+};
+
+// ─────────────────────────────────────────────────────────────────
+// SUBFLOOR FLATNESS (ASTM F710 / ASTM E1155 Compliant)  
+// ─────────────────────────────────────────────────────────────────
+
+export type SubfloorType = 'concrete' | 'plywood' | 'osb' | 'gypsum' | 'existing-flooring' | 'other';
+export type FlatnessStandard = 'astm-f710' | 'residential' | 'commercial' | 'manufacturer-spec';
+
+export interface FlatnessMeasurement {
+    location: string;
+    // 10-foot straightedge measurements (standard method)
+    gapOver10ft?: number;      // Inches - max gap under 10' straightedge
+    // Floor levelness (F-number system for commercial)
+    flNumber?: number;         // Overall flatness
+    ffNumber?: number;         // Flatness number
+    // Lippage between adjacent surfaces
+    lippage?: number;          // Inches at transitions
+    // Direction of slope if present
+    slopeDirection?: string;
+    slopeAmount?: number;      // Inches per foot
+}
+
+export interface SubfloorFlatnessTest {
+    id: string;
+    projectId: number;
+    testDate: string;
+
+    // Subfloor information
+    subfloorType: SubfloorType;
+    subfloorAge?: string;      // "New pour", "Existing - 5+ years", etc.
+    subfloorCondition: 'excellent' | 'good' | 'fair' | 'poor';
+
+    // Standards being applied
+    standard: FlatnessStandard;
+    maxAllowableGap: number;   // Inches per 10 feet (typically 3/16" residential, 1/8" commercial)
+    maxAllowableLippage: number; // Inches (typically 1/32" for rigid flooring)
+
+    // Measurements
+    areasTested: string[];     // List of rooms/areas
+    measurements: FlatnessMeasurement[];
+
+    // Results
+    passed: boolean;
+    worstGap: number;
+    worstLippage: number;
+
+    // Remediation
+    remediationRequired: boolean;
+    remediationType?: 'grinding' | 'self-leveler' | 'patching' | 'plywood-overlay' | 'other';
+    estimatedRemediationHours?: number;
+    estimatedRemediationCost?: number;
+
+    // Documentation
+    photos: string[];          // Photos with straightedge/level visible
+    notes?: string;
+
+    // Technician
+    testedBy: string;
+
+    // Sign-off (if remediation completed)
+    remediationComplete?: boolean;
+    remediationCompletedBy?: string;
+    remediationCompletedDate?: string;
+    postRemediationPhotos?: string[];
+
+    createdAt: string;
+    updatedAt: string;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// SITE CONDITIONS & RISK CONTROLS
+// ─────────────────────────────────────────────────────────────────
+
+export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
+export type SiteConditionType =
+    | 'hvac-status'            // HVAC must be running for acclimation
+    | 'moisture-concern'       // Visible moisture, water damage history
+    | 'structural-issue'       // Subfloor damage, joists, etc.
+    | 'access-restriction'     // Limited access, narrow doorways
+    | 'occupied-space'         // Furniture, occupants present
+    | 'asbestos-concern'       // Pre-1980 building, require testing
+    | 'lead-paint'             // Pre-1978, require testing
+    | 'mold-presence'          // Visible mold, remediation needed
+    | 'electrical-hazard'      // Exposed wiring, panel near work area
+    | 'plumbing-concern'       // Leaks, proximity to wet areas
+    | 'temperature-issue'      // Too hot/cold for installation
+    | 'ventilation'            // Inadequate for adhesive off-gassing
+    | 'dust-control'           // Sensitive environment (medical, etc.)
+    | 'noise-restriction'      // HOA/building rules on work hours
+    | 'parking-access'         // Delivery/crew parking limitations
+    | 'other';
+
+export interface SiteConditionMitigation {
+    action: string;
+    implementedBy: string;
+    implementedAt: string;
+    verified: boolean;
+    verifiedBy?: string;
+    verifiedAt?: string;
+}
+
+export interface SiteCondition {
+    id: string;
+    projectId: number;
+    conditionType: SiteConditionType;
+
+    // Risk assessment
+    riskLevel: RiskLevel;
+    description: string;
+    affectedAreas: string[];   // Which rooms/areas are affected
+
+    // Impact
+    impactsSchedule: boolean;
+    impactsBudget: boolean;
+    requiresClientApproval: boolean;
+
+    // Mitigation
+    mitigationRequired: boolean;
+    mitigations: SiteConditionMitigation[];
+
+    // Documentation
+    photos: string[];
+
+    // Timeline
+    identifiedBy: string;
+    identifiedAt: string;
+
+    // Resolution
+    status: 'active' | 'mitigated' | 'resolved' | 'accepted';
+    resolvedAt?: string;
+    resolvedBy?: string;
+    resolutionNotes?: string;
+
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Risk level definitions for consistent assessment
+export const RISK_LEVEL_CONFIG: Record<RiskLevel, { color: string; label: string; action: string }> = {
+    low: { color: 'hsl(142, 76%, 36%)', label: 'Low Risk', action: 'Monitor and document' },
+    medium: { color: 'hsl(38, 92%, 50%)', label: 'Medium Risk', action: 'Implement controls before proceeding' },
+    high: { color: 'hsl(25, 95%, 53%)', label: 'High Risk', action: 'Stop work, escalate to PM' },
+    critical: { color: 'hsl(0, 84%, 60%)', label: 'Critical Risk', action: 'Stop all work immediately, notify owner' },
+};
+
+// ─────────────────────────────────────────────────────────────────
+// SAFETY INCIDENTS (OSHA-Aligned Reporting)
+// ─────────────────────────────────────────────────────────────────
+
+export type IncidentSeverity = 'near-miss' | 'first-aid' | 'medical-treatment' | 'lost-time' | 'fatality';
+export type IncidentType =
+    | 'slip-trip-fall'
+    | 'struck-by'
+    | 'caught-between'
+    | 'overexertion'
+    | 'cut-laceration'
+    | 'eye-injury'
+    | 'respiratory'
+    | 'chemical-exposure'
+    | 'heat-illness'
+    | 'electrical'
+    | 'vehicle'
+    | 'property-damage'
+    | 'other';
+
+export interface IncidentPerson {
+    name: string;
+    role: string;              // Job title/role
+    company: string;           // Employer (for subs)
+    injuryDescription?: string;
+    treatmentProvided?: string;
+    transportedTo?: string;    // Hospital, clinic, etc.
+}
+
+export interface SafetyIncident {
+    id: string;
+    projectId: number;
+
+    // Incident details
+    incidentDate: string;
+    incidentTime: string;
+    location: string;          // Specific location on jobsite
+
+    // Classification
+    severity: IncidentSeverity;
+    incidentType: IncidentType;
+    description: string;       // Detailed description of what happened
+
+    // People involved
+    personnelInvolved: IncidentPerson[];
+    witnesses: { name: string; phone?: string; statement?: string }[];
+
+    // Immediate response
+    immediateActions: string;  // What was done immediately
+    workStopped: boolean;
+    areaCordoned: boolean;
+
+    // OSHA compliance
+    oshaReportable: boolean;   // Hospitalization, amputation, eye loss, fatality
+    oshaReportedDate?: string;
+    oshaReportNumber?: string;
+
+    // Root cause analysis
+    rootCauses?: string[];
+    contributingFactors?: string[];
+
+    // Corrective actions
+    correctiveActions: {
+        action: string;
+        assignedTo: string;
+        dueDate: string;
+        completedDate?: string;
+        verified: boolean;
+    }[];
+
+    // Documentation
+    photos: string[];
+    attachments?: string[];    // Incident reports, medical forms, etc.
+
+    // Investigation
+    investigatedBy?: string;
+    investigationDate?: string;
+    investigationComplete: boolean;
+
+    // Follow-up
+    followUpRequired: boolean;
+    followUpDate?: string;
+    followUpNotes?: string;
+
+    // Status
+    status: 'open' | 'under-investigation' | 'corrective-action' | 'closed';
+    closedBy?: string;
+    closedAt?: string;
+
+    // Reporter
+    reportedBy: string;
+    reportedAt: string;
+
+    createdAt: string;
+    updatedAt: string;
+}
+
+// ─────────────────────────────────────────────────────────────────
+// COMPLIANCE CHECKLISTS (Job-Specific Safety)
+// ─────────────────────────────────────────────────────────────────
+
+export type ComplianceChecklistType =
+    | 'daily-safety'           // Daily jobsite safety walkthrough
+    | 'site-setup'             // Initial site preparation
+    | 'material-handling'      // Safe handling of flooring materials
+    | 'ppe-inspection'         // Personal protective equipment
+    | 'tool-inspection'        // Power tools and equipment
+    | 'dust-control'           // Silica/dust management
+    | 'adhesive-safety'        // VOC and adhesive handling
+    | 'demolition'             // Demo work safety
+    | 'fall-protection'        // Elevated work areas
+    | 'confined-space'         // Crawl spaces, attics
+    | 'hot-work'               // Cutting, welding near flooring
+    | 'end-of-day';            // Closeout and security
+
+export interface ComplianceChecklistItem {
+    id: string;
+    text: string;
+    category?: string;         // Group items by category
+    required: boolean;         // Is this item mandatory?
+    checked: boolean;
+    na: boolean;               // Not applicable
+    notes?: string;
+    checkedBy?: string;
+    checkedAt?: string;
+}
+
+export interface ComplianceChecklist {
+    id: string;
+    projectId: number;
+    checklistType: ComplianceChecklistType;
+
+    // Checklist details
+    title: string;
+    description?: string;
+    date: string;              // Date checklist applies to
+    shift?: 'morning' | 'afternoon' | 'night';
+
+    // Items
+    items: ComplianceChecklistItem[];
+
+    // Completion
+    itemsChecked: number;
+    totalItems: number;
+    totalRequired: number;
+    requiredComplete: boolean;
+    percentComplete: number;
+
+    // Weather conditions (relevant for outdoor/temperature sensitive work)
+    weatherConditions?: {
+        temperature: number;
+        humidity: number;
+        conditions: string;    // "Sunny", "Rainy", etc.
+    };
+
+    // Sign-off
+    completedBy?: string;
+    completedAt?: string;
+    supervisorSignOff?: string;
+    supervisorSignOffAt?: string;
+
+    // Issues identified
+    issuesFound: string[];
+    correctiveActionsTaken?: string;
+
+    // Documentation
+    photos?: string[];
+
+    status: 'not-started' | 'in-progress' | 'completed' | 'requires-attention';
+
+    createdAt: string;
+    updatedAt: string;
+}
+
+// Default checklist templates for each type
+export const COMPLIANCE_CHECKLIST_TEMPLATES: Record<ComplianceChecklistType, { title: string; items: Omit<ComplianceChecklistItem, 'id' | 'checked' | 'na' | 'checkedBy' | 'checkedAt'>[] }> = {
+    'daily-safety': {
+        title: 'Daily Safety Checklist',
+        items: [
+            { text: 'Work area free of slip/trip hazards', category: 'General', required: true },
+            { text: 'All crew members wearing required PPE', category: 'PPE', required: true },
+            { text: 'First aid kit accessible and stocked', category: 'Emergency', required: true },
+            { text: 'Fire extinguisher accessible', category: 'Emergency', required: true },
+            { text: 'Emergency exits clear and marked', category: 'Emergency', required: true },
+            { text: 'Power tools inspected and in good condition', category: 'Tools', required: true },
+            { text: 'Extension cords free of damage', category: 'Tools', required: true },
+            { text: 'GFCI protection in use', category: 'Electrical', required: true },
+            { text: 'Adequate lighting in work areas', category: 'General', required: false },
+            { text: 'Dust control measures in place', category: 'Dust Control', required: true },
+            { text: 'Material staging area organized', category: 'Housekeeping', required: false },
+            { text: 'Client areas protected from dust/debris', category: 'Housekeeping', required: true },
+        ]
+    },
+    'site-setup': {
+        title: 'Site Setup Checklist',
+        items: [
+            { text: 'Pre-job walkthrough completed with client', category: 'Client', required: true },
+            { text: 'Work areas documented with photos', category: 'Documentation', required: true },
+            { text: 'Existing conditions noted and photographed', category: 'Documentation', required: true },
+            { text: 'HVAC running and set to 65-80°F', category: 'Environment', required: true },
+            { text: 'Humidity levels acceptable (35-55%)', category: 'Environment', required: true },
+            { text: 'Subfloor moisture tested and documented', category: 'Testing', required: true },
+            { text: 'Subfloor flatness verified', category: 'Testing', required: true },
+            { text: 'Furniture and belongings protected/moved', category: 'Prep', required: true },
+            { text: 'Traffic paths established and marked', category: 'Safety', required: false },
+            { text: 'Material storage area designated', category: 'Logistics', required: true },
+            { text: 'Waste disposal plan in place', category: 'Logistics', required: true },
+            { text: 'Client informed of work schedule', category: 'Client', required: true },
+        ]
+    },
+    'material-handling': {
+        title: 'Material Handling Safety',
+        items: [
+            { text: 'Lifting techniques reviewed with crew', category: 'Training', required: true },
+            { text: 'Heavy items to be team-lifted identified', category: 'Planning', required: true },
+            { text: 'Dollies/carts available for heavy loads', category: 'Equipment', required: false },
+            { text: 'Clear pathways for material transport', category: 'Housekeeping', required: true },
+            { text: 'Material storage stable and secure', category: 'Storage', required: true },
+            { text: 'Boxes opened away from body', category: 'Procedure', required: true },
+            { text: 'Adhesive containers properly sealed when not in use', category: 'Chemical', required: true },
+        ]
+    },
+    'ppe-inspection': {
+        title: 'PPE Inspection Checklist',
+        items: [
+            { text: 'Safety glasses available and worn', category: 'Eye', required: true },
+            { text: 'Hearing protection available for power tools', category: 'Hearing', required: true },
+            { text: 'Knee pads in good condition', category: 'Body', required: true },
+            { text: 'Work gloves available and appropriate', category: 'Hand', required: true },
+            { text: 'Dust masks/respirators fitted and available', category: 'Respiratory', required: true },
+            { text: 'Steel-toe/safety footwear worn', category: 'Foot', required: true },
+            { text: 'High-visibility vests (if required)', category: 'Visibility', required: false },
+        ]
+    },
+    'tool-inspection': {
+        title: 'Tool Safety Inspection',
+        items: [
+            { text: 'Power cords free of cuts/exposed wires', category: 'Electrical', required: true },
+            { text: 'Guards in place on all saws', category: 'Guards', required: true },
+            { text: 'Blades sharp and properly installed', category: 'Blades', required: true },
+            { text: 'Nailers/staplers inspected for jams', category: 'Pneumatic', required: true },
+            { text: 'Air compressor pressure appropriate', category: 'Pneumatic', required: true },
+            { text: 'Hoses free of damage and properly connected', category: 'Pneumatic', required: true },
+            { text: 'Battery tools charged and functioning', category: 'Battery', required: true },
+            { text: 'Hand tools in good condition', category: 'Hand Tools', required: true },
+        ]
+    },
+    'dust-control': {
+        title: 'Dust Control Checklist',
+        items: [
+            { text: 'Dust barriers installed at work boundaries', category: 'Containment', required: true },
+            { text: 'HEPA vacuum available and operational', category: 'Equipment', required: true },
+            { text: 'Wet cutting methods used where applicable', category: 'Method', required: false },
+            { text: 'Dust masks (N95 minimum) worn during cutting', category: 'PPE', required: true },
+            { text: 'HVAC returns covered/filtered', category: 'HVAC', required: true },
+            { text: 'Occupied areas protected from dust migration', category: 'Containment', required: true },
+            { text: 'Regular cleanup intervals maintained', category: 'Housekeeping', required: true },
+        ]
+    },
+    'adhesive-safety': {
+        title: 'Adhesive & Chemical Safety',
+        items: [
+            { text: 'SDS available for all products on site', category: 'Documentation', required: true },
+            { text: 'Adequate ventilation in work area', category: 'Ventilation', required: true },
+            { text: 'Adhesive containers properly labeled', category: 'Storage', required: true },
+            { text: 'Spill containment materials available', category: 'Emergency', required: true },
+            { text: 'Skin protection (gloves) worn', category: 'PPE', required: true },
+            { text: 'Eye wash available for chemical exposure', category: 'Emergency', required: false },
+            { text: 'No ignition sources near solvent-based products', category: 'Fire Safety', required: true },
+            { text: 'Empty containers disposed of properly', category: 'Disposal', required: true },
+        ]
+    },
+    'demolition': {
+        title: 'Demolition Safety Checklist',
+        items: [
+            { text: 'Asbestos assessment completed (pre-1980 buildings)', category: 'Hazmat', required: true },
+            { text: 'Lead paint assessment completed (pre-1978)', category: 'Hazmat', required: true },
+            { text: 'Utilities identified and protected', category: 'Utilities', required: true },
+            { text: 'Dust control measures implemented', category: 'Dust', required: true },
+            { text: 'Heavy debris removal plan in place', category: 'Logistics', required: true },
+            { text: 'PPE appropriate for demo work worn', category: 'PPE', required: true },
+            { text: 'Pry bars and demo tools inspected', category: 'Tools', required: true },
+            { text: 'Subfloor condition being documented during demo', category: 'Documentation', required: true },
+        ]
+    },
+    'fall-protection': {
+        title: 'Fall Protection Checklist',
+        items: [
+            { text: 'Elevated work areas identified', category: 'Assessment', required: true },
+            { text: 'Ladder inspected and rated for use', category: 'Equipment', required: true },
+            { text: 'Ladder placed on stable, level surface', category: 'Setup', required: true },
+            { text: 'Three points of contact maintained on ladder', category: 'Practice', required: true },
+            { text: 'Scaffold/platform stable and guarded', category: 'Equipment', required: false },
+            { text: 'Floor openings covered or barricaded', category: 'Hazard Control', required: true },
+            { text: 'Stair protection in place', category: 'Hazard Control', required: false },
+        ]
+    },
+    'confined-space': {
+        title: 'Confined Space Entry',
+        items: [
+            { text: 'Space assessed - permit required?', category: 'Assessment', required: true },
+            { text: 'Atmosphere tested (if required)', category: 'Testing', required: false },
+            { text: 'Adequate ventilation provided', category: 'Ventilation', required: true },
+            { text: 'Entry/exit plan established', category: 'Planning', required: true },
+            { text: 'Communication method established', category: 'Communication', required: true },
+            { text: 'Rescue plan in place', category: 'Emergency', required: true },
+            { text: 'Attendant posted (if required)', category: 'Personnel', required: false },
+        ]
+    },
+    'hot-work': {
+        title: 'Hot Work Permit Checklist',
+        items: [
+            { text: 'Hot work permit obtained (if required)', category: 'Permit', required: true },
+            { text: 'Combustibles removed or protected', category: 'Fire Prevention', required: true },
+            { text: 'Fire extinguisher within 10 feet', category: 'Fire Prevention', required: true },
+            { text: 'Fire watch assigned', category: 'Fire Prevention', required: true },
+            { text: 'Smoke detectors notification/coverage', category: 'Fire Prevention', required: true },
+            { text: 'Cutting area clear of dust and debris', category: 'Housekeeping', required: true },
+        ]
+    },
+    'end-of-day': {
+        title: 'End of Day Closeout',
+        items: [
+            { text: 'All power tools unplugged', category: 'Tools', required: true },
+            { text: 'Compressor drained and off', category: 'Tools', required: true },
+            { text: 'Adhesive containers sealed and stored properly', category: 'Materials', required: true },
+            { text: 'Work area cleaned and swept', category: 'Housekeeping', required: true },
+            { text: 'Debris removed or contained', category: 'Housekeeping', required: true },
+            { text: 'Trip hazards eliminated', category: 'Safety', required: true },
+            { text: 'Protective barriers secure', category: 'Safety', required: true },
+            { text: 'HVAC set for overnight acclimation (if applicable)', category: 'Environment', required: false },
+            { text: 'Doors/access points secured', category: 'Security', required: true },
+            { text: 'Daily progress photos taken', category: 'Documentation', required: true },
+            { text: 'Tomorrow\'s work reviewed with crew', category: 'Planning', required: false },
+        ]
+    },
+};
+
 export interface Database {
     projects: Project[];
     vendors: Vendor[];
@@ -380,6 +941,12 @@ export interface Database {
     teamMembers: TeamMember[];
     // Client Invoicing & Payments
     clientInvoices: ClientInvoice[];
+    // Safety & Compliance (cross-project reporting)
+    allMoistureTests: MoistureTest[];
+    allSubfloorTests: SubfloorFlatnessTest[];
+    allSiteConditions: SiteCondition[];
+    allSafetyIncidents: SafetyIncident[];
+    allComplianceChecklists: ComplianceChecklist[];
 }
 
 // Offline Mode Support
@@ -1052,7 +1619,156 @@ export const initialData: Database = {
             ],
             photoCaptures: [],
             qaChecklists: [],
-            financials: { contract: 45200, costs: 28450, margin: 37 }
+            financials: { contract: 45200, costs: 28450, margin: 37 },
+            // Safety & Compliance Data
+            moistureTests: [
+                {
+                    id: 'mt-001',
+                    projectId: 1,
+                    testDate: '2024-11-16',
+                    testType: 'rh-probe',
+                    readings: [
+                        { location: 'Main Lobby - Center', value: 72, depth: 1.2, probeId: 'RH-2847' },
+                        { location: 'Main Lobby - East Wall', value: 68, depth: 1.2, probeId: 'RH-2848' },
+                        { location: 'Elevator Vestibule', value: 78, depth: 1.2, probeId: 'RH-2849' }
+                    ],
+                    ambientTemp: 68,
+                    ambientRH: 45,
+                    slabTemp: 65,
+                    manufacturerLimit: 80,
+                    manufacturerName: 'Shaw Floors',
+                    productName: 'Shaw Commercial Carpet Tile',
+                    passed: true,
+                    highestReading: 78,
+                    averageReading: 72.7,
+                    photos: ['RH Test Setup', 'Probe Readings'],
+                    notes: 'All readings within manufacturer spec. Cleared for installation.',
+                    testedBy: 'Mike Rodriguez',
+                    certificationNumber: 'NWFA-4521',
+                    retestRequired: false,
+                    createdAt: '2024-11-16T09:30:00Z',
+                    updatedAt: '2024-11-16T11:45:00Z'
+                }
+            ],
+            subfloorTests: [
+                {
+                    id: 'sf-001',
+                    projectId: 1,
+                    testDate: '2024-11-17',
+                    subfloorType: 'concrete',
+                    subfloorAge: 'Existing - 15+ years',
+                    subfloorCondition: 'good',
+                    standard: 'commercial',
+                    maxAllowableGap: 0.125,
+                    maxAllowableLippage: 0.03125,
+                    areasTested: ['Main Lobby', 'Elevator Vestibule', 'Hallway'],
+                    measurements: [
+                        { location: 'Main Lobby - North/South', gapOver10ft: 0.0625, lippage: 0.02 },
+                        { location: 'Main Lobby - East/West', gapOver10ft: 0.09375, lippage: 0.015 },
+                        { location: 'Elevator Vestibule', gapOver10ft: 0.1875, lippage: 0.04, slopeDirection: 'Toward elevator' }
+                    ],
+                    passed: false,
+                    worstGap: 0.1875,
+                    worstLippage: 0.04,
+                    remediationRequired: true,
+                    remediationType: 'self-leveler',
+                    estimatedRemediationHours: 6,
+                    estimatedRemediationCost: 850,
+                    photos: ['Straightedge Test Lobby', 'Lippage at Elevator'],
+                    notes: 'Elevator vestibule requires self-leveler before tile installation. Main lobby acceptable for carpet.',
+                    testedBy: 'Mike Rodriguez',
+                    remediationComplete: true,
+                    remediationCompletedBy: 'James Wilson',
+                    remediationCompletedDate: '2024-11-20',
+                    postRemediationPhotos: ['Leveled Vestibule'],
+                    createdAt: '2024-11-17T08:00:00Z',
+                    updatedAt: '2024-11-20T16:30:00Z'
+                }
+            ],
+            siteConditions: [
+                {
+                    id: 'sc-001',
+                    projectId: 1,
+                    conditionType: 'occupied-space',
+                    riskLevel: 'medium',
+                    description: 'Building lobby remains active during work hours. Tenant traffic 7AM-6PM.',
+                    affectedAreas: ['Main Lobby', 'Hallway'],
+                    impactsSchedule: true,
+                    impactsBudget: false,
+                    requiresClientApproval: false,
+                    mitigationRequired: true,
+                    mitigations: [
+                        { action: 'Installed temporary barriers and signage', implementedBy: 'Mike Rodriguez', implementedAt: '2024-11-15T07:00:00Z', verified: true, verifiedBy: 'Derek Morrison', verifiedAt: '2024-11-15T08:30:00Z' },
+                        { action: 'Scheduled heavy work before 7AM and after 6PM', implementedBy: 'Sarah Chen', implementedAt: '2024-11-14T10:00:00Z', verified: true, verifiedBy: 'Derek Morrison', verifiedAt: '2024-11-15T08:30:00Z' }
+                    ],
+                    photos: ['Barriers Installed', 'Signage'],
+                    identifiedBy: 'Sarah Chen',
+                    identifiedAt: '2024-11-14T09:00:00Z',
+                    status: 'mitigated',
+                    createdAt: '2024-11-14T09:00:00Z',
+                    updatedAt: '2024-11-15T08:30:00Z'
+                }
+            ],
+            safetyIncidents: [
+                {
+                    id: 'inc-001',
+                    projectId: 1,
+                    incidentDate: '2024-11-20',
+                    incidentTime: '10:30',
+                    location: 'Main Lobby Entrance',
+                    severity: 'near-miss',
+                    incidentType: 'slip-trip-fall',
+                    description: 'Worker slipped on wet leveling compound but caught balance. Area was not properly cordon off.',
+                    personnelInvolved: [
+                        { name: 'James Wilson', role: 'Installer', company: 'FloorOps Pro' }
+                    ],
+                    witnesses: [{ name: 'Mike Rodriguez' }],
+                    immediateActions: 'Work stopped, wet area barricaded with caution tape.',
+                    workStopped: true,
+                    areaCordoned: true,
+                    oshaReportable: false,
+                    correctiveActions: [
+                        { action: 'Review barricade procedures with crew', assignedTo: 'Derek Morrison', dueDate: '2024-11-21', verified: true, completedDate: '2024-11-21' }
+                    ],
+                    photos: [],
+                    investigationComplete: true,
+                    followUpRequired: false,
+                    status: 'closed',
+                    reportedBy: 'Mike Rodriguez',
+                    reportedAt: '2024-11-20T10:45:00Z',
+                    createdAt: '2024-11-20T11:00:00Z',
+                    updatedAt: '2024-11-21T16:00:00Z'
+                }
+            ],
+            complianceChecklists: [
+                {
+                    id: 'cc-001',
+                    projectId: 1,
+                    checklistType: 'daily-safety',
+                    title: 'Daily Safety Checklist',
+                    date: '2024-12-12',
+                    shift: 'morning',
+                    items: [
+                        { id: 'cc-001-1', text: 'Work area free of slip/trip hazards', category: 'General', required: true, checked: true, na: false, checkedBy: 'Mike Rodriguez', checkedAt: '2024-12-12T07:15:00Z' },
+                        { id: 'cc-001-2', text: 'All crew members wearing required PPE', category: 'PPE', required: true, checked: true, na: false, checkedBy: 'Mike Rodriguez', checkedAt: '2024-12-12T07:15:00Z' },
+                        { id: 'cc-001-3', text: 'First aid kit accessible and stocked', category: 'Emergency', required: true, checked: true, na: false, checkedBy: 'Mike Rodriguez', checkedAt: '2024-12-12T07:20:00Z' },
+                        { id: 'cc-001-4', text: 'Fire extinguisher accessible', category: 'Emergency', required: true, checked: true, na: false, checkedBy: 'Mike Rodriguez', checkedAt: '2024-12-12T07:20:00Z' },
+                        { id: 'cc-001-5', text: 'GFCI protection in use', category: 'Electrical', required: true, checked: true, na: false, checkedBy: 'Mike Rodriguez', checkedAt: '2024-12-12T07:25:00Z' },
+                        { id: 'cc-001-6', text: 'Dust control measures in place', category: 'Dust Control', required: true, checked: true, na: false, checkedBy: 'Mike Rodriguez', checkedAt: '2024-12-12T07:25:00Z' }
+                    ],
+                    itemsChecked: 6,
+                    totalItems: 6,
+                    totalRequired: 6,
+                    requiredComplete: true,
+                    percentComplete: 100,
+                    completedBy: 'Mike Rodriguez',
+                    completedAt: '2024-12-12T07:30:00Z',
+                    issuesFound: [],
+                    status: 'completed',
+                    createdAt: '2024-12-12T07:00:00Z',
+                    updatedAt: '2024-12-12T07:30:00Z'
+                }
+            ]
         },
         {
             id: 2, key: 'oakridge', name: 'Oakridge Medical Remodel', client: 'Oakridge Health Systems',
@@ -1104,7 +1820,84 @@ export const initialData: Database = {
             ],
             photoCaptures: [],
             qaChecklists: [],
-            financials: { contract: 28750, costs: 16400, margin: 43 }
+            financials: { contract: 28750, costs: 16400, margin: 43 },
+            // Safety & Compliance - pending moisture testing due to asbestos finding
+            moistureTests: [],
+            subfloorTests: [],
+            siteConditions: [
+                {
+                    id: 'sc-002',
+                    projectId: 2,
+                    conditionType: 'asbestos-concern',
+                    riskLevel: 'critical',
+                    description: 'Asbestos tiles discovered under existing carpet in exam rooms.',
+                    affectedAreas: ['Exam Room 1', 'Exam Room 2', 'Exam Room 3'],
+                    impactsSchedule: true,
+                    impactsBudget: true,
+                    requiresClientApproval: true,
+                    mitigationRequired: true,
+                    mitigations: [
+                        { action: 'Area sealed off', implementedBy: 'Tony Martinez', implementedAt: '2024-12-08T09:00:00Z', verified: true },
+                        { action: 'Abatement company scheduled', implementedBy: 'Derek Morrison', implementedAt: '2024-12-08T11:00:00Z', verified: true }
+                    ],
+                    photos: ['Asbestos Warning Sign'],
+                    identifiedBy: 'Tony Martinez',
+                    identifiedAt: '2024-12-08T08:30:00Z',
+                    status: 'active',
+                    createdAt: '2024-12-08T09:00:00Z',
+                    updatedAt: '2024-12-08T11:00:00Z'
+                },
+                {
+                    id: 'sc-003',
+                    projectId: 2,
+                    conditionType: 'dust-control',
+                    riskLevel: 'high',
+                    description: 'Active medical facility. ZERO dust tolerance in corridors.',
+                    affectedAreas: ['Corridors', 'Waiting Area'],
+                    impactsSchedule: true,
+                    impactsBudget: true,
+                    requiresClientApproval: false,
+                    mitigationRequired: true,
+                    mitigations: [
+                        { action: 'Negative air pressure setup', implementedBy: 'Tony', implementedAt: '2024-12-01T08:00:00Z', verified: true },
+                        { action: 'Sticky mats at all entrances', implementedBy: 'Tony', implementedAt: '2024-12-01T08:00:00Z', verified: true }
+                    ],
+                    photos: ['Containment Wall'],
+                    identifiedBy: 'Derek Morrison',
+                    identifiedAt: '2024-11-28T14:00:00Z',
+                    status: 'active',
+                    createdAt: '2024-11-28T14:00:00Z',
+                    updatedAt: '2024-12-01T08:00:00Z'
+                }
+            ],
+            safetyIncidents: [],
+            complianceChecklists: [
+                {
+                    id: 'cc-002',
+                    projectId: 2,
+                    checklistType: 'daily-safety',
+                    title: 'Daily Safety Checklist',
+                    date: '2024-12-12',
+                    shift: 'morning',
+                    items: [
+                        { id: 'cc-002-1', text: 'Containment barriers intact', category: 'Dust Control', required: true, checked: true, na: false, checkedBy: 'Tony', checkedAt: '2024-12-12T07:45:00Z' },
+                        { id: 'cc-002-2', text: 'Negative air machines running', category: 'Dust Control', required: true, checked: true, na: false, checkedBy: 'Tony', checkedAt: '2024-12-12T07:45:00Z' },
+                        { id: 'cc-002-3', text: 'PPE worn (Tyvek suits)', category: 'PPE', required: true, checked: true, na: false, checkedBy: 'Tony', checkedAt: '2024-12-12T07:45:00Z' }
+                    ],
+                    itemsChecked: 3,
+                    totalItems: 3,
+                    totalRequired: 3,
+                    requiredComplete: true,
+                    percentComplete: 100,
+                    completedBy: 'Tony',
+                    completedAt: '2024-12-12T08:00:00Z',
+                    issuesFound: [],
+                    status: 'completed',
+                    createdAt: '2024-12-12T07:30:00Z',
+                    updatedAt: '2024-12-12T08:00:00Z'
+                }
+            ]
+
         },
         {
             id: 3, key: 'lakeside', name: 'Lakeside Condo Units', client: 'Lakeside HOA',
@@ -1120,7 +1913,13 @@ export const initialData: Database = {
             materials: [{ name: 'Shaw LVP Various', qty: 3200, unit: 'sf', status: 'ordered' }],
             changeOrders: [],
             qaChecklists: [],
-            financials: { contract: 52000, costs: 0, margin: 35 }
+            financials: { contract: 52000, costs: 0, margin: 35 },
+            // Safety - scheduled project, pre-job testing to be done on start
+            moistureTests: [],
+            subfloorTests: [],
+            siteConditions: [],
+            safetyIncidents: [],
+            complianceChecklists: []
         },
         {
             id: 4, key: 'warehouse', name: 'Warehouse Epoxy', client: 'Industrial Storage Co',
@@ -1131,7 +1930,13 @@ export const initialData: Database = {
                 { id: 2, title: 'Awaiting Approval', date: 'Dec 15', status: 'current' }
             ],
             punchList: [], dailyLogs: [], schedule: [], photos: [], photoCaptures: [], materials: [], changeOrders: [], qaChecklists: [],
-            financials: { contract: 35500, costs: 0, margin: 32 }
+            financials: { contract: 35500, costs: 0, margin: 32 },
+            // Safety - pending project
+            moistureTests: [],
+            subfloorTests: [],
+            siteConditions: [],
+            safetyIncidents: [],
+            complianceChecklists: []
         }
     ],
     vendors: [
@@ -2339,5 +3144,11 @@ export const initialData: Database = {
             createdBy: 'Derek Morrison',
             createdAt: '2024-12-15T08:00:00'
         }
-    ]
+    ],
+    // Safety & Compliance - Global arrays for cross-project reporting
+    allMoistureTests: [],      // Aggregated from all projects for company-wide reporting
+    allSubfloorTests: [],      // Aggregated from all projects for company-wide reporting
+    allSiteConditions: [],     // Active site conditions across all projects
+    allSafetyIncidents: [],    // Safety incident log for OSHA compliance
+    allComplianceChecklists: [] // Compliance records for auditing
 };

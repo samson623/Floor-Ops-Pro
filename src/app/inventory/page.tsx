@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { TopBar } from '@/components/top-bar';
 import { useData } from '@/components/data-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,9 +11,11 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Plus, Package, AlertTriangle, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
+import { AddInventoryModal } from '@/components/project-modals';
 
 export default function InventoryPage() {
-    const { data } = useData();
+    const { data, addInventoryItem } = useData();
+    const [showAddModal, setShowAddModal] = useState(false);
 
     const totalStock = data.inventory.reduce((s, i) => s + i.stock, 0);
     const totalReserved = data.inventory.reduce((s, i) => s + i.reserved, 0);
@@ -25,7 +28,7 @@ export default function InventoryPage() {
                 breadcrumb="Global Stock"
                 showNewProject={false}
             >
-                <Button onClick={() => toast.info('Add inventory item coming soon')} size="sm">
+                <Button onClick={() => setShowAddModal(true)} size="sm">
                     <Plus className="w-4 h-4 mr-2" />
                     Add Item
                 </Button>
@@ -145,6 +148,16 @@ export default function InventoryPage() {
                     </CardContent>
                 </Card>
             </div>
+
+            {/* Add Inventory Modal */}
+            <AddInventoryModal
+                open={showAddModal}
+                onClose={() => setShowAddModal(false)}
+                onCreate={(item) => {
+                    addInventoryItem(item);
+                }}
+            />
         </>
     );
 }
+

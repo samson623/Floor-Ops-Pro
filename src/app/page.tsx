@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { TopBar } from '@/components/top-bar';
 import { StatCard } from '@/components/stat-card';
@@ -9,12 +10,13 @@ import { useData } from '@/components/data-provider';
 import { usePermissions, PermissionGate } from '@/components/permission-context';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { NewProjectModal } from '@/components/project-modals';
 
 export default function DashboardPage() {
   const router = useRouter();
-  const { data, getActiveProjects, getTotalPipeline, getOpenPunchCount } = useData();
+  const { data, getActiveProjects, getTotalPipeline, getOpenPunchCount, addProject } = useData();
   const { canViewPricing, currentUser, can } = usePermissions();
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
 
   const activeProjects = getActiveProjects();
   const pipeline = getTotalPipeline();
@@ -29,7 +31,7 @@ export default function DashboardPage() {
       <TopBar
         title="Dashboard"
         breadcrumb={currentUser ? `Welcome back, ${currentUser.name.split(' ')[0]}` : 'Overview'}
-        onNewProject={() => toast.info('New project form coming soon')}
+        onNewProject={() => setShowNewProjectModal(true)}
         showNewProject={can('CREATE_PROJECT')}
       />
 
@@ -174,6 +176,17 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* New Project Modal */}
+      <NewProjectModal
+        open={showNewProjectModal}
+        onClose={() => setShowNewProjectModal(false)}
+        onCreate={(project) => {
+          addProject(project);
+          router.push('/projects');
+        }}
+      />
     </>
   );
 }
+
