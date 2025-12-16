@@ -478,40 +478,68 @@ interface NewLogModalProps {
     open: boolean;
     onClose: () => void;
     onCreate: (log: Omit<DailyLog, 'id'>) => void;
+    projectId?: number;
 }
 
-export function NewLogModal({ open, onClose, onCreate }: NewLogModalProps) {
+export function NewLogModal({ open, onClose, onCreate, projectId = 0 }: NewLogModalProps) {
     const [crew, setCrew] = useState('3');
     const [hours, setHours] = useState('8');
     const [sqft, setSqft] = useState('');
-    const [weather, setWeather] = useState('☀️');
+    const [weather, setWeather] = useState<'sunny' | 'cloudy' | 'rain' | 'snow' | 'windy' | 'extreme-heat' | 'extreme-cold'>('sunny');
     const [temperature, setTemperature] = useState('72');
     const [siteConditions, setSiteConditions] = useState('');
     const [blockers, setBlockers] = useState('');
     const [notes, setNotes] = useState('');
 
     const handleCreate = () => {
-        const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const today = new Date().toISOString().split('T')[0];
         const crewNum = parseInt(crew) || 3;
         const hoursNum = parseInt(hours) || 8;
+        const totalHours = crewNum * hoursNum;
+        const sqftCompleted = parseInt(sqft) || 0;
 
         onCreate({
+            projectId,
             date: today,
-            crew: crewNum,
-            hours: crewNum * hoursNum,
+            crewMembers: [],
+            totalCrewCount: crewNum,
+            totalHours: totalHours,
             weather,
-            sqft: parseInt(sqft) || 0,
-            notes: notes.trim() || 'No notes.',
-            siteConditions: siteConditions.trim() || undefined,
-            blockers: blockers.trim() || undefined,
             temperature: parseInt(temperature) || undefined,
+            sqftCompleted,
+            workCompleted: notes.trim() || 'Daily work completed',
+            areasWorked: [],
+            delays: blockers.trim() ? [{
+                id: `delay-${Date.now()}`,
+                type: 'other',
+                description: blockers.trim(),
+                duration: 0,
+                responsibleParty: 'other',
+                documentedAt: new Date().toISOString(),
+            }] : [],
+            hasDelays: !!blockers.trim(),
+            totalDelayMinutes: 0,
+            photos: [],
+            materialsUsed: [],
+            incidentReported: false,
+            clientOnSite: false,
+            siteConditions: siteConditions.trim() || undefined,
+            createdBy: 'Current User',
+            createdByUserId: 0,
+            createdAt: new Date().toISOString(),
+            submittedOffline: false,
+            // Legacy compat
+            crew: crewNum,
+            hours: totalHours,
+            notes: notes.trim() || 'No notes.',
+            blockers: blockers.trim() || undefined,
         });
 
         // Reset form
         setCrew('3');
         setHours('8');
         setSqft('');
-        setWeather('☀️');
+        setWeather('sunny');
         setTemperature('72');
         setSiteConditions('');
         setBlockers('');
@@ -520,7 +548,13 @@ export function NewLogModal({ open, onClose, onCreate }: NewLogModalProps) {
         toast.success('Daily log created!');
     };
 
-    const weatherOptions = ['☀️', '⛅', '🌧️', '❄️', '🌡️'];
+    const weatherOptions: { value: typeof weather; label: string; icon: string }[] = [
+        { value: 'sunny', label: 'Sunny', icon: '☀️' },
+        { value: 'cloudy', label: 'Cloudy', icon: '⛅' },
+        { value: 'rain', label: 'Rain', icon: '🌧️' },
+        { value: 'snow', label: 'Snow', icon: '❄️' },
+        { value: 'extreme-heat', label: 'Hot', icon: '🌡️' },
+    ];
     const conditionOptions = ['Clean & Ready', 'Debris Present', 'Wet/Damp', 'Dusty', 'Other'];
 
     return (
@@ -574,13 +608,14 @@ export function NewLogModal({ open, onClose, onCreate }: NewLogModalProps) {
                             <div className="flex gap-1 mt-1">
                                 {weatherOptions.map(w => (
                                     <Button
-                                        key={w}
+                                        key={w.value}
                                         variant="outline"
                                         size="icon"
-                                        className={cn('text-xl h-9 w-9', weather === w && 'border-primary bg-primary/10')}
-                                        onClick={() => setWeather(w)}
+                                        className={cn('text-xl h-9 w-9', weather === w.value && 'border-primary bg-primary/10')}
+                                        onClick={() => setWeather(w.value)}
+                                        title={w.label}
                                     >
-                                        {w}
+                                        {w.icon}
                                     </Button>
                                 ))}
                             </div>
@@ -665,6 +700,7 @@ export function NewLogModal({ open, onClose, onCreate }: NewLogModalProps) {
         </Dialog>
     );
 }
+
 
 // ============================================================================
 // CAPTURE UPDATE MODAL

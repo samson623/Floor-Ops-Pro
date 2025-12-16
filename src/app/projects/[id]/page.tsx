@@ -240,13 +240,31 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             },
             dailyLogs: [
                 {
-                    id: Date.now(),
-                    date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+                    id: `dl-co-${Date.now()}`,
+                    projectId: project.id,
+                    date: new Date().toISOString().split('T')[0],
+                    crewMembers: [],
+                    totalCrewCount: 0,
+                    totalHours: 0,
+                    weather: 'sunny' as const,
+                    sqftCompleted: 0,
+                    workCompleted: `[CO EXECUTED] ${co.id}: ${co.desc}. Contract adjusted by +$${co.costImpact.toLocaleString()}, schedule extended by ${co.timeImpact} day(s).`,
+                    areasWorked: [],
+                    delays: [],
+                    hasDelays: false,
+                    totalDelayMinutes: 0,
+                    photos: [],
+                    materialsUsed: [],
+                    incidentReported: false,
+                    clientOnSite: false,
+                    createdBy: 'System',
+                    createdByUserId: 0,
+                    createdAt: new Date().toISOString(),
+                    submittedOffline: false,
+                    // Legacy compat
                     crew: 0,
                     hours: 0,
-                    weather: '📋',
-                    sqft: 0,
-                    notes: `[CO EXECUTED] ${co.id}: ${co.desc}. Contract adjusted by +$${co.costImpact.toLocaleString()}, schedule extended by ${co.timeImpact} day(s).`,
+                    notes: `[CO EXECUTED] ${co.id}: ${co.desc}`,
                 },
                 ...project.dailyLogs,
             ],
@@ -303,26 +321,44 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         }
 
         // Create log
-        const today = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+        const today = new Date().toISOString().split('T')[0];
         const sqftMatch = text.match(/(\d+)\s*(sf|sq\s*ft|square\s*feet)/i);
         const crewMatch = text.match(/crew\s*of\s*(\d+)/i);
         const hoursMatch = text.match(/(\d+)\s*hours?/i);
 
-        const crew = crewMatch ? parseInt(crewMatch[1]) : 3;
-        const hours = hoursMatch ? parseInt(hoursMatch[1]) * crew : 24;
+        const crewCount = crewMatch ? parseInt(crewMatch[1]) : 3;
+        const hours = hoursMatch ? parseInt(hoursMatch[1]) * crewCount : 24;
         const sqft = sqftMatch ? parseInt(sqftMatch[1]) : 0;
 
         addDailyLog(project.id, {
+            projectId: project.id,
             date: today,
-            crew,
-            hours,
-            weather: '☀️',
-            sqft,
+            crewMembers: [],
+            totalCrewCount: crewCount,
+            totalHours: hours,
+            weather: 'sunny',
+            sqftCompleted: sqft,
+            workCompleted: text,
+            areasWorked: [],
+            delays: [],
+            hasDelays: false,
+            totalDelayMinutes: 0,
+            photos: [],
+            materialsUsed: [],
+            incidentReported: false,
+            clientOnSite: false,
+            createdBy: 'Current User',
+            createdByUserId: 0,
+            createdAt: new Date().toISOString(),
+            submittedOffline: false,
+            // Legacy compat
+            crew: crewCount,
+            hours: hours,
             notes: text,
         });
 
         setCaptureSuccess({
-            log: { date: today, crew, hours, sqft },
+            log: { date: today, crew: crewCount, hours, sqft },
             extractedPunch,
         });
     }, [project, addPunchItem, addDailyLog]);
@@ -788,33 +824,41 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         </div>
                         {project.dailyLogs.length > 0 ? (
                             project.dailyLogs.map(log => (
-                                <Card key={log.id}>
+                                <Card key={log.id} className={cn(log.hasDelays && "border-l-4 border-l-amber-500")}>
                                     <CardContent className="pt-6">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="font-semibold">📅 {log.date}</div>
-                                            <span className="text-2xl">{log.weather}</span>
+                                            <div className="flex items-center gap-2">
+                                                {log.hasDelays && <Badge variant="outline" className="border-amber-500 text-amber-600">Delays</Badge>}
+                                                <span className="text-sm capitalize">{log.weather}</span>
+                                            </div>
                                         </div>
                                         <div className="grid grid-cols-4 gap-4 mb-4">
                                             <div className="text-center p-3 rounded-lg bg-muted/50">
-                                                <div className="text-lg font-bold">{log.crew}</div>
+                                                <div className="text-lg font-bold">{log.totalCrewCount || log.crew || 0}</div>
                                                 <div className="text-xs text-muted-foreground">Crew</div>
                                             </div>
                                             <div className="text-center p-3 rounded-lg bg-muted/50">
-                                                <div className="text-lg font-bold">{log.hours}</div>
+                                                <div className="text-lg font-bold">{log.totalHours || log.hours || 0}</div>
                                                 <div className="text-xs text-muted-foreground">Hours</div>
                                             </div>
                                             <div className="text-center p-3 rounded-lg bg-muted/50">
-                                                <div className="text-lg font-bold">{log.sqft}</div>
+                                                <div className="text-lg font-bold">{log.sqftCompleted || 0}</div>
                                                 <div className="text-xs text-muted-foreground">Sq Ft</div>
                                             </div>
                                             <div className="text-center p-3 rounded-lg bg-muted/50">
-                                                <div className="text-lg font-bold">{log.weather}</div>
+                                                <div className="text-lg font-bold capitalize">{log.weather}</div>
                                                 <div className="text-xs text-muted-foreground">Weather</div>
                                             </div>
                                         </div>
                                         <div className="text-sm">
-                                            <strong>Notes:</strong> {log.notes}
+                                            <strong>Notes:</strong> {log.workCompleted || log.notes || 'No notes'}
                                         </div>
+                                        {log.signedBy && (
+                                            <div className="text-xs text-muted-foreground mt-2">
+                                                ✓ Signed by {log.signedBy}
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             ))

@@ -200,18 +200,139 @@ export interface RepeatIssueDetection {
     detectedAt: string;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// DAILY LOG SYSTEM - Enterprise Field Documentation
+// Court-admissible, AI-ready, designed for fast field entry
+// ══════════════════════════════════════════════════════════════════
+
+export type WeatherCondition = 'sunny' | 'cloudy' | 'rain' | 'snow' | 'windy' | 'extreme-heat' | 'extreme-cold';
+
+export type DelayType =
+    | 'weather'                    // Rain, extreme temps, etc.
+    | 'material-delay'             // Materials not delivered on time
+    | 'material-defect'            // Wrong or damaged materials
+    | 'access-restriction'         // Can't access work area
+    | 'client-delay'               // Client not ready, decisions pending
+    | 'subcontractor-delay'        // Sub didn't show or not ready
+    | 'equipment-failure'          // Tool or equipment broke
+    | 'site-condition'             // Unexpected site issue discovered
+    | 'inspection-required'        // Waiting on inspector
+    | 'labor-shortage'             // Crew member called out
+    | 'other';
+
+export interface CrewMemberLog {
+    id: string;
+    userId: number;
+    name: string;
+    role: 'lead' | 'installer' | 'helper' | 'apprentice';
+    hoursWorked: number;
+    overtimeHours?: number;
+    notes?: string;
+}
+
+export interface DailyLogDelay {
+    id: string;
+    type: DelayType;
+    description: string;
+    duration: number;              // Minutes lost
+    responsibleParty: 'client' | 'supplier' | 'weather' | 'subcontractor' | 'internal' | 'gc' | 'other';
+    costImpact?: number;           // Estimated $ impact
+    scheduleImpact?: number;       // Days delayed
+    photos?: string[];             // Photo evidence
+    documentedAt: string;
+}
+
+export interface DailyLogPhoto {
+    id: string;
+    url: string;
+    thumbnailUrl?: string;
+    caption: string;
+    timestamp: string;
+    takenBy: string;
+    type: 'progress' | 'issue' | 'delay' | 'completion' | 'safety' | 'before' | 'after';
+    location?: string;             // Room/area
+    linkedDelayId?: string;
+    linkedPunchItemId?: number;
+}
+
+export interface MaterialUsageLog {
+    materialName: string;
+    quantityUsed: number;
+    unit: string;
+    lotNumber?: string;
+    wasteAmount?: number;
+    wasteReason?: string;
+}
+
 export interface DailyLog {
-    id: number;
-    date: string;
-    crew: number;
-    hours: number;
-    weather: string;
-    sqft: number;
-    notes: string;
-    // Enhanced fields for field production
+    id: string;                    // UUID for offline sync
+    projectId: number;
+    date: string;                  // ISO date
+
+    // Crew & Labor
+    crewMembers: CrewMemberLog[];
+    totalCrewCount: number;
+    totalHours: number;
+    overtimeHours?: number;
+
+    // Work Completed
+    workCompleted: string;         // Brief description of what was done
+    sqftCompleted: number;
+    phase?: PhaseType;             // Which phase worked on
+    areasWorked: string[];         // Rooms/areas worked
+    percentComplete?: number;      // Estimated project completion %
+
+    // Environmental Conditions
+    weather: WeatherCondition;
+    temperature?: number;          // °F
+    humidity?: number;             // %
+
+    // Delays & Blockers (CRITICAL for disputes)
+    delays: DailyLogDelay[];
+    hasDelays: boolean;
+    totalDelayMinutes: number;
+
+    // Photo Documentation
+    photos: DailyLogPhoto[];
+
+    // Materials Used
+    materialsUsed: MaterialUsageLog[];
+
+    // Safety Notes
+    safetyNotes?: string;
+    incidentReported: boolean;
+    incidentId?: string;
+
+    // Client Interaction (internal tracking)
+    clientOnSite: boolean;
+    clientName?: string;
+    clientNotes?: string;
+
+    // Site Conditions
     siteConditions?: string;
-    blockers?: string;
-    temperature?: number;
+
+    // Digital Signature (for legal admissibility)
+    signedBy?: string;
+    signedByUserId?: number;
+    signedAt?: string;
+    signatureData?: string;        // Base64 signature image
+
+    // Audit Trail
+    createdBy: string;
+    createdByUserId: number;
+    createdAt: string;
+    updatedAt?: string;
+    lastModifiedBy?: string;
+
+    // Offline Support
+    submittedOffline: boolean;
+    syncedAt?: string;
+
+    // Legacy compatibility (backwards compat with old logs)
+    crew?: number;                 // Old field - use crewMembers instead
+    hours?: number;                // Old field - use totalHours instead
+    notes?: string;                // Old field - use workCompleted instead
+    blockers?: string;             // Old field - use delays instead
 }
 
 // Photo with semantic labels for field documentation
@@ -1831,8 +1952,91 @@ export const initialData: Database = {
                 { id: 7, text: 'Grout sealer missing in wet area', priority: 'high', reporter: 'Sarah Chen', reportedDate: '2024-12-12', due: '2024-12-15', completed: false, status: 'needs-verification', assignedTo: 'Mike Rodriguez', completedBy: 'Mike Rodriguez', completedDate: '2024-12-14', location: 'Restroom', room: 'Main Floor Restroom', category: 'grout', tradeType: 'tile', verificationRequired: true, estimatedHours: 1.5, actualHours: 1.5, photos: ['/photos/sealer-1.jpg', '/photos/sealer-2.jpg'], visibleToClient: true }
             ],
             dailyLogs: [
-                { id: 1, date: 'December 12, 2024', crew: 3, hours: 24, weather: '☀️', sqft: 320, notes: 'Completed tile installation in main lobby. Client walkthrough at 2 PM went well.' },
-                { id: 2, date: 'December 11, 2024', crew: 3, hours: 24, weather: '🌧️', sqft: 280, notes: 'Good progress on subfloor leveling. Waiting on transition strips.' }
+                {
+                    id: 'dl-001',
+                    projectId: 1,
+                    date: '2024-12-12',
+                    crewMembers: [
+                        { id: 'cm-001', userId: 3, name: 'Mike Rodriguez', role: 'lead', hoursWorked: 8 },
+                        { id: 'cm-002', userId: 4, name: 'James Wilson', role: 'installer', hoursWorked: 8 },
+                        { id: 'cm-003', userId: 0, name: 'Carlos Martinez', role: 'helper', hoursWorked: 8 }
+                    ],
+                    totalCrewCount: 3,
+                    totalHours: 24,
+                    weather: 'sunny',
+                    temperature: 72,
+                    sqftCompleted: 320,
+                    workCompleted: 'Completed tile installation in main lobby. Client walkthrough at 2 PM went well.',
+                    areasWorked: ['Main Lobby', 'Entrance'],
+                    phase: 'install',
+                    delays: [],
+                    hasDelays: false,
+                    totalDelayMinutes: 0,
+                    photos: [
+                        { id: 'dlp-001', url: '/photos/lobby-progress.jpg', caption: 'Tile installation progress', timestamp: '2024-12-12T14:00:00Z', takenBy: 'Mike Rodriguez', type: 'progress', location: 'Main Lobby' }
+                    ],
+                    materialsUsed: [
+                        { materialName: 'Ceramic Entry Tile', quantityUsed: 320, unit: 'sf' }
+                    ],
+                    incidentReported: false,
+                    clientOnSite: true,
+                    clientName: 'John Smith',
+                    clientNotes: 'Walkthrough went well, client pleased with progress',
+                    signedBy: 'Mike Rodriguez',
+                    signedByUserId: 3,
+                    signedAt: '2024-12-12T16:30:00Z',
+                    createdBy: 'Mike Rodriguez',
+                    createdByUserId: 3,
+                    createdAt: '2024-12-12T16:30:00Z',
+                    submittedOffline: false,
+                    // Legacy compat
+                    crew: 3, hours: 24, notes: 'Completed tile installation in main lobby. Client walkthrough at 2 PM went well.'
+                },
+                {
+                    id: 'dl-002',
+                    projectId: 1,
+                    date: '2024-12-11',
+                    crewMembers: [
+                        { id: 'cm-004', userId: 3, name: 'Mike Rodriguez', role: 'lead', hoursWorked: 8 },
+                        { id: 'cm-005', userId: 4, name: 'James Wilson', role: 'installer', hoursWorked: 8 },
+                        { id: 'cm-006', userId: 0, name: 'Carlos Martinez', role: 'helper', hoursWorked: 8 }
+                    ],
+                    totalCrewCount: 3,
+                    totalHours: 24,
+                    weather: 'rain',
+                    temperature: 58,
+                    sqftCompleted: 280,
+                    workCompleted: 'Good progress on subfloor leveling. Waiting on transition strips.',
+                    areasWorked: ['Conference Room', 'Hallway'],
+                    phase: 'prep',
+                    delays: [
+                        {
+                            id: 'delay-001',
+                            type: 'material-delay',
+                            description: 'Transition strips not delivered - supplier backorder',
+                            duration: 60,
+                            responsibleParty: 'supplier',
+                            documentedAt: '2024-12-11T14:00:00Z'
+                        }
+                    ],
+                    hasDelays: true,
+                    totalDelayMinutes: 60,
+                    photos: [],
+                    materialsUsed: [
+                        { materialName: 'Self-Leveling Compound', quantityUsed: 10, unit: 'bags' }
+                    ],
+                    incidentReported: false,
+                    clientOnSite: false,
+                    signedBy: 'Mike Rodriguez',
+                    signedByUserId: 3,
+                    signedAt: '2024-12-11T16:30:00Z',
+                    createdBy: 'Mike Rodriguez',
+                    createdByUserId: 3,
+                    createdAt: '2024-12-11T16:30:00Z',
+                    submittedOffline: false,
+                    // Legacy compat
+                    crew: 3, hours: 24, notes: 'Good progress on subfloor leveling. Waiting on transition strips.', blockers: 'Waiting on transition strips delivery'
+                }
             ],
             schedule: [
                 { id: 1, time: '7:00 AM', title: 'Tile Installation', subtitle: 'Main lobby area', type: 'primary' },
@@ -2159,7 +2363,49 @@ export const initialData: Database = {
                 { id: 3, text: 'Replace damaged LVP plank near nurse station', priority: 'high', reporter: 'Sarah Chen', reportedDate: '2024-12-14', due: '2024-12-16', completed: false, status: 'assigned', assignedTo: 'Carlos Martinez', location: 'Nurse Station', category: 'damage', tradeType: 'flooring', estimatedHours: 1, photos: ['/photos/damaged-plank.jpg'], notes: 'Plank cracked during furniture move - replacement needed', visibleToClient: false }
             ],
             dailyLogs: [
-                { id: 3, date: 'December 12, 2024', crew: 2, hours: 16, weather: '☀️', sqft: 150, notes: 'Subfloor prep in exam rooms. Working around patient schedule.' }
+                {
+                    id: 'dl-003',
+                    projectId: 2,
+                    date: '2024-12-12',
+                    crewMembers: [
+                        { id: 'cm-007', userId: 0, name: 'Tony Martinez', role: 'lead', hoursWorked: 8 },
+                        { id: 'cm-008', userId: 0, name: 'Alex Hernandez', role: 'installer', hoursWorked: 8 }
+                    ],
+                    totalCrewCount: 2,
+                    totalHours: 16,
+                    weather: 'sunny',
+                    temperature: 68,
+                    sqftCompleted: 150,
+                    workCompleted: 'Subfloor prep in exam rooms. Working around patient schedule.',
+                    areasWorked: ['Exam Room 1', 'Exam Room 2', 'Exam Room 3'],
+                    phase: 'prep',
+                    delays: [
+                        {
+                            id: 'delay-002',
+                            type: 'access-restriction',
+                            description: 'Had to pause work during patient appointments - worked around schedule',
+                            duration: 90,
+                            responsibleParty: 'client',
+                            documentedAt: '2024-12-12T12:00:00Z'
+                        }
+                    ],
+                    hasDelays: true,
+                    totalDelayMinutes: 90,
+                    photos: [],
+                    materialsUsed: [],
+                    incidentReported: false,
+                    clientOnSite: true,
+                    clientName: 'Dr. Emily Chen',
+                    clientNotes: 'Working around patient schedule as agreed',
+                    signedBy: 'Tony Martinez',
+                    signedAt: '2024-12-12T17:00:00Z',
+                    createdBy: 'Tony Martinez',
+                    createdByUserId: 0,
+                    createdAt: '2024-12-12T17:00:00Z',
+                    submittedOffline: false,
+                    // Legacy compat
+                    crew: 2, hours: 16, notes: 'Subfloor prep in exam rooms. Working around patient schedule.'
+                }
             ],
             schedule: [
                 { id: 3, time: '8:00 AM', title: 'Subfloor Prep', subtitle: 'Exam rooms 1-3', type: 'success' }

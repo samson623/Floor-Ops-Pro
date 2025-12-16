@@ -53,7 +53,22 @@ interface DataContextType {
     updateChangeOrder: (projectId: number, coId: string, updates: Partial<ChangeOrder>) => void;
 
     // Daily log operations
-    addDailyLog: (projectId: number, log: Omit<DailyLog, 'id'>) => void;
+    addDailyLog: (projectId: number, log: Omit<DailyLog, 'id'>) => string;
+    updateDailyLog: (projectId: number, logId: string, updates: Partial<DailyLog>) => void;
+    deleteDailyLog: (projectId: number, logId: string) => void;
+    getDailyLog: (projectId: number, logId: string) => DailyLog | undefined;
+    getDailyLogsByProject: (projectId: number) => DailyLog[];
+    getAllDailyLogs: () => DailyLog[];
+    getDailyLogAnalytics: (projectId?: number) => {
+        totalLogs: number;
+        totalHours: number;
+        totalSqft: number;
+        logsWithDelays: number;
+        totalDelayMinutes: number;
+        delaysByType: Record<string, number>;
+        averageCrewSize: number;
+        logsWithPhotos: number;
+    };
 
     // Estimate operations
     getEstimate: (id: number) => Estimate | undefined;
@@ -559,9 +574,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
     const addDailyLog = useCallback((projectId: number, log: Omit<DailyLog, 'id'>) => {
         const project = data.projects.find(p => p.id === projectId);
-        if (!project) return;
+        if (!project) return '';
 
-        const newId = Math.max(0, ...project.dailyLogs.map(l => l.id)) + 1;
+        const newId = `dl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         const newLog: DailyLog = { ...log, id: newId };
 
         const newProjects = data.projects.map(p => {
@@ -571,7 +586,88 @@ export function DataProvider({ children }: { children: ReactNode }) {
             return p;
         });
         saveData({ ...data, projects: newProjects });
+        return newId;
     }, [data, saveData]);
+
+    const updateDailyLog = useCallback((projectId: number, logId: string, updates: Partial<DailyLog>) => {
+        const newProjects = data.projects.map(p => {
+            if (p.id === projectId) {
+                const newLogs = p.dailyLogs.map(log =>
+                    log.id === logId ? { ...log, ...updates, updatedAt: new Date().toISOString() } : log
+                );
+                return { ...p, dailyLogs: newLogs };
+            }
+            return p;
+        });
+        saveData({ ...data, projects: newProjects });
+    }, [data, saveData]);
+
+    const deleteDailyLog = useCallback((projectId: number, logId: string) => {
+        const newProjects = data.projects.map(p => {
+            if (p.id === projectId) {
+                return { ...p, dailyLogs: p.dailyLogs.filter(log => log.id !== logId) };
+            }
+            return p;
+        });
+        saveData({ ...data, projects: newProjects });
+    }, [data, saveData]);
+
+    const getDailyLog = useCallback((projectId: number, logId: string) => {
+        const project = data.projects.find(p => p.id === projectId);
+        return project?.dailyLogs.find(log => log.id === logId);
+    }, [data.projects]);
+
+    const getDailyLogsByProject = useCallback((projectId: number) => {
+        const project = data.projects.find(p => p.id === projectId);
+        return project?.dailyLogs || [];
+    }, [data.projects]);
+
+    const getAllDailyLogs = useCallback(() => {
+        const allLogs: DailyLog[] = [];
+        data.projects.forEach(p => {
+            p.dailyLogs.forEach(log => {
+                allLogs.push({ ...log, projectId: p.id });
+            });
+        });
+        return allLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }, [data.projects]);
+
+    const getDailyLogAnalytics = useCallback((projectId?: number) => {
+        const logs = projectId
+            ? getDailyLogsByProject(projectId)
+            : getAllDailyLogs();
+
+        const delaysByType: Record<string, number> = {};
+        let totalDelayMinutes = 0;
+        let logsWithDelays = 0;
+        let logsWithPhotos = 0;
+        let totalCrewCount = 0;
+
+        logs.forEach(log => {
+            if (log.hasDelays && log.delays.length > 0) {
+                logsWithDelays++;
+                log.delays.forEach(delay => {
+                    delaysByType[delay.type] = (delaysByType[delay.type] || 0) + 1;
+                    totalDelayMinutes += delay.duration;
+                });
+            }
+            if (log.photos && log.photos.length > 0) {
+                logsWithPhotos++;
+            }
+            totalCrewCount += log.totalCrewCount || log.crew || 0;
+        });
+
+        return {
+            totalLogs: logs.length,
+            totalHours: logs.reduce((sum, log) => sum + (log.totalHours || log.hours || 0), 0),
+            totalSqft: logs.reduce((sum, log) => sum + (log.sqftCompleted || 0), 0),
+            logsWithDelays,
+            totalDelayMinutes,
+            delaysByType,
+            averageCrewSize: logs.length > 0 ? Math.round(totalCrewCount / logs.length * 10) / 10 : 0,
+            logsWithPhotos
+        };
+    }, [getDailyLogsByProject, getAllDailyLogs]);
 
     const getEstimate = useCallback((id: number) => {
         return data.estimates.find(e => e.id === id);
@@ -1318,6 +1414,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
             addChangeOrder,
             updateChangeOrder,
             addDailyLog,
+            updateDailyLog,
+            deleteDailyLog,
+            getDailyLog,
+            getDailyLogsByProject,
+            getAllDailyLogs,
+            getDailyLogAnalytics,
             getEstimate,
             updateEstimate,
             convertEstimateToProject,
@@ -1450,7 +1552,16 @@ export function useData(): DataContextType {
             addPunchItem: () => { },
             addChangeOrder: () => { },
             updateChangeOrder: () => { },
-            addDailyLog: () => { },
+            addDailyLog: () => '',
+            updateDailyLog: () => { },
+            deleteDailyLog: () => { },
+            getDailyLog: () => undefined,
+            getDailyLogsByProject: () => [],
+            getAllDailyLogs: () => [],
+            getDailyLogAnalytics: () => ({
+                totalLogs: 0, totalHours: 0, totalSqft: 0, logsWithDelays: 0,
+                totalDelayMinutes: 0, delaysByType: {}, averageCrewSize: 0, logsWithPhotos: 0
+            }),
             getEstimate: () => undefined,
             updateEstimate: () => { },
             convertEstimateToProject: () => { },
