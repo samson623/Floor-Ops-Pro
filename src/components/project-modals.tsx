@@ -112,7 +112,11 @@ export function NewProjectModal({ open, onClose, onCreate }: NewProjectModalProp
             subfloorTests: [],
             siteConditions: [],
             safetyIncidents: [],
-            complianceChecklists: []
+            complianceChecklists: [],
+            // System of Record - initialized empty for new projects
+            schedulePhases: [],
+            materialDeliveries: [],
+            phasePhotos: []
         };
 
         onCreate?.(newProject);

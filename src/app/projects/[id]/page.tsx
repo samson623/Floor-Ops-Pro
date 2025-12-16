@@ -34,6 +34,10 @@ import {
 import { MessageFeed } from '@/components/message-feed';
 import { ClientUpdateModal } from '@/components/client-update-modal';
 import { SafetyComplianceTab } from '@/components/safety-compliance-tab';
+import { ScopeTab } from '@/components/scope-tab';
+import { ScheduleTabEnhanced } from '@/components/schedule-tab-enhanced';
+import { MaterialsTabEnhanced } from '@/components/materials-tab-enhanced';
+import { PhotosTabEnhanced } from '@/components/photos-tab-enhanced';
 import { AddMoistureTestModal } from '@/components/project-modals';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -62,7 +66,7 @@ import {
     MessageSquare
 } from 'lucide-react';
 
-type TabType = 'overview' | 'timeline' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials' | 'invoices' | 'walkthrough' | 'safety' | 'communication';
+type TabType = 'overview' | 'timeline' | 'scope' | 'schedule' | 'logs' | 'photos' | 'punch' | 'materials' | 'changeorders' | 'financials' | 'invoices' | 'walkthrough' | 'safety' | 'communication';
 
 const statusConfig = {
     active: { label: 'Active', className: 'bg-success/10 text-success border-success/20' },
@@ -442,6 +446,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                     <TabsList className="flex-wrap h-auto gap-1 mb-6 bg-muted/50 p-1">
                         <TabsTrigger value="overview" className="data-[state=active]:shadow-sm">📋 Overview</TabsTrigger>
                         <TabsTrigger value="timeline">📈 Timeline</TabsTrigger>
+                        {can('VIEW_CONTRACT_SCOPE') && (
+                            <TabsTrigger value="scope">📜 Scope</TabsTrigger>
+                        )}
                         <TabsTrigger value="schedule">📅 Schedule</TabsTrigger>
                         <TabsTrigger value="logs">📝 Daily Logs</TabsTrigger>
                         <TabsTrigger value="photos">📷 Photos</TabsTrigger>
@@ -728,15 +735,32 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                         </Card>
                     </TabsContent>
 
+                    {/* Scope Tab - System of Record */}
+                    <TabsContent value="scope" className="mt-0 space-y-4">
+                        <ScopeTab
+                            project={project}
+                            onUpdate={(updates) => updateProject(project.id, updates)}
+                        />
+                    </TabsContent>
+
                     {/* Schedule Tab */}
                     <TabsContent value="schedule" className="mt-0 space-y-4">
+                        {/* Enhanced Schedule - Phase Dependencies & Critical Path */}
+                        {project.schedulePhases && project.schedulePhases.length > 0 && (
+                            <ScheduleTabEnhanced
+                                project={project}
+                                onUpdate={(updates) => updateProject(project.id, updates)}
+                            />
+                        )}
+
+                        {/* Legacy Schedule Entries */}
                         <Button variant="secondary" size="sm" onClick={() => toast.success('Adding entry...')}>
                             <Plus className="w-4 h-4 mr-1" />
                             Add Entry
                         </Button>
                         <Card>
                             <CardHeader>
-                                <CardTitle className="text-base">{project.name} — Schedule</CardTitle>
+                                <CardTitle className="text-base">{project.name} — Daily Schedule</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
                                 {project.schedule.length > 0 ? (
@@ -805,37 +829,47 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
                     {/* Photos Tab */}
                     <TabsContent value="photos" className="mt-0 space-y-4">
-                        <Button variant="secondary" size="sm" onClick={() => toast.success('Uploading...')}>
-                            <Camera className="w-4 h-4 mr-1" />
-                            Upload
-                        </Button>
-                        <Card>
-                            <CardHeader>
-                                <CardTitle className="text-base">{project.name} — Photos</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                                    {project.photos.map((label, i) => (
-                                        <div
-                                            key={i}
-                                            className="aspect-square bg-muted rounded-xl flex items-center justify-center text-4xl cursor-pointer hover:bg-muted/80 transition-colors relative overflow-hidden group"
-                                            onClick={() => toast.success(`Opening ${label}...`)}
-                                        >
-                                            📷
-                                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white text-xs font-semibold translate-y-full group-hover:translate-y-0 transition-transform">
-                                                {label}
+                        {/* Enhanced Photos - Phase-based Organization */}
+                        {project.phasePhotos && project.phasePhotos.length > 0 ? (
+                            <PhotosTabEnhanced
+                                project={project}
+                                onUpdate={(updates) => updateProject(project.id, updates)}
+                            />
+                        ) : (
+                            <>
+                                <Button variant="secondary" size="sm" onClick={() => toast.success('Uploading...')}>
+                                    <Camera className="w-4 h-4 mr-1" />
+                                    Upload
+                                </Button>
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-base">{project.name} — Photos</CardTitle>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                                            {project.photos.map((label, i) => (
+                                                <div
+                                                    key={i}
+                                                    className="aspect-square bg-muted rounded-xl flex items-center justify-center text-4xl cursor-pointer hover:bg-muted/80 transition-colors relative overflow-hidden group"
+                                                    onClick={() => toast.success(`Opening ${label}...`)}
+                                                >
+                                                    📷
+                                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white text-xs font-semibold translate-y-full group-hover:translate-y-0 transition-transform">
+                                                        {label}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            <div
+                                                className="aspect-square border-2 border-dashed rounded-xl flex items-center justify-center text-4xl text-muted-foreground cursor-pointer hover:border-primary hover:text-primary transition-colors"
+                                                onClick={() => toast.success('Upload...')}
+                                            >
+                                                +
                                             </div>
                                         </div>
-                                    ))}
-                                    <div
-                                        className="aspect-square border-2 border-dashed rounded-xl flex items-center justify-center text-4xl text-muted-foreground cursor-pointer hover:border-primary hover:text-primary transition-colors"
-                                        onClick={() => toast.success('Upload...')}
-                                    >
-                                        +
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                    </CardContent>
+                                </Card>
+                            </>
+                        )}
                     </TabsContent>
 
                     {/* Punch List Tab */}
@@ -914,61 +948,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
                     {/* Materials Tab */}
                     <TabsContent value="materials" className="mt-0 space-y-4">
-                        <div className="flex gap-2">
-                            <Button variant="secondary" size="sm" onClick={() => toast.success('Adding material...')}>
-                                <Plus className="w-4 h-4 mr-1" />
-                                Add Material
-                            </Button>
-                            <Button variant="outline" size="sm" onClick={() => toast.success('Opening order form...')}>
-                                📦 Order
-                            </Button>
-                        </div>
-                        <Card>
-                            <CardContent className="p-0">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full">
-                                        <thead>
-                                            <tr className="border-b bg-muted/50">
-                                                <th className="text-left p-4 font-semibold">Material</th>
-                                                <th className="text-left p-4 font-semibold">Qty</th>
-                                                <th className="text-left p-4 font-semibold">Status</th>
-                                                <th className="text-left p-4 font-semibold">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {project.materials.length > 0 ? (
-                                                project.materials.map((m, i) => (
-                                                    <tr key={i} className="border-b last:border-0 hover:bg-muted/30">
-                                                        <td className="p-4 font-medium">{m.name}</td>
-                                                        <td className="p-4">{m.qty} {m.unit}</td>
-                                                        <td className="p-4">
-                                                            <Badge className={cn(
-                                                                m.status === 'delivered' && 'bg-success/10 text-success',
-                                                                m.status === 'ordered' && 'bg-primary/10 text-primary',
-                                                                m.status === 'low' && 'bg-warning/10 text-warning'
-                                                            )}>
-                                                                {m.status}
-                                                            </Badge>
-                                                        </td>
-                                                        <td className="p-4">
-                                                            <Button variant="secondary" size="sm" onClick={() => toast.success('Opening order form...')}>
-                                                                Order
-                                                            </Button>
-                                                        </td>
-                                                    </tr>
-                                                ))
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={4} className="p-8 text-center text-muted-foreground">
-                                                        No materials assigned.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        {/* Enhanced Materials - Delivery Tracking & Acclimation */}
+                        <MaterialsTabEnhanced
+                            project={project}
+                            onUpdate={(updates) => updateProject(project.id, updates)}
+                        />
                     </TabsContent>
 
                     {/* Change Orders Tab */}

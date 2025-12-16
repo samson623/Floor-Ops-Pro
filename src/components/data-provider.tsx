@@ -326,7 +326,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
             subfloorTests: [],
             siteConditions: [],
             safetyIncidents: [],
-            complianceChecklists: []
+            complianceChecklists: [],
+            // System of Record - initialized empty for converted projects
+            schedulePhases: [],
+            materialDeliveries: [],
+            phasePhotos: []
         };
 
         saveData({

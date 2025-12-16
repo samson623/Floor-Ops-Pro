@@ -162,7 +162,25 @@ export type Permission =
     | 'VIEW_SITE_CONDITIONS'        // View site conditions and risks
     | 'MANAGE_SITE_CONDITIONS'      // Create, mitigate, resolve site conditions
     | 'VIEW_COMPLIANCE_CHECKLISTS'  // View compliance checklists
-    | 'MANAGE_COMPLIANCE_CHECKLISTS'; // Create and complete checklists
+    | 'MANAGE_COMPLIANCE_CHECKLISTS' // Create and complete checklists
+
+    // Contract Scope (System of Record)
+    | 'VIEW_CONTRACT_SCOPE'         // View original and current scope
+    | 'EDIT_CONTRACT_SCOPE'         // Modify scope (owner/PM only)
+    | 'VIEW_SCOPE_HISTORY'          // View scope change history
+
+    // Schedule Dependencies (System of Record)
+    | 'VIEW_SCHEDULE_DEPENDENCIES'  // View phase dependencies and critical path
+    | 'EDIT_SCHEDULE_DEPENDENCIES'  // Modify dependencies
+    | 'VIEW_SCHEDULE_VARIANCE'      // View baseline vs actual schedule variance
+
+    // Material Deliveries (System of Record)
+    | 'VIEW_DELIVERY_TRACKING'      // View delivery schedules and status
+    | 'MANAGE_DELIVERY_TRACKING'    // Update delivery status, add deliveries
+
+    // Phase Photos (System of Record)
+    | 'VIEW_PHASE_PHOTOS'           // View phase-organized photo documentation
+    | 'TAG_PHASE_PHOTOS';           // Tag/categorize photos by phase
 
 /**
  * Permission sets for each role.
@@ -191,7 +209,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_MOISTURE_TESTS', 'CREATE_MOISTURE_TEST',
         'VIEW_SUBFLOOR_TESTS', 'CREATE_SUBFLOOR_TEST',
         'VIEW_SITE_CONDITIONS', 'MANAGE_SITE_CONDITIONS',
-        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS'
+        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS',
+        // System of Record - full access
+        'VIEW_CONTRACT_SCOPE', 'EDIT_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
+        'VIEW_SCHEDULE_DEPENDENCIES', 'EDIT_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
+        'VIEW_DELIVERY_TRACKING', 'MANAGE_DELIVERY_TRACKING',
+        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS'
     ],
 
     pm: [
@@ -216,7 +239,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_MOISTURE_TESTS', 'CREATE_MOISTURE_TEST',
         'VIEW_SUBFLOOR_TESTS', 'CREATE_SUBFLOOR_TEST',
         'VIEW_SITE_CONDITIONS', 'MANAGE_SITE_CONDITIONS',
-        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS'
+        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS',
+        // System of Record - PM has full access
+        'VIEW_CONTRACT_SCOPE', 'EDIT_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
+        'VIEW_SCHEDULE_DEPENDENCIES', 'EDIT_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
+        'VIEW_DELIVERY_TRACKING', 'MANAGE_DELIVERY_TRACKING',
+        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS'
     ],
 
     foreman: [
@@ -237,7 +265,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_MOISTURE_TESTS', 'CREATE_MOISTURE_TEST',
         'VIEW_SUBFLOOR_TESTS', 'CREATE_SUBFLOOR_TEST',
         'VIEW_SITE_CONDITIONS', 'MANAGE_SITE_CONDITIONS',
-        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS'
+        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS',
+        // System of Record - Foreman view access, can tag photos and track deliveries
+        'VIEW_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
+        'VIEW_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
+        'VIEW_DELIVERY_TRACKING', 'MANAGE_DELIVERY_TRACKING',
+        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS'
     ],
 
     installer: [
@@ -255,7 +288,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         // Installer safety access - view and report
         'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT',
         'VIEW_MOISTURE_TESTS', 'VIEW_SUBFLOOR_TESTS',
-        'VIEW_SITE_CONDITIONS', 'VIEW_COMPLIANCE_CHECKLISTS'
+        'VIEW_SITE_CONDITIONS', 'VIEW_COMPLIANCE_CHECKLISTS',
+        // System of Record - Installer can view scope/schedule, tag their own photos
+        'VIEW_CONTRACT_SCOPE',
+        'VIEW_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
+        'VIEW_DELIVERY_TRACKING',
+        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS'
     ],
 
     office_admin: [
@@ -279,7 +317,12 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT',
         'VIEW_MOISTURE_TESTS', 'VIEW_SUBFLOOR_TESTS',
         'VIEW_SITE_CONDITIONS',
-        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS'
+        'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS',
+        // System of Record - Office admin has full visibility, can manage deliveries
+        'VIEW_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
+        'VIEW_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
+        'VIEW_DELIVERY_TRACKING', 'MANAGE_DELIVERY_TRACKING',
+        'VIEW_PHASE_PHOTOS'
     ],
 
     sub: [
@@ -290,7 +333,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_SUB_INVOICES', 'SUBMIT_SUB_INVOICE',
         'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES',
         // Subs can report safety incidents and view conditions
-        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT', 'VIEW_SITE_CONDITIONS'
+        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT', 'VIEW_SITE_CONDITIONS',
+        // System of Record - Subs can view schedule and their delivery items
+        'VIEW_SCHEDULE_DEPENDENCIES', 'VIEW_DELIVERY_TRACKING', 'VIEW_PHASE_PHOTOS'
     ],
     client: [
         'VIEW_ASSIGNED_PROJECTS',
@@ -301,7 +346,11 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         // Client safety access - view only
         'VIEW_SAFETY_RECORDS',
         'VIEW_MOISTURE_TESTS', 'VIEW_SUBFLOOR_TESTS',
-        'VIEW_SITE_CONDITIONS', 'VIEW_COMPLIANCE_CHECKLISTS'
+        'VIEW_SITE_CONDITIONS', 'VIEW_COMPLIANCE_CHECKLISTS',
+        // System of Record - Clients can view scope, schedule, and progress photos
+        'VIEW_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
+        'VIEW_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
+        'VIEW_PHASE_PHOTOS'
     ]
 };
 

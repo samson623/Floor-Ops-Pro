@@ -123,6 +123,117 @@ export interface ProjectFinancials {
     margin: number;
 }
 
+// ══════════════════════════════════════════════════════════════════
+// SYSTEM OF RECORD TYPES
+// These structures enable AI-powered queries about scope, schedule,
+// materials, and project state - the foundation for true business intelligence
+// ══════════════════════════════════════════════════════════════════
+
+// Contract Scope - The source of truth for what was agreed upon
+export interface ScopeChange {
+    id: string;
+    changeOrderId?: string;      // Link to change order if applicable
+    description: string;
+    date: string;
+    impact: 'addition' | 'removal' | 'modification';
+    affectedAreas: string[];     // Rooms/areas affected
+    sqftImpact?: number;         // Change in scope sqft
+    valueImpact?: number;        // Change in contract value
+    approvedBy?: string;
+}
+
+export interface ContractScope {
+    id: string;
+    projectId: number;
+    originalScope: string;       // The baseline scope of work (contract language)
+    currentScope: string;        // Current scope after all changes
+    scopeItems: ScopeItem[];     // Line-item breakdown
+    scopeChanges: ScopeChange[]; // History of all changes
+    lastUpdated: string;
+    updatedBy: string;
+}
+
+export interface ScopeItem {
+    id: string;
+    category: 'flooring' | 'demo' | 'prep' | 'install' | 'transition' | 'misc';
+    description: string;
+    area: string;                // Room/area
+    sqft?: number;
+    included: boolean;           // Is this still in scope?
+    excludedReason?: string;     // If excluded, why
+}
+
+// Enhanced Schedule Phases with Dependencies and Variance Tracking
+export type PhaseType = 'demo' | 'prep' | 'acclimation' | 'install' | 'cure' | 'punch' | 'closeout';
+
+export interface SchedulePhase {
+    id: string;
+    projectId: number;
+    phase: PhaseType;
+    name: string;                // Display name (can customize)
+    startDate: string;           // Actual/planned start
+    endDate: string;             // Actual/planned end
+    actualStartDate?: string;    // Actual start (for variance)
+    actualEndDate?: string;      // Actual end (for variance)
+    status: 'pending' | 'in-progress' | 'completed' | 'delayed' | 'blocked';
+    dependencies: string[];      // IDs of prerequisite phases
+    assignedCrewId?: string;     // Which crew is assigned
+    progress: number;            // 0-100 completion
+    // Baseline tracking for variance
+    baselineStart?: string;
+    baselineEnd?: string;
+    varianceDays?: number;       // Days ahead (-) or behind (+) schedule
+    // Blocking info
+    blockedBy?: string;          // Description of what's blocking
+    blockingReason?: 'materials' | 'weather' | 'subfloor' | 'crew' | 'client' | 'other';
+    notes?: string;
+    isCriticalPath: boolean;     // Is this on the critical path?
+}
+
+// Material Delivery Tracking
+export interface MaterialDelivery {
+    id: string;
+    projectId: number;
+    purchaseOrderId?: string;    // Link to PO
+    materialName: string;
+    sku?: string;
+    quantity: number;
+    unit: string;
+    expectedDate: string;
+    actualDate?: string;
+    status: 'pending' | 'scheduled' | 'in-transit' | 'delivered' | 'delayed' | 'partial';
+    vendorName: string;
+    vendorContact?: string;
+    cost: number;
+    deliveredQuantity?: number;  // For partial deliveries
+    location?: string;           // Where materials are stored on site
+    photos: string[];            // Delivery confirmation photos
+    notes?: string;
+    receivedBy?: string;
+    receivedAt?: string;
+    acclimationRequired?: boolean;
+    acclimationStartDate?: string;
+    acclimationDaysRequired?: number;
+}
+
+// Phase-Organized Photos for Documentation
+export interface PhasePhoto {
+    id: string;
+    projectId: number;
+    phase: PhaseType | 'pre-construction' | 'complete' | 'issue';
+    url: string;
+    thumbnailUrl?: string;
+    caption?: string;
+    timestamp: string;
+    location?: string;           // Room/area where taken
+    takenBy: string;             // Who took the photo
+    tags: string[];              // Custom tags (e.g., "moisture", "subfloor", "transition")
+    isBeforePhoto: boolean;      // Part of before/after pair
+    linkedPhotoId?: string;      // ID of corresponding before/after photo
+    changeOrderId?: string;      // Link to CO if documenting an issue
+    punchItemId?: number;        // Link to punch item if documenting issue
+}
+
 export interface Project {
     id: number;
     key: string;
@@ -153,6 +264,11 @@ export interface Project {
     siteConditions: SiteCondition[];
     safetyIncidents: SafetyIncident[];
     complianceChecklists: ComplianceChecklist[];
+    // System of Record - NEW
+    contractScope?: ContractScope;
+    schedulePhases: SchedulePhase[];
+    materialDeliveries: MaterialDelivery[];
+    phasePhotos: PhasePhoto[];
 }
 
 export interface Vendor {
@@ -1768,6 +1884,85 @@ export const initialData: Database = {
                     createdAt: '2024-12-12T07:00:00Z',
                     updatedAt: '2024-12-12T07:30:00Z'
                 }
+            ],
+            // System of Record - Contract Scope
+            contractScope: {
+                id: 'cs-001',
+                projectId: 1,
+                originalScope: 'Complete flooring renovation of main lobby area including demo of existing carpet and tile, subfloor preparation, installation of 2,400 SF of commercial carpet tile in main lobby and hallways, and 200 SF of ceramic tile at building entrance. Includes all transitions, baseboards, and final cleanup.',
+                currentScope: 'Complete flooring renovation of main lobby area including demo of existing carpet and tile, subfloor preparation with waterproof membrane at elevator, installation of 2,400 SF of commercial carpet tile in main lobby and hallways, and 200 SF of premium porcelain tile at building entrance (upgraded from ceramic). Includes all transitions, baseboards, and final cleanup.',
+                scopeItems: [
+                    { id: 'si-001', category: 'demo', description: 'Remove existing carpet and tile', area: 'Main Lobby', sqft: 2400, included: true },
+                    { id: 'si-002', category: 'demo', description: 'Remove existing ceramic tile', area: 'Entrance', sqft: 200, included: true },
+                    { id: 'si-003', category: 'prep', description: 'Subfloor leveling and preparation', area: 'Main Lobby', sqft: 2400, included: true },
+                    { id: 'si-004', category: 'prep', description: 'Waterproof membrane installation', area: 'Elevator Vestibule', sqft: 150, included: true },
+                    { id: 'si-005', category: 'install', description: 'Commercial carpet tile installation', area: 'Main Lobby', sqft: 2400, included: true },
+                    { id: 'si-006', category: 'install', description: 'Premium porcelain tile installation', area: 'Entrance', sqft: 200, included: true },
+                    { id: 'si-007', category: 'transition', description: 'Metal transition strips', area: 'All doorways', included: true },
+                    { id: 'si-008', category: 'misc', description: 'Baseboard reinstallation', area: 'Main Lobby', included: true },
+                    { id: 'si-009', category: 'misc', description: 'Final cleanup and debris removal', area: 'All areas', included: true },
+                    { id: 'si-010', category: 'install', description: 'Decorative border pattern', area: 'Main Lobby', sqft: 100, included: false, excludedReason: 'Client decided to simplify design to reduce cost' }
+                ],
+                scopeChanges: [
+                    {
+                        id: 'sc-change-001',
+                        changeOrderId: 'CO-001',
+                        description: 'Added waterproof membrane at elevator vestibule',
+                        date: '2024-12-05',
+                        impact: 'addition',
+                        affectedAreas: ['Elevator Vestibule'],
+                        sqftImpact: 150,
+                        valueImpact: 2450,
+                        approvedBy: 'John Smith (Client)'
+                    },
+                    {
+                        id: 'sc-change-002',
+                        changeOrderId: 'CO-002',
+                        description: 'Upgraded from ceramic to premium porcelain tile at entrance',
+                        date: '2024-12-10',
+                        impact: 'modification',
+                        affectedAreas: ['Entrance'],
+                        sqftImpact: 0,
+                        valueImpact: 3800,
+                        approvedBy: undefined
+                    },
+                    {
+                        id: 'sc-change-003',
+                        description: 'Removed decorative border pattern from main lobby',
+                        date: '2024-11-18',
+                        impact: 'removal',
+                        affectedAreas: ['Main Lobby'],
+                        sqftImpact: -100,
+                        valueImpact: -1200,
+                        approvedBy: 'John Smith (Client)'
+                    }
+                ],
+                lastUpdated: '2024-12-10T14:30:00Z',
+                updatedBy: 'Derek Morrison'
+            },
+            // System of Record - Schedule Phases with dependencies
+            schedulePhases: [
+                { id: 'sp-1-1', projectId: 1, phase: 'demo', name: 'Demo & Remove Existing', startDate: '2024-11-16', endDate: '2024-11-18', actualStartDate: '2024-11-16', actualEndDate: '2024-11-18', status: 'completed', dependencies: [], progress: 100, baselineStart: '2024-11-16', baselineEnd: '2024-11-18', varianceDays: 0, isCriticalPath: true },
+                { id: 'sp-1-2', projectId: 1, phase: 'prep', name: 'Subfloor Preparation', startDate: '2024-11-19', endDate: '2024-11-25', actualStartDate: '2024-11-19', actualEndDate: '2024-11-25', status: 'completed', dependencies: ['sp-1-1'], progress: 100, baselineStart: '2024-11-19', baselineEnd: '2024-11-24', varianceDays: 1, isCriticalPath: true, notes: 'Additional leveling needed in lobby area' },
+                { id: 'sp-1-3', projectId: 1, phase: 'acclimation', name: 'Material Acclimation', startDate: '2024-11-20', endDate: '2024-11-27', actualStartDate: '2024-11-20', actualEndDate: '2024-11-27', status: 'completed', dependencies: [], progress: 100, baselineStart: '2024-11-20', baselineEnd: '2024-11-27', varianceDays: 0, isCriticalPath: false },
+                { id: 'sp-1-4', projectId: 1, phase: 'install', name: 'Tile & Carpet Installation', startDate: '2024-12-01', endDate: '2024-12-16', actualStartDate: '2024-12-01', status: 'in-progress', dependencies: ['sp-1-2', 'sp-1-3'], progress: 65, baselineStart: '2024-12-01', baselineEnd: '2024-12-15', varianceDays: 1, isCriticalPath: true, notes: 'Tile 85% complete, carpet starting Dec 16' },
+                { id: 'sp-1-5', projectId: 1, phase: 'punch', name: 'Punch List & Touch-ups', startDate: '2024-12-17', endDate: '2024-12-18', status: 'pending', dependencies: ['sp-1-4'], progress: 0, baselineStart: '2024-12-17', baselineEnd: '2024-12-18', varianceDays: 0, isCriticalPath: true },
+                { id: 'sp-1-6', projectId: 1, phase: 'closeout', name: 'Final Walkthrough & Close', startDate: '2024-12-19', endDate: '2024-12-20', status: 'pending', dependencies: ['sp-1-5'], progress: 0, baselineStart: '2024-12-19', baselineEnd: '2024-12-20', varianceDays: 0, isCriticalPath: true }
+            ],
+            // System of Record - Material Deliveries
+            materialDeliveries: [
+                { id: 'md-1-1', projectId: 1, materialName: 'Premium Porcelain Tile 24x24', sku: 'PPT-24-GRAY', quantity: 1200, unit: 'sqft', expectedDate: '2024-11-18', actualDate: '2024-11-18', status: 'delivered', vendorName: 'FloorMart Pro', cost: 4800, deliveredQuantity: 1200, location: 'Main lobby staging area', photos: [], receivedBy: 'Mike Rodriguez', receivedAt: '2024-11-18T09:30:00Z', acclimationRequired: true, acclimationStartDate: '2024-11-20', acclimationDaysRequired: 7 },
+                { id: 'md-1-2', projectId: 1, materialName: 'Commercial Carpet Tiles', sku: 'CCT-SLATE-BLU', quantity: 800, unit: 'sqft', expectedDate: '2024-12-10', actualDate: '2024-12-10', status: 'delivered', vendorName: 'Shaw Commercial', cost: 6400, deliveredQuantity: 800, location: 'Storage room B', photos: [], receivedBy: 'Mike Rodriguez', receivedAt: '2024-12-10T14:00:00Z', acclimationRequired: true, acclimationStartDate: '2024-12-10', acclimationDaysRequired: 3 },
+                { id: 'md-1-3', projectId: 1, materialName: 'Tile Adhesive & Grout', sku: 'TAG-BUNDLE-GRY', quantity: 50, unit: 'bags', expectedDate: '2024-11-17', actualDate: '2024-11-17', status: 'delivered', vendorName: 'BuilderSupply', cost: 625, deliveredQuantity: 50, location: 'Main lobby staging area', photos: [], receivedBy: 'Mike Rodriguez', receivedAt: '2024-11-17T11:00:00Z' },
+                { id: 'md-1-4', projectId: 1, materialName: 'Transition Strips - Metal', sku: 'TS-ALU-48', quantity: 12, unit: 'pieces', expectedDate: '2024-12-09', actualDate: '2024-12-11', status: 'delivered', vendorName: 'BuilderSupply', cost: 180, deliveredQuantity: 12, location: 'Main lobby staging area', photos: [], receivedBy: 'Mike Rodriguez', receivedAt: '2024-12-11T10:00:00Z', notes: 'Delayed 2 days - backordered' }
+            ],
+            // System of Record - Phase Photos
+            phasePhotos: [
+                { id: 'pp-1-1', projectId: 1, phase: 'pre-construction', url: '/photos/p1-before-lobby.jpg', timestamp: '2024-11-14T09:00:00Z', location: 'Main Lobby', takenBy: 'Derek Morrison', tags: ['before', 'lobby', 'existing-condition'], isBeforePhoto: true },
+                { id: 'pp-1-2', projectId: 1, phase: 'demo', url: '/photos/p1-demo-progress.jpg', timestamp: '2024-11-17T15:00:00Z', location: 'Main Lobby', takenBy: 'Mike Rodriguez', tags: ['demo', 'subfloor-exposed'], isBeforePhoto: false, caption: 'Demo complete - subfloor exposed and ready for inspection' },
+                { id: 'pp-1-3', projectId: 1, phase: 'prep', url: '/photos/p1-subfloor-leveling.jpg', timestamp: '2024-11-22T11:00:00Z', location: 'Main Lobby - Center', takenBy: 'Mike Rodriguez', tags: ['prep', 'leveling', 'subfloor'], isBeforePhoto: false, caption: 'Self-leveling compound applied to low spots' },
+                { id: 'pp-1-4', projectId: 1, phase: 'install', url: '/photos/p1-tile-progress-60.jpg', timestamp: '2024-12-08T16:00:00Z', location: 'Main Lobby', takenBy: 'Mike Rodriguez', tags: ['install', 'tile', 'in-progress'], isBeforePhoto: false, caption: 'Tile installation 60% complete' },
+                { id: 'pp-1-5', projectId: 1, phase: 'issue', url: '/photos/p1-grout-mismatch.jpg', timestamp: '2024-12-10T10:30:00Z', location: 'Elevator Entrance', takenBy: 'Derek Morrison', tags: ['issue', 'grout', 'color-mismatch'], isBeforePhoto: false, caption: 'Grout color mismatch documented - punch item created', punchItemId: 1 }
             ]
         },
         {
@@ -1896,8 +2091,46 @@ export const initialData: Database = {
                     createdAt: '2024-12-12T07:30:00Z',
                     updatedAt: '2024-12-12T08:00:00Z'
                 }
-            ]
-
+            ],
+            // System of Record - Contract Scope
+            contractScope: {
+                id: 'cs-002',
+                projectId: 2,
+                originalScope: 'Complete LVP installation in medical office including demo of existing flooring, subfloor preparation, and installation of 1,800 SF of Shaw Endura LVP in exam rooms, corridors, and waiting area. Work to be performed during off-hours to minimize patient disruption.',
+                currentScope: 'Complete LVP installation in medical office including demo of existing flooring with asbestos abatement in exam rooms, subfloor preparation, and installation of 1,800 SF of Shaw Endura LVP in exam rooms, corridors, and waiting area. Work to be performed during off-hours to minimize patient disruption. Enhanced dust control measures required for medical facility.',
+                scopeItems: [
+                    { id: 'si-020', category: 'demo', description: 'Remove existing carpet and VCT', area: 'Exam Rooms 1-3', sqft: 600, included: true },
+                    { id: 'si-021', category: 'demo', description: 'Asbestos tile abatement', area: 'Exam Rooms 1-3', sqft: 600, included: true },
+                    { id: 'si-022', category: 'demo', description: 'Remove existing flooring', area: 'Corridors', sqft: 800, included: true },
+                    { id: 'si-023', category: 'demo', description: 'Remove existing flooring', area: 'Waiting Area', sqft: 400, included: true },
+                    { id: 'si-024', category: 'prep', description: 'Subfloor leveling and preparation', area: 'All Areas', sqft: 1800, included: true },
+                    { id: 'si-025', category: 'install', description: 'Shaw Endura LVP installation', area: 'Exam Rooms 1-3', sqft: 600, included: true },
+                    { id: 'si-026', category: 'install', description: 'Shaw Endura LVP installation', area: 'Corridors', sqft: 800, included: true },
+                    { id: 'si-027', category: 'install', description: 'Shaw Endura LVP installation', area: 'Waiting Area', sqft: 400, included: true },
+                    { id: 'si-028', category: 'transition', description: 'Transition strips at doorways', area: 'All doorways', included: true },
+                    { id: 'si-029', category: 'misc', description: 'Enhanced dust control - negative air', area: 'All Areas', included: true },
+                    { id: 'si-030', category: 'misc', description: 'Final cleanup and medical-grade sanitization', area: 'All Areas', included: true }
+                ],
+                scopeChanges: [
+                    {
+                        id: 'sc-change-010',
+                        changeOrderId: 'CO-004',
+                        description: 'Added asbestos tile removal and licensed abatement',
+                        date: '2024-12-08',
+                        impact: 'addition',
+                        affectedAreas: ['Exam Room 1', 'Exam Room 2', 'Exam Room 3'],
+                        sqftImpact: 600,
+                        valueImpact: 5200,
+                        approvedBy: 'Dr. Sarah Chen (Oakridge)'
+                    }
+                ],
+                lastUpdated: '2024-12-09T10:00:00Z',
+                updatedBy: 'Derek Morrison'
+            },
+            // System of Record - empty for new projects
+            schedulePhases: [],
+            materialDeliveries: [],
+            phasePhotos: []
         },
         {
             id: 3, key: 'lakeside', name: 'Lakeside Condo Units', client: 'Lakeside HOA',
@@ -1919,7 +2152,11 @@ export const initialData: Database = {
             subfloorTests: [],
             siteConditions: [],
             safetyIncidents: [],
-            complianceChecklists: []
+            complianceChecklists: [],
+            // System of Record - empty for scheduled projects
+            schedulePhases: [],
+            materialDeliveries: [],
+            phasePhotos: []
         },
         {
             id: 4, key: 'warehouse', name: 'Warehouse Epoxy', client: 'Industrial Storage Co',
@@ -1936,7 +2173,11 @@ export const initialData: Database = {
             subfloorTests: [],
             siteConditions: [],
             safetyIncidents: [],
-            complianceChecklists: []
+            complianceChecklists: [],
+            // System of Record - empty for pending projects
+            schedulePhases: [],
+            materialDeliveries: [],
+            phasePhotos: []
         }
     ],
     vendors: [
