@@ -22,7 +22,7 @@ interface ClientUpdateModalProps {
 
 export function ClientUpdateModal({ isOpen, onClose, projectId }: ClientUpdateModalProps) {
     const { getProject, sendMessage } = useData();
-    const [selectedLogs, setSelectedLogs] = useState<number[]>([]);
+    const [selectedLogs, setSelectedLogs] = useState<string[]>([]);
     const [generatedUpdate, setGeneratedUpdate] = useState('');
     const [tone, setTone] = useState<'professional' | 'casual' | 'brief'>('professional');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -51,7 +51,7 @@ export function ClientUpdateModal({ isOpen, onClose, projectId }: ClientUpdateMo
             text += `Here is a summary of the progress made recently:\n\n`;
 
             selectedLogItems.forEach(log => {
-                text += `• ${format(new Date(log.date), 'MM/dd')}: ${log.notes}\n`;
+                text += `• ${format(new Date(log.date), 'MM/dd')}: ${log.workCompleted || log.notes}\n`;
             });
 
             text += `\nHigh Level Summary:\n`;
@@ -60,13 +60,13 @@ export function ClientUpdateModal({ isOpen, onClose, projectId }: ClientUpdateMo
             if (tone === 'brief') {
                 text = `Quick update on ${project?.name}:\n\n`;
                 selectedLogItems.forEach(log => {
-                    text += `- ${log.notes} (${format(new Date(log.date), 'MM/dd')})\n`;
+                    text += `- ${log.workCompleted || log.notes} (${format(new Date(log.date), 'MM/dd')})\n`;
                 });
                 text += `\nBest,\nFloor Ops Pro Team`;
             } else if (tone === 'casual') {
                 text = `Hi there,\n\nJust wanted to share some quick wins from the ${project?.name} job site!\n\n`;
                 selectedLogItems.forEach(log => {
-                    text += `We tackled: ${log.notes} on ${format(new Date(log.date), 'MMM do')}.\n`;
+                    text += `We tackled: ${log.workCompleted || log.notes} on ${format(new Date(log.date), 'MMM do')}.\n`;
                 });
                 text += `\nThings are looking great! Let us know if you have questions.\n\nCheers,\nFloor Ops Pro Team`;
             } else {
@@ -130,7 +130,7 @@ export function ClientUpdateModal({ isOpen, onClose, projectId }: ClientUpdateMo
                                                 {format(new Date(log.date), 'MMM dd, yyyy')}
                                             </Label>
                                             <p className="text-xs text-muted-foreground line-clamp-3">
-                                                {log.notes}
+                                                {log.workCompleted || log.notes}
                                             </p>
                                         </div>
                                     </div>

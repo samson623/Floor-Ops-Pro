@@ -308,10 +308,9 @@ export default function PunchPage() {
             <QuickAddPunchModal
                 open={isQuickAddOpen}
                 onOpenChange={setIsQuickAddOpen}
-                projectId={data.projects[0]?.id || 1}
-                projectName={data.projects[0]?.name || 'Select Project'}
-                onAdd={(item) => {
-                    addPunchItem(data.projects[0]?.id || 1, item);
+                projects={data.projects.map(p => ({ id: p.id, name: p.name }))}
+                onAdd={(item, projectId) => {
+                    addPunchItem(projectId, item);
                 }}
                 teamMembers={getTeamMembers().map(m => ({ id: m.id, name: m.name, role: m.role }))}
                 currentUserName={currentUser?.name || 'Unknown'}

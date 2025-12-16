@@ -18,9 +18,10 @@ import { PunchItem, PunchItemPriority, PunchItemCategory, PunchItemHistoryEntry 
 interface QuickAddPunchModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    projectId: number;
-    projectName: string;
-    onAdd: (item: Omit<PunchItem, 'id'>) => void;
+    projectId?: number;
+    projectName?: string;
+    projects?: { id: number; name: string }[];
+    onAdd: (item: Omit<PunchItem, 'id'>, projectId: number) => void;
     teamMembers: { id: number; name: string; role: string }[];
     currentUserName: string;
     defaultLocation?: string;
@@ -71,8 +72,9 @@ function analyzeTextForSuggestions(text: string): { category?: PunchItemCategory
 }
 
 export function QuickAddPunchModal({
-    open, onOpenChange, projectId, projectName, onAdd, teamMembers, currentUserName, defaultLocation
+    open, onOpenChange, projectId, projectName, projects, onAdd, teamMembers, currentUserName, defaultLocation
 }: QuickAddPunchModalProps) {
+    const [selectedProjectId, setSelectedProjectId] = useState<number | ''>(projectId || '');
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState<PunchItemPriority>('medium');
     const [category, setCategory] = useState<PunchItemCategory | ''>('');
@@ -130,6 +132,8 @@ export function QuickAddPunchModal({
 
     const handleSubmit = () => {
         if (!description.trim()) return;
+        const targetProjectId = projectId || (selectedProjectId as number);
+        if (!targetProjectId) return;
 
         const now = new Date().toISOString();
         const historyEntry: PunchItemHistoryEntry = {
@@ -160,7 +164,7 @@ export function QuickAddPunchModal({
             history: [historyEntry]
         };
 
-        onAdd(newItem);
+        onAdd(newItem, targetProjectId);
 
         // Reset form
         setDescription('');
@@ -196,6 +200,25 @@ export function QuickAddPunchModal({
                 </DialogHeader>
 
                 <div className="space-y-4 mt-4">
+                    {/* Project Selection (if not pre-defined) */}
+                    {!projectId && projects && (
+                        <div>
+                            <Label>Project</Label>
+                            <Select
+                                value={selectedProjectId.toString()}
+                                onValueChange={(v) => setSelectedProjectId(parseInt(v))}
+                            >
+                                <SelectTrigger className="mt-1">
+                                    <SelectValue placeholder="Select Project" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {projects.map(p => (
+                                        <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     {/* Photo Capture Area */}
                     <Card className="border-dashed">
                         <CardContent className="p-4">

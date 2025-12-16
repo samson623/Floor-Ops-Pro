@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { usePermissions } from '@/components/permission-context';
+import { useData } from '@/components/data-provider';
 import {
     Brain,
     Sparkles,
@@ -33,35 +34,61 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
-// --- Mock Data Generators (Simulating "Senior PM" inputs) ---
-
-const MOCK_PUNCH_ITEMS = [
-    { id: 1, task: 'Grout haze removal', location: 'Lobby - Main Entrance', trade: 'Tile', priority: 'medium', due: 'Tomorrow' },
-    { id: 2, task: 'Fix transition strip height', location: 'Corridor 2B -> Conf Room', trade: 'Flooring', priority: 'high', due: 'Today' },
-    { id: 3, task: 'Touch up baseboard paint', location: 'Executive Suite 404', trade: 'Painter', priority: 'low', due: 'Friday' },
-];
-
-const MOCK_BLOCKERS = [
-    { id: 1, issue: 'Moisture readings too high (85% RH)', area: 'Lvl 1 Slab', impact: 'Stops LVP install', responsible: 'GC / HVAC', status: 'critical' },
-    { id: 2, issue: 'Missing adhesive delivery', area: 'All phases', impact: 'Delaying carpet tile start', responsible: 'Vendor (FloorSupplyCo)', status: 'high' },
-];
-
-const MOCK_DAILY_PLAN = [
-    { time: '07:00', task: 'Crew A: Prep Subfloor', location: 'Lobby', details: 'Grind & Patch high spots', status: 'ready' },
-    { time: '09:30', task: 'Moisture Test Check', location: 'Lobby', details: 'Re-verify RH% after HVAC adjustment', status: 'pending' },
-    { time: '11:00', task: 'Material Drop', location: 'Loading Dock', details: 'Accept LVP Pallets (Use Forklift)', status: 'pending' },
-    { time: '13:00', task: 'Crew B: Start Install', location: 'Corridor 2B', details: 'Start from East Wall', status: 'blocked' }, // Blocked by Adhesive
-];
-
-// --- Components ---
-
 export function IntelligenceCenter() {
     const { can, getCurrentRoleInfo } = usePermissions();
+    const { data } = useData();
     const [inputMode, setInputMode] = useState<'text' | 'voice'>('text');
     const [inputValue, setInputValue] = useState('');
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisComplete, setAnalysisComplete] = useState(false);
     const [activeTab, setActiveTab] = useState('insights');
+
+    // --- Derive Real Intelligence Data ---
+
+    // 1. Get open high-priority punch items
+    const activePunchItems = data.projects.flatMap(p =>
+        (p.punchList || []).filter(i => !i.completed).map(i => ({
+            id: i.id,
+            task: i.text,
+            location: i.location ? `${i.location} (${p.name})` : p.name,
+            trade: i.category,
+            priority: i.priority,
+            due: i.due
+        }))
+    ).sort((a, b) => {
+        const priorityScore = { critical: 0, high: 1, medium: 2, low: 3, all: 4 };
+        return priorityScore[a.priority as keyof typeof priorityScore] - priorityScore[b.priority as keyof typeof priorityScore];
+    }).slice(0, 5);
+
+    // 2. Get recent blockers/delays from daily logs (last 7 days)
+    const recentBlockers = data.projects.flatMap(p =>
+        (p.dailyLogs || []).flatMap(log =>
+            (log.delays || []).map((delay, idx) => ({
+                id: `${log.id}-${idx}`,
+                issue: delay.description || 'Unspecified delay',
+                area: p.name,
+                impact: `${delay.duration}m delay (${delay.type})`,
+                responsible: delay.responsibleParty || 'Unknown',
+                status: (delay.duration > 120 ? 'critical' : 'high') as 'critical' | 'high'
+            }))
+        )
+    ).slice(0, 5);
+
+    const dailyPlan = data.projects.flatMap(p =>
+        (p.schedule || []).filter((task: any) => {
+            const today = new Date().toISOString().split('T')[0];
+            const start = task.startDate || task.start || '';
+            const end = task.endDate || task.end || '';
+            return start <= today && end >= today;
+        }).map((task: any) => ({
+            time: '08:00',
+            task: task.taskName || task.title || 'Task',
+            location: p.name,
+            details: `Phase: ${task.phase || 'General'}`,
+            status: 'ready'
+        }))
+    ).slice(0, 5);
+
 
     // Permission checks
     const canViewIntelligence = can('VIEW_INTELLIGENCE_CENTER');
@@ -375,7 +402,7 @@ export function IntelligenceCenter() {
                                                 <Calendar className="w-4 h-4 text-primary" />
                                                 Suggested Daily Plan
                                             </h3>
-                                            <div className="grid gap-3">{MOCK_DAILY_PLAN.map((item, i) => (
+                                            <div className="grid gap-3">{dailyPlan.map((item, i) => (
                                                 <div key={i} className={cn(
                                                     "group flex items-center gap-4 p-4 rounded-xl border bg-card hover:shadow-md transition-all",
                                                     item.status === 'blocked' ? 'border-red-200 bg-red-50/30' : 'border-border hover:border-primary/50'
@@ -408,7 +435,7 @@ export function IntelligenceCenter() {
                                                 </h3>
                                                 <ScrollArea className="h-[300px] w-full rounded-xl border bg-muted/20 p-4">
                                                     <div className="space-y-3">
-                                                        {MOCK_PUNCH_ITEMS.map((item) => (
+                                                        {activePunchItems.map((item) => (
                                                             <Card key={item.id} className="shadow-sm bg-background">
                                                                 <CardContent className="p-3">
                                                                     <div className="flex justify-between items-start mb-1">
@@ -433,7 +460,7 @@ export function IntelligenceCenter() {
                                                     Critical Blockers
                                                 </h3>
                                                 <div className="space-y-3">
-                                                    {MOCK_BLOCKERS.map((blocker) => (
+                                                    {recentBlockers.map((blocker) => (
                                                         <div key={blocker.id} className="p-4 rounded-xl border-l-4 border-l-red-500 bg-red-50/30 border border-t-border border-r-border border-b-border">
                                                             <div className="flex items-start gap-3">
                                                                 <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
