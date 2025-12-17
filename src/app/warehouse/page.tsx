@@ -3,6 +3,11 @@
 import { useState } from 'react';
 import { WarehouseDashboard } from '@/components/warehouse-dashboard';
 import { ReceiveDeliveryModal, TransferModal, AdjustmentModal, QuickOrderModal } from '@/components/warehouse-modals';
+import { InventoryDetailModal } from '@/components/warehouse-inventory-detail-modal';
+import { LocationDetailModal } from '@/components/warehouse-location-detail-modal';
+import { TransferDetailModal } from '@/components/warehouse-transfer-detail-modal';
+import { LotDetailModal } from '@/components/warehouse-lot-detail-modal';
+import { TransactionHistoryModal } from '@/components/warehouse-transaction-history-modal';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +16,8 @@ import { Input } from '@/components/ui/input';
 import { useData } from '@/components/data-provider';
 import { usePermissions } from '@/components/permission-context';
 import { cn } from '@/lib/utils';
+import type { InventoryItem } from '@/lib/data';
+import type { WarehouseLocation, StockTransfer, EnhancedMaterialLot } from '@/lib/warehouse-types';
 import {
     Package,
     ArrowUpDown,
@@ -28,7 +35,8 @@ import {
     Clock,
     RefreshCcw,
     Layers,
-    FileText
+    FileText,
+    Eye
 } from 'lucide-react';
 
 // ══════════════════════════════════════════════════════════════════
@@ -53,6 +61,17 @@ export default function WarehousePage() {
     const [showReceiveModal, setShowReceiveModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false);
     const [showAdjustModal, setShowAdjustModal] = useState(false);
+
+    // Detail modal states
+    const [showInventoryDetail, setShowInventoryDetail] = useState(false);
+    const [selectedInventoryItem, setSelectedInventoryItem] = useState<InventoryItem | null>(null);
+    const [showLocationDetail, setShowLocationDetail] = useState(false);
+    const [selectedLocation, setSelectedLocation] = useState<WarehouseLocation | null>(null);
+    const [showTransferDetail, setShowTransferDetail] = useState(false);
+    const [selectedTransfer, setSelectedTransfer] = useState<StockTransfer | null>(null);
+    const [showLotDetail, setShowLotDetail] = useState(false);
+    const [selectedLot, setSelectedLot] = useState<EnhancedMaterialLot | null>(null);
+    const [showTransactionHistory, setShowTransactionHistory] = useState(false);
 
     // Get location stats
     const locations = data.warehouseLocations || [];
@@ -225,7 +244,14 @@ export default function WarehousePage() {
                                                     const available = item.stock - item.reserved;
                                                     const isLowStock = available < 5;
                                                     return (
-                                                        <tr key={item.id} className="border-t hover:bg-muted/30 transition-colors">
+                                                        <tr
+                                                            key={item.id}
+                                                            className="border-t hover:bg-muted/30 transition-colors cursor-pointer"
+                                                            onClick={() => {
+                                                                setSelectedInventoryItem(item);
+                                                                setShowInventoryDetail(true);
+                                                            }}
+                                                        >
                                                             <td className="p-3">
                                                                 <div className="font-medium">{item.name}</div>
                                                             </td>
@@ -249,7 +275,19 @@ export default function WarehousePage() {
                                                                 )}
                                                             </td>
                                                             <td className="p-3 text-right">
-                                                                <Button variant="ghost" size="sm">View</Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    className="gap-1"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        setSelectedInventoryItem(item);
+                                                                        setShowInventoryDetail(true);
+                                                                    }}
+                                                                >
+                                                                    <Eye className="w-4 h-4" />
+                                                                    View
+                                                                </Button>
                                                             </td>
                                                         </tr>
                                                     );
@@ -283,13 +321,20 @@ export default function WarehousePage() {
                             <CardContent>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                     {locations.map((location) => (
-                                        <div key={location.id} className={cn(
-                                            "p-4 rounded-lg border transition-colors hover:bg-muted/30",
-                                            location.type === 'warehouse' && "border-primary/50 bg-primary/5",
-                                            location.type === 'truck' && "border-blue-500/50 bg-blue-500/5",
-                                            location.type === 'jobsite' && "border-green-500/50 bg-green-500/5",
-                                            location.type === 'damage_hold' && "border-red-500/50 bg-red-500/5"
-                                        )}>
+                                        <div
+                                            key={location.id}
+                                            className={cn(
+                                                "p-4 rounded-lg border transition-colors hover:bg-muted/30 cursor-pointer",
+                                                location.type === 'warehouse' && "border-primary/50 bg-primary/5",
+                                                location.type === 'truck' && "border-blue-500/50 bg-blue-500/5",
+                                                location.type === 'jobsite' && "border-green-500/50 bg-green-500/5",
+                                                location.type === 'damage_hold' && "border-red-500/50 bg-red-500/5"
+                                            )}
+                                            onClick={() => {
+                                                setSelectedLocation(location);
+                                                setShowLocationDetail(true);
+                                            }}
+                                        >
                                             <div className="flex items-start justify-between">
                                                 <div>
                                                     <div className="font-medium">{location.name}</div>
@@ -361,7 +406,14 @@ export default function WarehousePage() {
                                         </div>
                                     ) : (
                                         (data.stockTransfers || []).map((transfer) => (
-                                            <div key={transfer.id} className="p-4 rounded-lg border hover:bg-muted/30 transition-colors">
+                                            <div
+                                                key={transfer.id}
+                                                className="p-4 rounded-lg border hover:bg-muted/30 transition-colors cursor-pointer"
+                                                onClick={() => {
+                                                    setSelectedTransfer(transfer);
+                                                    setShowTransferDetail(true);
+                                                }}
+                                            >
                                                 <div className="flex items-start justify-between">
                                                     <div>
                                                         <div className="font-medium flex items-center gap-2">
@@ -428,11 +480,18 @@ export default function WarehousePage() {
                                         </div>
                                     ) : (
                                         (data.enhancedLots || []).map((lot) => (
-                                            <div key={lot.id} className={cn(
-                                                "p-4 rounded-lg border transition-colors",
-                                                lot.status === 'damaged' && "border-red-500/50 bg-red-500/5",
-                                                lot.qcStatus === 'failed' && "border-orange-500/50 bg-orange-500/5"
-                                            )}>
+                                            <div
+                                                key={lot.id}
+                                                className={cn(
+                                                    "p-4 rounded-lg border transition-colors cursor-pointer hover:bg-muted/30",
+                                                    lot.status === 'damaged' && "border-red-500/50 bg-red-500/5",
+                                                    lot.qcStatus === 'failed' && "border-orange-500/50 bg-orange-500/5"
+                                                )}
+                                                onClick={() => {
+                                                    setSelectedLot(lot);
+                                                    setShowLotDetail(true);
+                                                }}
+                                            >
                                                 <div className="flex items-start justify-between">
                                                     <div>
                                                         <div className="font-medium">{lot.itemName}</div>
@@ -545,6 +604,45 @@ export default function WarehousePage() {
             <AdjustmentModal
                 open={showAdjustModal}
                 onClose={() => setShowAdjustModal(false)}
+            />
+
+            {/* Detail View Modals */}
+            <InventoryDetailModal
+                open={showInventoryDetail}
+                onClose={() => { setShowInventoryDetail(false); setSelectedInventoryItem(null); }}
+                item={selectedInventoryItem}
+                onAdjust={(item) => {
+                    setSelectedInventoryItem(item);
+                    setShowInventoryDetail(false);
+                    setShowAdjustModal(true);
+                }}
+                onTransfer={(item) => {
+                    setShowInventoryDetail(false);
+                    setShowTransferModal(true);
+                }}
+            />
+            <LocationDetailModal
+                open={showLocationDetail}
+                onClose={() => { setShowLocationDetail(false); setSelectedLocation(null); }}
+                location={selectedLocation}
+                onViewItem={(item) => {
+                    setSelectedInventoryItem(item);
+                    setShowInventoryDetail(true);
+                }}
+            />
+            <TransferDetailModal
+                open={showTransferDetail}
+                onClose={() => { setShowTransferDetail(false); setSelectedTransfer(null); }}
+                transfer={selectedTransfer}
+            />
+            <LotDetailModal
+                open={showLotDetail}
+                onClose={() => { setShowLotDetail(false); setSelectedLot(null); }}
+                lot={selectedLot}
+            />
+            <TransactionHistoryModal
+                open={showTransactionHistory}
+                onClose={() => setShowTransactionHistory(false)}
             />
         </div>
     );
