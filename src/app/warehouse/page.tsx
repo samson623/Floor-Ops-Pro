@@ -234,6 +234,7 @@ export default function WarehousePage() {
                                                 <tr>
                                                     <th className="text-left p-3 font-medium">Item</th>
                                                     <th className="text-left p-3 font-medium">SKU</th>
+                                                    <th className="text-left p-3 font-medium">Location</th>
                                                     <th className="text-right p-3 font-medium">Stock</th>
                                                     <th className="text-right p-3 font-medium">Reserved</th>
                                                     <th className="text-right p-3 font-medium">Available</th>
@@ -245,6 +246,25 @@ export default function WarehousePage() {
                                                 {data.inventory.map((item) => {
                                                     const available = item.stock - item.reserved;
                                                     const isLowStock = available < 5;
+
+                                                    // Get locations for this item from enhanced lots
+                                                    const itemLots = (data.enhancedLots || []).filter(l => l.itemId === item.id);
+                                                    const locationMap = new Map<string, { code: string; quantity: number }>();
+                                                    itemLots.forEach(lot => {
+                                                        (lot.locations || []).forEach(loc => {
+                                                            const existing = locationMap.get(loc.locationCode);
+                                                            if (existing) {
+                                                                existing.quantity += loc.quantity;
+                                                            } else {
+                                                                locationMap.set(loc.locationCode, {
+                                                                    code: loc.locationCode,
+                                                                    quantity: loc.quantity
+                                                                });
+                                                            }
+                                                        });
+                                                    });
+                                                    const itemLocations = Array.from(locationMap.values());
+
                                                     return (
                                                         <tr
                                                             key={item.id}
@@ -259,6 +279,32 @@ export default function WarehousePage() {
                                                             </td>
                                                             <td className="p-3">
                                                                 <code className="text-xs bg-muted px-2 py-1 rounded">{item.sku}</code>
+                                                            </td>
+                                                            <td className="p-3">
+                                                                {itemLocations.length > 0 ? (
+                                                                    <div className="flex flex-wrap gap-1">
+                                                                        {itemLocations.slice(0, 3).map((loc, idx) => (
+                                                                            <Badge
+                                                                                key={idx}
+                                                                                variant="secondary"
+                                                                                className="text-xs font-mono"
+                                                                            >
+                                                                                <MapPin className="w-3 h-3 mr-1" />
+                                                                                {loc.code}: {loc.quantity}
+                                                                            </Badge>
+                                                                        ))}
+                                                                        {itemLocations.length > 3 && (
+                                                                            <Badge variant="outline" className="text-xs">
+                                                                                +{itemLocations.length - 3} more
+                                                                            </Badge>
+                                                                        )}
+                                                                    </div>
+                                                                ) : (
+                                                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                                        <MapPin className="w-3 h-3" />
+                                                                        Not tracked
+                                                                    </span>
+                                                                )}
                                                             </td>
                                                             <td className="p-3 text-right font-medium">{item.stock}</td>
                                                             <td className="p-3 text-right text-muted-foreground">{item.reserved}</td>
