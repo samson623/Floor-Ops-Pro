@@ -78,7 +78,7 @@ export default function WarehousePage() {
                             </div>
                         </div>
 
-                        {/* Quick Stats */}
+                        {/* Quick Stats + Reset Button */}
                         <div className="flex items-center gap-4">
                             <div className="flex items-center gap-2 text-sm">
                                 <MapPin className="w-4 h-4 text-muted-foreground" />
@@ -95,6 +95,31 @@ export default function WarehousePage() {
                                 <span className="font-medium">{jobsiteCount}</span>
                                 <span className="text-muted-foreground">Jobsites</span>
                             </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                    // Clear warehouse-related data from localStorage to force reload mock data
+                                    const stored = localStorage.getItem('floorops-pro-data');
+                                    if (stored) {
+                                        const parsed = JSON.parse(stored);
+                                        // Clear warehouse data to force mock data reload
+                                        delete parsed.warehouseLocations;
+                                        delete parsed.inventoryTransactions;
+                                        delete parsed.stockReservations;
+                                        delete parsed.stockTransfers;
+                                        delete parsed.enhancedLots;
+                                        delete parsed.cycleCounts;
+                                        delete parsed.reorderSuggestions;
+                                        localStorage.setItem('floorops-pro-data', JSON.stringify(parsed));
+                                        window.location.reload();
+                                    }
+                                }}
+                                className="gap-1 text-xs"
+                            >
+                                <RefreshCcw className="w-3 h-3" />
+                                Reset Demo
+                            </Button>
                         </div>
                     </div>
                 </div>

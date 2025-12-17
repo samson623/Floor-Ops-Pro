@@ -71,30 +71,44 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
                     notifications: parsed.notifications || initialData.notifications,
                     // ══════════════════════════════════════════════════════════════════
                     // WAREHOUSE MANAGEMENT SYSTEM - Initialize with mock data
+                    // Force load mock data for demo if existing data is missing/empty
                     // ══════════════════════════════════════════════════════════════════
-                    warehouseLocations: parsed.warehouseLocations?.length > 0
+                    warehouseLocations: (parsed.warehouseLocations && parsed.warehouseLocations.length > 0)
                         ? parsed.warehouseLocations
                         : MOCK_WAREHOUSE_LOCATIONS,
-                    inventoryTransactions: parsed.inventoryTransactions?.length > 0
+                    inventoryTransactions: (parsed.inventoryTransactions && parsed.inventoryTransactions.length > 0)
                         ? parsed.inventoryTransactions
                         : MOCK_TRANSACTIONS,
-                    stockReservations: parsed.stockReservations?.length > 0
+                    stockReservations: (parsed.stockReservations && parsed.stockReservations.length > 0)
                         ? parsed.stockReservations
                         : MOCK_RESERVATIONS,
-                    stockTransfers: parsed.stockTransfers?.length > 0
+                    stockTransfers: (parsed.stockTransfers && parsed.stockTransfers.length > 0)
                         ? parsed.stockTransfers
                         : MOCK_TRANSFERS,
-                    enhancedLots: parsed.enhancedLots?.length > 0
+                    enhancedLots: (parsed.enhancedLots && parsed.enhancedLots.length > 0)
                         ? parsed.enhancedLots
                         : MOCK_ENHANCED_LOTS,
-                    cycleCounts: parsed.cycleCounts?.length > 0
+                    cycleCounts: (parsed.cycleCounts && parsed.cycleCounts.length > 0)
                         ? parsed.cycleCounts
                         : MOCK_CYCLE_COUNTS,
-                    reorderSuggestions: parsed.reorderSuggestions?.length > 0
+                    reorderSuggestions: (parsed.reorderSuggestions && parsed.reorderSuggestions.length > 0)
                         ? parsed.reorderSuggestions
                         : MOCK_REORDER_SUGGESTIONS,
                 };
                 setData(merged);
+            } else {
+                // No localStorage data - initialize with mock warehouse data for demo
+                const freshData: Database = {
+                    ...initialData,
+                    warehouseLocations: MOCK_WAREHOUSE_LOCATIONS,
+                    inventoryTransactions: MOCK_TRANSACTIONS,
+                    stockReservations: MOCK_RESERVATIONS,
+                    stockTransfers: MOCK_TRANSFERS,
+                    enhancedLots: MOCK_ENHANCED_LOTS,
+                    cycleCounts: MOCK_CYCLE_COUNTS,
+                    reorderSuggestions: MOCK_REORDER_SUGGESTIONS,
+                };
+                setData(freshData);
             }
         } catch (error) {
             console.error('Error loading data from localStorage:', error);
