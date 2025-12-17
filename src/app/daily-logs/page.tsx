@@ -123,17 +123,17 @@ export default function DailyLogsPage() {
     };
 
     return (
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Daily Logs</h1>
-                    <p className="text-muted-foreground">Field documentation and daily reports</p>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="pl-12 sm:pl-0">
+                    <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Daily Logs</h1>
+                    <p className="text-sm text-muted-foreground">Field documentation and daily reports</p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button variant="outline" size="sm" className="flex-1 sm:flex-none">
+                        <Download className="h-4 w-4 sm:mr-2" />
+                        <span className="hidden sm:inline">Export</span>
                     </Button>
                     <Select
                         value="select-project"
@@ -146,7 +146,7 @@ export default function DailyLogsPage() {
                             }
                         }}
                     >
-                        <SelectTrigger className="w-[200px]">
+                        <SelectTrigger className="w-full sm:w-[200px]">
                             <div className="flex items-center gap-2">
                                 <Plus className="h-4 w-4" />
                                 <span>New Daily Log</span>
@@ -165,7 +165,7 @@ export default function DailyLogsPage() {
             </div>
 
             {/* Analytics Cards */}
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-3 sm:gap-4 grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total Logs</CardTitle>

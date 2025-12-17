@@ -405,6 +405,319 @@ export const MOCK_ENHANCED_LOTS: EnhancedMaterialLot[] = [
         totalCost: 770,
         createdAt: '2024-11-15T10:00:00Z',
         notes: 'Awaiting vendor return pickup'
+    },
+
+    // ═══ Tile Adhesive - FlexBond (Item 3) ═══
+    {
+        id: 'lot-006',
+        itemId: 3,
+        itemName: 'Tile Adhesive - FlexBond',
+        sku: 'ADH-FB-001',
+        lotNumber: 'FB-2024-1205',
+        originalQuantity: 48,
+        currentQuantity: 42,
+        unit: 'bags',
+        locations: [
+            { locationId: 'b-02', locationCode: 'B-02', quantity: 42 }
+        ],
+        allocations: [
+            { projectId: 1, projectName: 'Downtown Lobby Renovation', quantity: 6, allocatedAt: '2024-12-05T10:00:00Z', allocatedBy: 'Sarah Chen' }
+        ],
+        vendorId: 3,
+        vendorName: 'Floor Supply Co',
+        receivedDate: '2024-12-05T09:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 28.50,
+        totalCost: 1197,
+        createdAt: '2024-12-05T09:00:00Z'
+    },
+
+    // ═══ T-Molding - Oak (Item 4) ═══
+    {
+        id: 'lot-007',
+        itemId: 4,
+        itemName: 'T-Molding - Oak',
+        sku: 'TM-OAK-001',
+        lotNumber: 'TM-2024-1128',
+        originalQuantity: 30,
+        currentQuantity: 22,
+        unit: 'pcs',
+        locations: [
+            { locationId: 'b-03', locationCode: 'B-03', quantity: 22 }
+        ],
+        allocations: [],
+        vendorId: 1,
+        vendorName: 'Shaw Flooring',
+        receivedDate: '2024-11-28T14:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 24.00,
+        totalCost: 528,
+        createdAt: '2024-11-28T14:00:00Z'
+    },
+
+    // ═══ Grout - Charcoal (Item 6) ═══
+    {
+        id: 'lot-008',
+        itemId: 6,
+        itemName: 'Grout - Charcoal',
+        sku: 'GRT-CHR-001',
+        lotNumber: 'GRT-2024-1201',
+        originalQuantity: 24,
+        currentQuantity: 18,
+        unit: 'bags',
+        locations: [
+            { locationId: 'b-02', locationCode: 'B-02', quantity: 18 }
+        ],
+        allocations: [
+            { projectId: 2, projectName: 'Harmony Estates', quantity: 4, allocatedAt: '2024-12-08T11:00:00Z', allocatedBy: 'Sarah Chen' }
+        ],
+        vendorId: 2,
+        vendorName: 'Tile Distributors Inc',
+        receivedDate: '2024-12-01T10:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 18.00,
+        totalCost: 324,
+        createdAt: '2024-12-01T10:00:00Z'
+    },
+
+    // ═══ Reducer - Oak (Item 7) ═══
+    {
+        id: 'lot-009',
+        itemId: 7,
+        itemName: 'Reducer - Oak',
+        sku: 'RED-OAK-001',
+        lotNumber: 'RED-2024-1122',
+        originalQuantity: 18,
+        currentQuantity: 12,
+        unit: 'pcs',
+        locations: [
+            { locationId: 'b-03', locationCode: 'B-03', quantity: 12 }
+        ],
+        allocations: [],
+        vendorId: 1,
+        vendorName: 'Shaw Flooring',
+        receivedDate: '2024-11-22T09:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 32.00,
+        totalCost: 384,
+        createdAt: '2024-11-22T09:00:00Z'
+    },
+
+    // ═══ Carpet Pad - 8lb (Item 8) - LOW STOCK ═══
+    {
+        id: 'lot-010',
+        itemId: 8,
+        itemName: 'Carpet Pad - 8lb',
+        sku: 'CPD-8LB-001',
+        lotNumber: 'CPD-2024-1115',
+        originalQuantity: 10,
+        currentQuantity: 2,
+        unit: 'rolls',
+        locations: [
+            { locationId: 'zone-b', locationCode: 'B', quantity: 2 }
+        ],
+        allocations: [],
+        vendorId: 3,
+        vendorName: 'Floor Supply Co',
+        receivedDate: '2024-11-15T11:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 85.00,
+        totalCost: 170,
+        createdAt: '2024-11-15T11:00:00Z',
+        notes: 'Low stock - reorder needed'
+    },
+
+    // ═══ Porcelain Tile - 24x24 (Item 9) ═══
+    {
+        id: 'lot-011',
+        itemId: 9,
+        itemName: 'Porcelain Tile - 24x24',
+        sku: 'PT-24-001',
+        lotNumber: 'PT-2024-1208',
+        dyeLot: 'GRAY-A12',
+        originalQuantity: 500,
+        currentQuantity: 450,
+        unit: 'sqft',
+        locations: [
+            { locationId: 'a-02-01', locationCode: 'A-02-01', quantity: 300 },
+            { locationId: 'staging', locationCode: 'STAGE', quantity: 150 }
+        ],
+        allocations: [
+            { projectId: 1, projectName: 'Downtown Lobby Renovation', quantity: 150, allocatedAt: '2024-12-10T08:00:00Z', allocatedBy: 'Sarah Chen' }
+        ],
+        vendorId: 2,
+        vendorName: 'Tile Distributors Inc',
+        receivedDate: '2024-12-08T10:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 6.75,
+        totalCost: 3037.50,
+        createdAt: '2024-12-08T10:00:00Z'
+    },
+
+    // ═══ Carpet Tile - Commercial (Item 10) ═══
+    {
+        id: 'lot-012',
+        itemId: 10,
+        itemName: 'Carpet Tile - Commercial',
+        sku: 'CT-COM-001',
+        lotNumber: 'CT-2024-1128',
+        dyeLot: 'BLU-2024-12',
+        originalQuantity: 500,
+        currentQuantity: 320,
+        unit: 'sqft',
+        locations: [
+            { locationId: 'a-01-01', locationCode: 'A-01-01', quantity: 200 },
+            { locationId: 'jobsite-1', locationCode: 'JS-ASH', quantity: 120 }
+        ],
+        allocations: [
+            { projectId: 1, projectName: 'Downtown Lobby Renovation', quantity: 180, allocatedAt: '2024-12-01T09:00:00Z', allocatedBy: 'Sarah Chen' }
+        ],
+        vendorId: 1,
+        vendorName: 'Shaw Flooring',
+        receivedDate: '2024-11-28T10:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 3.25,
+        totalCost: 1040,
+        createdAt: '2024-11-28T10:00:00Z'
+    },
+
+    // ═══ Shaw Endura LVP - Walnut (Item 11) ═══
+    {
+        id: 'lot-013',
+        itemId: 11,
+        itemName: 'Shaw Endura LVP - Walnut',
+        sku: 'SH-END-002',
+        lotNumber: 'SH-2024-1212',
+        dyeLot: 'WAL-2024-B08',
+        originalQuantity: 700,
+        currentQuantity: 580,
+        unit: 'sqft',
+        locations: [
+            { locationId: 'a-01-02', locationCode: 'A-01-02', quantity: 400 },
+            { locationId: 'staging', locationCode: 'STAGE', quantity: 180 }
+        ],
+        allocations: [
+            { projectId: 3, projectName: 'Lakeside Commons', quantity: 120, allocatedAt: '2024-12-12T10:00:00Z', allocatedBy: 'Sarah Chen' }
+        ],
+        vendorId: 1,
+        vendorName: 'Shaw Flooring',
+        receivedDate: '2024-12-12T14:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 4.50,
+        totalCost: 2610,
+        createdAt: '2024-12-12T14:00:00Z'
+    },
+
+    // ═══ Mapei Ultraflex 2 (Item 12) ═══
+    {
+        id: 'lot-014',
+        itemId: 12,
+        itemName: 'Mapei Ultraflex 2',
+        sku: 'MP-UF2-50',
+        lotNumber: 'MAP-2024-1130',
+        originalQuantity: 50,
+        currentQuantity: 35,
+        unit: 'bags',
+        locations: [
+            { locationId: 'b-02', locationCode: 'B-02', quantity: 25 },
+            { locationId: 'truck-1', locationCode: 'TRK-01', quantity: 10 }
+        ],
+        allocations: [
+            { projectId: 1, projectName: 'Downtown Lobby Renovation', quantity: 10, allocatedAt: '2024-12-05T08:00:00Z', allocatedBy: 'Sarah Chen' }
+        ],
+        vendorId: 2,
+        vendorName: 'Tile Distributors Inc',
+        receivedDate: '2024-11-30T09:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 35.00,
+        totalCost: 1225,
+        createdAt: '2024-11-30T09:00:00Z'
+    },
+
+    // ═══ Schluter DITRA (Item 13) ═══
+    {
+        id: 'lot-015',
+        itemId: 13,
+        itemName: 'Schluter DITRA',
+        sku: 'SC-DIT-150',
+        lotNumber: 'SCH-2024-1125',
+        originalQuantity: 40,
+        currentQuantity: 28,
+        unit: 'sqft',
+        locations: [
+            { locationId: 'b-01', locationCode: 'B-01', quantity: 28 }
+        ],
+        allocations: [
+            { projectId: 1, projectName: 'Downtown Lobby Renovation', quantity: 12, allocatedAt: '2024-12-06T09:00:00Z', allocatedBy: 'Sarah Chen' }
+        ],
+        vendorId: 3,
+        vendorName: 'Floor Supply Co',
+        receivedDate: '2024-11-25T10:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 75.00,
+        totalCost: 2100,
+        createdAt: '2024-11-25T10:00:00Z'
+    },
+
+    // ═══ Quarter Round - White (Item 14) ═══
+    {
+        id: 'lot-016',
+        itemId: 14,
+        itemName: 'Quarter Round - White',
+        sku: 'QR-WHT-001',
+        lotNumber: 'QR-2024-1120',
+        originalQuantity: 100,
+        currentQuantity: 85,
+        unit: 'pcs',
+        locations: [
+            { locationId: 'b-03', locationCode: 'B-03', quantity: 70 },
+            { locationId: 'truck-2', locationCode: 'TRK-02', quantity: 15 }
+        ],
+        allocations: [],
+        vendorId: 1,
+        vendorName: 'Shaw Flooring',
+        receivedDate: '2024-11-20T11:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 8.00,
+        totalCost: 680,
+        createdAt: '2024-11-20T11:00:00Z'
+    },
+
+    // ═══ Stair Nose - Oak (Item 15) ═══
+    {
+        id: 'lot-017',
+        itemId: 15,
+        itemName: 'Stair Nose - Oak',
+        sku: 'SN-OAK-001',
+        lotNumber: 'SN-2024-1118',
+        originalQuantity: 24,
+        currentQuantity: 18,
+        unit: 'pcs',
+        locations: [
+            { locationId: 'b-03', locationCode: 'B-03', quantity: 18 }
+        ],
+        allocations: [
+            { projectId: 3, projectName: 'Lakeside Commons', quantity: 6, allocatedAt: '2024-12-11T14:00:00Z', allocatedBy: 'Sarah Chen' }
+        ],
+        vendorId: 1,
+        vendorName: 'Shaw Flooring',
+        receivedDate: '2024-11-18T09:00:00Z',
+        qcStatus: 'passed',
+        status: 'active',
+        unitCost: 45.00,
+        totalCost: 810,
+        createdAt: '2024-11-18T09:00:00Z'
     }
 ];
 

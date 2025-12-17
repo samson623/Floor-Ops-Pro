@@ -726,3 +726,256 @@ export function QuickOrderModal({ open, onClose, item }: QuickOrderModalProps) {
         </Dialog>
     );
 }
+
+// ══════════════════════════════════════════════════════════════════
+// ADD INVENTORY ITEM MODAL
+// Enterprise-grade item creation with role-based permissions
+// ══════════════════════════════════════════════════════════════════
+
+interface AddInventoryItemModalProps {
+    open: boolean;
+    onClose: () => void;
+}
+
+export function AddInventoryItemModal({ open, onClose }: AddInventoryItemModalProps) {
+    const { data, addInventoryItem } = useData();
+    const { can, currentUser } = usePermissions();
+    const [name, setName] = useState('');
+    const [sku, setSku] = useState('');
+    const [initialStock, setInitialStock] = useState('');
+    const [unitType, setUnitType] = useState('');
+    const [vendor, setVendor] = useState('');
+    const [location, setLocation] = useState('');
+    const [category, setCategory] = useState('');
+    const [notes, setNotes] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [success, setSuccess] = useState(false);
+
+    const hasPermission = can('ADD_INVENTORY');
+    const locations = (data.warehouseLocations || []).filter(l =>
+        l.isReceivable && ['bay', 'aisle', 'warehouse', 'staging', 'zone'].includes(l.type)
+    );
+
+    const unitTypes = ['sqft', 'pcs', 'boxes', 'bags', 'rolls', 'pallets', 'gallons', 'each'];
+    const categories = [
+        'Flooring - LVP',
+        'Flooring - Hardwood',
+        'Flooring - Tile',
+        'Flooring - Carpet',
+        'Adhesives & Mortar',
+        'Underlayment',
+        'Transitions & Trim',
+        'Tools & Supplies'
+    ];
+
+    const handleSubmit = async () => {
+        if (!hasPermission) return;
+
+        setIsSubmitting(true);
+
+        // Generate new item
+        const newItem = {
+            id: Math.max(...data.inventory.map(i => i.id), 0) + 1,
+            name,
+            sku: sku || `SKU-${Date.now().toString().slice(-6)}`,
+            stock: parseInt(initialStock) || 0,
+            reserved: 0
+        };
+
+        // Add to inventory
+        addInventoryItem(newItem);
+
+        await new Promise(resolve => setTimeout(resolve, 600));
+        setSuccess(true);
+
+        setTimeout(() => {
+            setSuccess(false);
+            onClose();
+            resetForm();
+        }, 1500);
+    };
+
+    const resetForm = () => {
+        setName('');
+        setSku('');
+        setInitialStock('');
+        setUnitType('');
+        setVendor('');
+        setLocation('');
+        setCategory('');
+        setNotes('');
+        setIsSubmitting(false);
+    };
+
+    return (
+        <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+            <DialogContent className="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Plus className="w-5 h-5 text-primary" />
+                        Add Inventory Item
+                    </DialogTitle>
+                    <DialogDescription>
+                        Create a new material in the warehouse system
+                    </DialogDescription>
+                </DialogHeader>
+
+                {!hasPermission ? (
+                    <div className="py-12 text-center">
+                        <AlertTriangle className="w-16 h-16 mx-auto text-yellow-500 mb-4" />
+                        <p className="text-lg font-medium">Permission Denied</p>
+                        <p className="text-muted-foreground">
+                            You don't have permission to add inventory items.
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
+                            Contact a Warehouse Manager or Administrator.
+                        </p>
+                    </div>
+                ) : success ? (
+                    <div className="py-12 text-center">
+                        <CheckCircle2 className="w-16 h-16 mx-auto text-green-500 mb-4" />
+                        <p className="text-lg font-medium">Item Created!</p>
+                        <p className="text-muted-foreground">{name} has been added to inventory</p>
+                    </div>
+                ) : (
+                    <div className="space-y-4 py-4">
+                        {/* Item Name & SKU */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Item Name *</Label>
+                                <Input
+                                    placeholder="e.g., LVP - Ash Gray"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>SKU</Label>
+                                <Input
+                                    placeholder="Auto-generated if empty"
+                                    value={sku}
+                                    onChange={(e) => setSku(e.target.value.toUpperCase())}
+                                />
+                            </div>
+                        </div>
+
+                        {/* Category */}
+                        <div className="space-y-2">
+                            <Label>Category</Label>
+                            <Select value={category} onValueChange={setCategory}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select category" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {categories.map(cat => (
+                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Stock & Unit Type */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Initial Stock</Label>
+                                <Input
+                                    type="number"
+                                    placeholder="0"
+                                    value={initialStock}
+                                    onChange={(e) => setInitialStock(e.target.value)}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Unit Type</Label>
+                                <Select value={unitType} onValueChange={setUnitType}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select unit" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {unitTypes.map(unit => (
+                                            <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Vendor & Location */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Preferred Vendor</Label>
+                                <Select value={vendor} onValueChange={setVendor}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select vendor" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {data.vendors.map(v => (
+                                            <SelectItem key={v.id} value={v.id.toString()}>{v.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Default Location</Label>
+                                <Select value={location} onValueChange={setLocation}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select location" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {locations.map(loc => (
+                                            <SelectItem key={loc.id} value={loc.id}>
+                                                {loc.code} - {loc.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
+
+                        {/* Notes */}
+                        <div className="space-y-2">
+                            <Label>Notes</Label>
+                            <Textarea
+                                placeholder="Additional notes about this item..."
+                                value={notes}
+                                onChange={(e) => setNotes(e.target.value)}
+                                rows={2}
+                            />
+                        </div>
+
+                        {/* Preview */}
+                        {name && (
+                            <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <div className="font-medium">{name}</div>
+                                        <div className="text-sm text-muted-foreground">
+                                            {sku || 'SKU: Auto-generated'} • {category || 'Uncategorized'}
+                                        </div>
+                                    </div>
+                                    <Badge variant="secondary">
+                                        {initialStock || 0} {unitType || 'units'}
+                                    </Badge>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                <DialogFooter>
+                    <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+                        Cancel
+                    </Button>
+                    {hasPermission && (
+                        <Button
+                            onClick={handleSubmit}
+                            disabled={isSubmitting || !name}
+                        >
+                            {isSubmitting ? 'Creating...' : 'Add Item'}
+                        </Button>
+                    )}
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+}

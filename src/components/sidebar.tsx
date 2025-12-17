@@ -143,10 +143,10 @@ function SidebarContent() {
                                         key={item.href}
                                         href={item.href}
                                         className={cn(
-                                            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+                                            'flex items-center gap-3 px-3 py-3 min-h-[48px] rounded-lg text-sm font-medium transition-all duration-200 touch-action-manipulation active:scale-[0.98]',
                                             isActive
                                                 ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
-                                                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                                                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground active:bg-sidebar-accent/70'
                                         )}
                                     >
                                         <span className={cn(

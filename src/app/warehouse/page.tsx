@@ -1,8 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import { ResponsiveDataView, MobileFilterBar } from '@/components/responsive-data-view';
 import { WarehouseDashboard } from '@/components/warehouse-dashboard';
-import { ReceiveDeliveryModal, TransferModal, AdjustmentModal, QuickOrderModal } from '@/components/warehouse-modals';
+import { ReceiveDeliveryModal, TransferModal, AdjustmentModal, QuickOrderModal, AddInventoryItemModal } from '@/components/warehouse-modals';
 import { InventoryDetailModal } from '@/components/warehouse-inventory-detail-modal';
 import { LocationDetailModal } from '@/components/warehouse-location-detail-modal';
 import { TransferDetailModal } from '@/components/warehouse-transfer-detail-modal';
@@ -52,6 +53,7 @@ export default function WarehousePage() {
 
     // Check permissions
     const canViewInventory = can('VIEW_INVENTORY');
+    const canAddInventory = can('ADD_INVENTORY');
     const canReceive = can('PERFORM_RECEIVING');
     const canTransfer = can('CREATE_TRANSFER');
     const canAdjust = can('ADJUST_INVENTORY');
@@ -61,6 +63,7 @@ export default function WarehousePage() {
     const [showReceiveModal, setShowReceiveModal] = useState(false);
     const [showTransferModal, setShowTransferModal] = useState(false);
     const [showAdjustModal, setShowAdjustModal] = useState(false);
+    const [showAddItemModal, setShowAddItemModal] = useState(false);
 
     // Detail modal states
     const [showInventoryDetail, setShowInventoryDetail] = useState(false);
@@ -150,31 +153,31 @@ export default function WarehousePage() {
             <div className="container mx-auto px-4 py-6">
                 <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <TabsList className="bg-muted/50 p-1">
-                            <TabsTrigger value="dashboard" className="gap-2">
+                        <TabsList className="bg-muted/50 p-1.5 overflow-x-auto flex-nowrap w-full sm:w-auto mobile-tabs">
+                            <TabsTrigger value="dashboard" className="gap-2 flex-shrink-0 min-h-[44px] px-4">
                                 <BarChart3 className="w-4 h-4" />
-                                Dashboard
+                                <span className="hidden xs:inline sm:inline">Dashboard</span>
                             </TabsTrigger>
-                            <TabsTrigger value="inventory" className="gap-2">
+                            <TabsTrigger value="inventory" className="gap-2 flex-shrink-0 min-h-[44px] px-4">
                                 <Boxes className="w-4 h-4" />
-                                Inventory
+                                <span className="hidden xs:inline sm:inline">Inventory</span>
                             </TabsTrigger>
-                            <TabsTrigger value="locations" className="gap-2">
+                            <TabsTrigger value="locations" className="gap-2 flex-shrink-0 min-h-[44px] px-4">
                                 <MapPin className="w-4 h-4" />
-                                Locations
+                                <span className="hidden xs:inline sm:inline">Locations</span>
                             </TabsTrigger>
-                            <TabsTrigger value="transfers" className="gap-2">
+                            <TabsTrigger value="transfers" className="gap-2 flex-shrink-0 min-h-[44px] px-4">
                                 <ArrowUpDown className="w-4 h-4" />
-                                Transfers
+                                <span className="hidden xs:inline sm:inline">Transfers</span>
                             </TabsTrigger>
-                            <TabsTrigger value="lots" className="gap-2">
+                            <TabsTrigger value="lots" className="gap-2 flex-shrink-0 min-h-[44px] px-4">
                                 <Layers className="w-4 h-4" />
-                                Lots
+                                <span className="hidden xs:inline sm:inline">Lots</span>
                             </TabsTrigger>
                             {canViewReports && (
-                                <TabsTrigger value="reports" className="gap-2">
+                                <TabsTrigger value="reports" className="gap-2 flex-shrink-0 min-h-[44px] px-4">
                                     <FileText className="w-4 h-4" />
-                                    Reports
+                                    <span className="hidden xs:inline sm:inline">Reports</span>
                                 </TabsTrigger>
                             )}
                         </TabsList>
@@ -218,35 +221,42 @@ export default function WarehousePage() {
                                             <Filter className="w-4 h-4 mr-2" />
                                             Filter
                                         </Button>
-                                        <Button size="sm">
-                                            <Package className="w-4 h-4 mr-2" />
-                                            Add Item
-                                        </Button>
+                                        {canAddInventory && (
+                                            <Button size="sm" onClick={() => setShowAddItemModal(true)}>
+                                                <Package className="w-4 h-4 mr-2" />
+                                                Add Item
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-4">
                                     {/* Inventory Table */}
-                                    <div className="border rounded-lg overflow-hidden">
-                                        <table className="w-full text-sm">
-                                            <thead className="bg-muted/50">
-                                                <tr>
-                                                    <th className="text-left p-3 font-medium">Item</th>
-                                                    <th className="text-left p-3 font-medium">SKU</th>
-                                                    <th className="text-left p-3 font-medium">Location</th>
-                                                    <th className="text-right p-3 font-medium">Stock</th>
-                                                    <th className="text-right p-3 font-medium">Reserved</th>
-                                                    <th className="text-right p-3 font-medium">Available</th>
-                                                    <th className="text-center p-3 font-medium">Status</th>
-                                                    <th className="text-right p-3 font-medium">Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {data.inventory.map((item) => {
-                                                    const available = item.stock - item.reserved;
-                                                    const isLowStock = available < 5;
-
+                                    {/* Inventory Table - Responsive */}
+                                    <ResponsiveDataView
+                                        data={data.inventory}
+                                        keyField="id"
+                                        titleField="name"
+                                        subtitleField="sku"
+                                        columns={[
+                                            {
+                                                key: 'name',
+                                                header: 'Item',
+                                                width: 'w-1/4'
+                                            },
+                                            {
+                                                key: 'sku',
+                                                header: 'SKU',
+                                                render: (item) => (
+                                                    <code className="text-xs bg-muted px-2 py-1 rounded">{item.sku}</code>
+                                                )
+                                            },
+                                            {
+                                                key: 'locations',
+                                                header: 'Location',
+                                                width: 'w-1/3',
+                                                render: (item) => {
                                                     // Get locations for this item from enhanced lots
                                                     const itemLots = (data.enhancedLots || []).filter(l => l.itemId === item.id);
                                                     const locationMap = new Map<string, { code: string; quantity: number }>();
@@ -265,84 +275,95 @@ export default function WarehousePage() {
                                                     });
                                                     const itemLocations = Array.from(locationMap.values());
 
-                                                    return (
-                                                        <tr
-                                                            key={item.id}
-                                                            className="border-t hover:bg-muted/30 transition-colors cursor-pointer"
-                                                            onClick={() => {
-                                                                setSelectedInventoryItem(item);
-                                                                setShowInventoryDetail(true);
-                                                            }}
-                                                        >
-                                                            <td className="p-3">
-                                                                <div className="font-medium">{item.name}</div>
-                                                            </td>
-                                                            <td className="p-3">
-                                                                <code className="text-xs bg-muted px-2 py-1 rounded">{item.sku}</code>
-                                                            </td>
-                                                            <td className="p-3">
-                                                                {itemLocations.length > 0 ? (
-                                                                    <div className="flex flex-wrap gap-1">
-                                                                        {itemLocations.slice(0, 3).map((loc, idx) => (
-                                                                            <Badge
-                                                                                key={idx}
-                                                                                variant="secondary"
-                                                                                className="text-xs font-mono"
-                                                                            >
-                                                                                <MapPin className="w-3 h-3 mr-1" />
-                                                                                {loc.code}: {loc.quantity}
-                                                                            </Badge>
-                                                                        ))}
-                                                                        {itemLocations.length > 3 && (
-                                                                            <Badge variant="outline" className="text-xs">
-                                                                                +{itemLocations.length - 3} more
-                                                                            </Badge>
-                                                                        )}
-                                                                    </div>
-                                                                ) : (
-                                                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                                        <MapPin className="w-3 h-3" />
-                                                                        Not tracked
-                                                                    </span>
-                                                                )}
-                                                            </td>
-                                                            <td className="p-3 text-right font-medium">{item.stock}</td>
-                                                            <td className="p-3 text-right text-muted-foreground">{item.reserved}</td>
-                                                            <td className={cn("p-3 text-right font-medium", isLowStock && "text-yellow-600")}>
-                                                                {available}
-                                                            </td>
-                                                            <td className="p-3 text-center">
-                                                                {isLowStock ? (
-                                                                    <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
-                                                                        Low Stock
-                                                                    </Badge>
-                                                                ) : (
-                                                                    <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
-                                                                        In Stock
-                                                                    </Badge>
-                                                                )}
-                                                            </td>
-                                                            <td className="p-3 text-right">
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    className="gap-1"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setSelectedInventoryItem(item);
-                                                                        setShowInventoryDetail(true);
-                                                                    }}
+                                                    return itemLocations.length > 0 ? (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {itemLocations.slice(0, 3).map((loc, idx) => (
+                                                                <Badge
+                                                                    key={idx}
+                                                                    variant="secondary"
+                                                                    className="text-xs font-mono"
                                                                 >
-                                                                    <Eye className="w-4 h-4" />
-                                                                    View
-                                                                </Button>
-                                                            </td>
-                                                        </tr>
+                                                                    <MapPin className="w-3 h-3 mr-1" />
+                                                                    {loc.code}: {loc.quantity}
+                                                                </Badge>
+                                                            ))}
+                                                            {itemLocations.length > 3 && (
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    +{itemLocations.length - 3} more
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                                            <MapPin className="w-3 h-3" />
+                                                            Not tracked
+                                                        </span>
                                                     );
-                                                })}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                }
+                                            },
+                                            {
+                                                key: 'stock',
+                                                header: 'Stock',
+                                                align: 'right'
+                                            },
+                                            {
+                                                key: 'reserved',
+                                                header: 'Reserved',
+                                                align: 'right'
+                                            },
+                                            {
+                                                key: 'available',
+                                                header: 'Available',
+                                                align: 'right',
+                                                render: (item) => {
+                                                    const available = item.stock - item.reserved;
+                                                    const isLowStock = available < 5;
+                                                    return (
+                                                        <span className={cn("font-medium", isLowStock && "text-yellow-600")}>
+                                                            {available}
+                                                        </span>
+                                                    );
+                                                }
+                                            },
+                                            {
+                                                key: 'status',
+                                                header: 'Status',
+                                                align: 'center',
+                                                asBadge: true,
+                                                render: (item) => {
+                                                    const available = item.stock - item.reserved;
+                                                    return available < 5 ? (
+                                                        <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                                                            Low Stock
+                                                        </Badge>
+                                                    ) : (
+                                                        <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/30">
+                                                            In Stock
+                                                        </Badge>
+                                                    );
+                                                }
+                                            }
+                                        ]}
+                                        onItemClick={(item) => {
+                                            setSelectedInventoryItem(item);
+                                            setShowInventoryDetail(true);
+                                        }}
+                                        actions={(item) => (
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="gap-1"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setSelectedInventoryItem(item);
+                                                    setShowInventoryDetail(true);
+                                                }}
+                                            >
+                                                <Eye className="w-4 h-4" />
+                                                View
+                                            </Button>
+                                        )}
+                                    />
                                 </div>
                             </CardContent>
                         </Card>
@@ -691,6 +712,10 @@ export default function WarehousePage() {
             <TransactionHistoryModal
                 open={showTransactionHistory}
                 onClose={() => setShowTransactionHistory(false)}
+            />
+            <AddInventoryItemModal
+                open={showAddItemModal}
+                onClose={() => setShowAddItemModal(false)}
             />
         </div>
     );

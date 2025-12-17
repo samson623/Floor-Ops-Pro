@@ -39,9 +39,9 @@ export default function SchedulePage() {
         <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
             {/* Hero Header */}
             <div className="border-b bg-gradient-to-r from-primary/10 via-transparent to-chart-2/10">
-                <div className="max-w-[1800px] mx-auto px-6 py-8">
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                        <div>
+                <div className="max-w-[1800px] mx-auto px-4 sm:px-6 py-6 sm:py-8">
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+                        <div className="pl-12 lg:pl-0">
                             <div className="flex items-center gap-3 mb-2">
                                 <div className="p-3 rounded-2xl bg-gradient-to-br from-primary via-primary to-chart-1 text-primary-foreground shadow-lg shadow-primary/30">
                                     <Calendar className="w-8 h-8" />
@@ -57,8 +57,8 @@ export default function SchedulePage() {
                             </div>
                         </div>
 
-                        {/* Quick Stats */}
-                        <div className="flex items-center gap-4 flex-wrap">
+                        {/* Quick Stats - Scrollable on mobile */}
+                        <div className="flex items-center gap-3 sm:gap-4 overflow-x-auto pb-2 lg:pb-0 -mx-4 px-4 lg:mx-0 lg:px-0 lg:flex-wrap">
                             <QuickStat
                                 icon={<Clock className="w-5 h-5 text-primary" />}
                                 value={todayEntries.length}
@@ -87,39 +87,39 @@ export default function SchedulePage() {
             </div>
 
             {/* Main Content */}
-            <div className="max-w-[1800px] mx-auto px-6 py-6">
-                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-                    <TabsList className="bg-muted/50 p-1.5 h-auto flex-wrap gap-1">
+            <div className="max-w-[1800px] mx-auto px-4 sm:px-6 py-4 sm:py-6">
+                <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
+                    <TabsList className="bg-muted/50 p-1.5 h-auto overflow-x-auto flex-nowrap gap-1 w-full sm:w-auto mobile-tabs">
                         <TabsTrigger
                             value="daily"
-                            className="gap-2 px-4 py-2.5 data-[state=active]:shadow-lg data-[state=active]:bg-background"
+                            className="gap-2 px-4 min-h-[44px] flex-shrink-0 data-[state=active]:shadow-lg data-[state=active]:bg-background"
                         >
                             <Target className="w-4 h-4" />
-                            <span className="hidden sm:inline">Daily Plan</span>
-                            <Badge variant="secondary" className="ml-1 text-[10px] h-5">
+                            <span className="hidden xs:inline">Daily Plan</span>
+                            <Badge variant="secondary" className="ml-1 text-[10px] h-5 hidden sm:inline-flex">
                                 Smart
                             </Badge>
                         </TabsTrigger>
                         <TabsTrigger
                             value="calendar"
-                            className="gap-2 px-4 py-2.5 data-[state=active]:shadow-lg data-[state=active]:bg-background"
+                            className="gap-2 px-4 min-h-[44px] flex-shrink-0 data-[state=active]:shadow-lg data-[state=active]:bg-background"
                         >
                             <Calendar className="w-4 h-4" />
-                            <span className="hidden sm:inline">Calendar</span>
+                            <span className="hidden xs:inline">Calendar</span>
                         </TabsTrigger>
                         <TabsTrigger
                             value="crews"
-                            className="gap-2 px-4 py-2.5 data-[state=active]:shadow-lg data-[state=active]:bg-background"
+                            className="gap-2 px-4 min-h-[44px] flex-shrink-0 data-[state=active]:shadow-lg data-[state=active]:bg-background"
                         >
                             <Users className="w-4 h-4" />
-                            <span className="hidden sm:inline">Crews</span>
+                            <span className="hidden xs:inline">Crews</span>
                         </TabsTrigger>
                         <TabsTrigger
                             value="gantt"
-                            className="gap-2 px-4 py-2.5 data-[state=active]:shadow-lg data-[state=active]:bg-background"
+                            className="gap-2 px-4 min-h-[44px] flex-shrink-0 data-[state=active]:shadow-lg data-[state=active]:bg-background"
                         >
                             <LayoutGrid className="w-4 h-4" />
-                            <span className="hidden sm:inline">Project Timelines</span>
+                            <span className="hidden xs:inline">Timelines</span>
                         </TabsTrigger>
                     </TabsList>
 

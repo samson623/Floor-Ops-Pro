@@ -36,8 +36,8 @@ export default function ProjectsPage() {
             />
 
             <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
-                {/* Filter Tabs */}
-                <div className="flex flex-wrap gap-2">
+                {/* Filter Tabs - Scrollable on mobile */}
+                <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap mobile-tabs">
                     {filters.map(f => (
                         <Button
                             key={f.value}
@@ -45,7 +45,7 @@ export default function ProjectsPage() {
                             size="sm"
                             onClick={() => setFilter(f.value)}
                             className={cn(
-                                'transition-all',
+                                'transition-all flex-shrink-0 min-h-[44px] px-4',
                                 filter === f.value && 'shadow-lg shadow-primary/25'
                             )}
                         >

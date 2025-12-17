@@ -164,3 +164,222 @@
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   MOBILE RESPONSIVENESS ENHANCEMENTS
+   Enterprise-grade mobile support for field crews
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* Touch-optimized interactive elements */
+@layer base {
+  @media (max-width: 768px) {
+
+    /* Prevent zoom on input focus (iOS Safari) */
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+
+    /* Smooth momentum scrolling */
+    * {
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Touch action optimization for smoother scrolling */
+    html {
+      touch-action: manipulation;
+    }
+  }
+}
+
+/* Mobile touch targets - Apple HIG compliance (44px minimum) */
+@layer utilities {
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  .touch-target-sm {
+    @apply min-h-[36px] min-w-[36px];
+  }
+}
+
+/* Safe area insets for notched devices (iPhone X+, etc.) */
+@layer utilities {
+  .safe-area-inset {
+    padding-left: env(safe-area-inset-left, 0);
+    padding-right: env(safe-area-inset-right, 0);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top, 0);
+  }
+}
+
+/* Mobile-specific layout utilities */
+@layer utilities {
+
+  /* Stack on mobile, row on desktop */
+  .mobile-stack {
+    @apply flex flex-col gap-3 sm:flex-row sm:items-center;
+  }
+
+  /* Full width on mobile, auto on desktop */
+  .mobile-full {
+    @apply w-full sm:w-auto;
+  }
+
+  /* Hide on mobile, show on desktop */
+  .mobile-hide {
+    @apply hidden md:block;
+  }
+
+  /* Show on mobile only */
+  .mobile-only {
+    @apply block md:hidden;
+  }
+
+  /* Responsive grid that goes 1 col on mobile */
+  .responsive-grid {
+    @apply grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4;
+  }
+
+  /* Scrollable container with visible indicators */
+  .scroll-container {
+    @apply overflow-x-auto;
+    scroll-snap-type: x mandatory;
+  }
+
+  .scroll-container>* {
+    scroll-snap-align: start;
+  }
+}
+
+/* Mobile card styles for data tables */
+@layer components {
+  .mobile-card {
+    @apply p-4 rounded-xl border bg-card transition-all;
+    @apply active:scale-[0.98] active:bg-muted/50;
+  }
+
+  .mobile-card-header {
+    @apply flex items-start justify-between gap-3 mb-3;
+  }
+
+  .mobile-card-title {
+    @apply font-semibold text-base leading-tight;
+  }
+
+  .mobile-card-meta {
+    @apply flex flex-wrap items-center gap-2 text-xs text-muted-foreground;
+  }
+
+  .mobile-card-actions {
+    @apply flex items-center gap-2 mt-3 pt-3 border-t;
+  }
+}
+
+/* Mobile navigation enhancements */
+@layer components {
+  .mobile-nav-item {
+    @apply flex items-center gap-3 px-4 py-3 rounded-lg;
+    touch-action: manipulation;
+    @apply transition-colors active:bg-accent;
+  }
+
+  .mobile-bottom-bar {
+    @apply fixed bottom-0 left-0 right-0 z-50;
+    @apply bg-background/95 backdrop-blur-md border-t;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+}
+
+/* Mobile form enhancements */
+@layer components {
+  .mobile-input {
+    @apply h-12 text-base rounded-xl px-4;
+  }
+
+  .mobile-select {
+    @apply h-12 text-base rounded-xl;
+  }
+
+  .mobile-button {
+    @apply h-12 text-base rounded-xl px-6;
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Horizontal scrolling tabs for mobile */
+@layer components {
+  .mobile-tabs {
+    @apply flex gap-1 overflow-x-auto pb-1 -mx-2 px-2;
+
+    scroll-snap-type: x mandatory;
+  }
+
+  .mobile-tabs>* {
+    @apply flex-shrink-0;
+    scroll-snap-align: start;
+  }
+}
+
+/* Pull to refresh indicator */
+@layer components {
+  .pull-indicator {
+    @apply flex items-center justify-center py-4;
+    @apply text-muted-foreground transition-transform;
+  }
+
+  .pull-indicator.active {
+    @apply text-primary;
+  }
+}
+
+/* Mobile modal/sheet improvements */
+@layer components {
+  .mobile-sheet {
+    @apply fixed inset-x-0 bottom-0 z-50;
+    @apply bg-background rounded-t-3xl;
+    @apply max-h-[90vh] overflow-y-auto;
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  .mobile-sheet-handle {
+    @apply w-12 h-1.5 bg-muted-foreground/30 rounded-full mx-auto mt-3 mb-4;
+  }
+}
+
+/* Swipe action hints */
+@layer utilities {
+  .swipe-hint {
+    @apply relative overflow-hidden;
+  }
+
+  .swipe-hint::after {
+    content: '';
+    @apply absolute right-0 top-0 bottom-0 w-8;
+    @apply bg-gradient-to-l from-primary/10 to-transparent;
+    @apply opacity-0 transition-opacity;
+  }
+
+  .swipe-hint:hover::after {
+    @apply opacity-100;
+  }
+}
+
+/* Responsive table to cards */
+@layer components {
+  .responsive-table {
+    @apply hidden md:table w-full;
+  }
+
+  .responsive-cards {
+    @apply md:hidden space-y-3;
+  }
+}
