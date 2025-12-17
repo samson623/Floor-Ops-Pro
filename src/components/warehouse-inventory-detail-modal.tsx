@@ -177,9 +177,7 @@ export function InventoryDetailModal({
                                 <DialogDescription className="flex items-center gap-2 mt-1">
                                     <code className="text-xs bg-muted px-2 py-0.5 rounded">{item.sku}</code>
                                     <span>•</span>
-                                    <span>{item.category}</span>
-                                    <span>•</span>
-                                    <span>{item.unit}</span>
+                                    <span>{itemLots.length} lot{itemLots.length !== 1 ? 's' : ''}</span>
                                 </DialogDescription>
                             </div>
                         </div>
@@ -388,7 +386,7 @@ export function InventoryDetailModal({
                                                     </div>
                                                 </div>
                                                 <Badge variant="secondary">
-                                                    {res.quantity} {item.unit}
+                                                    {res.quantity} {res.unit}
                                                 </Badge>
                                             </div>
                                             <div className="mt-3">
