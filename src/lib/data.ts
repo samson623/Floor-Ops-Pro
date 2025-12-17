@@ -1358,6 +1358,16 @@ export interface Database {
     allSiteConditions: SiteCondition[];
     allSafetyIncidents: SafetyIncident[];
     allComplianceChecklists: ComplianceChecklist[];
+    // ══════════════════════════════════════════════════════════════════
+    // WAREHOUSE MANAGEMENT SYSTEM
+    // ══════════════════════════════════════════════════════════════════
+    warehouseLocations: import('./warehouse-types').WarehouseLocation[];
+    inventoryTransactions: import('./warehouse-types').InventoryTransaction[];
+    stockReservations: import('./warehouse-types').StockReservation[];
+    stockTransfers: import('./warehouse-types').StockTransfer[];
+    enhancedLots: import('./warehouse-types').EnhancedMaterialLot[];
+    cycleCounts: import('./warehouse-types').CycleCount[];
+    reorderSuggestions: import('./warehouse-types').ReorderSuggestion[];
 }
 
 // Offline Mode Support
@@ -2607,13 +2617,30 @@ export const initialData: Database = {
     ],
     vendors: [
         { id: 1, name: 'Shaw Flooring', type: 'LVP/Carpet Supplier', phone: '(800) 441-7429', rep: 'Sarah Mitchell' },
-        { id: 2, name: 'Tile Distributors Inc', type: 'Tile & Setting Materials', phone: '(555) 234-5678', rep: 'Mike Johnson' },
-        { id: 3, name: 'Flooring Supply Co', type: 'Tools & Accessories', phone: '(555) 345-6789', rep: 'Tom Anderson' }
+        { id: 2, name: 'MSI Surfaces', type: 'Hardwood & Tile', phone: '(555) 234-5678', rep: 'Mike Johnson' },
+        { id: 3, name: 'Floor Supply Co', type: 'Tools & Accessories', phone: '(555) 345-6789', rep: 'Tom Anderson' },
+        { id: 4, name: 'Carpet World', type: 'Carpet & Pad Supplier', phone: '(555) 456-7890', rep: 'Lisa Chen' },
+        { id: 5, name: 'Tile Distributors Inc', type: 'Tile & Setting Materials', phone: '(555) 567-8901', rep: 'James Park' },
+        { id: 6, name: 'Mapei USA', type: 'Adhesives & Grouts', phone: '(800) 426-2734', rep: 'Kevin Russo' },
+        { id: 7, name: 'Schluter Systems', type: 'Underlayment & Transitions', phone: '(800) 472-4588', rep: 'Maria Schmidt' }
     ],
     inventory: [
-        { id: 1, name: 'Shaw Endura LVP - Oak', sku: 'SH-END-001', stock: 120, reserved: 48 },
-        { id: 2, name: 'Mapei Ultraflex 2', sku: 'MP-UF2-50', stock: 15, reserved: 10 },
-        { id: 3, name: 'Schluter DITRA', sku: 'SC-DIT-150', stock: 8, reserved: 3 }
+        // Flooring Materials
+        { id: 1, name: 'LVP - Oak Natural', sku: 'LVP-OAK-001', stock: 1220, reserved: 350 },
+        { id: 2, name: 'Hardwood - Maple', sku: 'HW-MAP-002', stock: 380, reserved: 280 },
+        { id: 3, name: 'Tile Adhesive - FlexBond', sku: 'ADH-FB-001', stock: 42, reserved: 20 },
+        { id: 4, name: 'T-Molding - Oak', sku: 'TM-OAK-001', stock: 22, reserved: 8 },
+        { id: 5, name: 'Underlayment - Premium', sku: 'UL-PREM-001', stock: 1650, reserved: 400 },
+        { id: 6, name: 'Grout - Charcoal', sku: 'GRT-CHR-001', stock: 18, reserved: 6 },
+        { id: 7, name: 'Reducer - Oak', sku: 'RED-OAK-001', stock: 12, reserved: 5 },
+        { id: 8, name: 'Carpet Pad - 8lb', sku: 'CPD-8LB-001', stock: 2, reserved: 0 },
+        { id: 9, name: 'Porcelain Tile - 24x24', sku: 'PT-24-001', stock: 450, reserved: 200 },
+        { id: 10, name: 'Carpet Tile - Commercial', sku: 'CT-COM-001', stock: 320, reserved: 150 },
+        { id: 11, name: 'Shaw Endura LVP - Walnut', sku: 'SH-END-002', stock: 580, reserved: 120 },
+        { id: 12, name: 'Mapei Ultraflex 2', sku: 'MP-UF2-50', stock: 35, reserved: 10 },
+        { id: 13, name: 'Schluter DITRA', sku: 'SC-DIT-150', stock: 28, reserved: 12 },
+        { id: 14, name: 'Quarter Round - White', sku: 'QR-WHT-001', stock: 85, reserved: 15 },
+        { id: 15, name: 'Stair Nose - Oak', sku: 'SN-OAK-001', stock: 18, reserved: 6 }
     ],
     globalSchedule: [
         { id: 1, time: '7:00 AM', title: 'Downtown - Tile Install', subtitle: 'Team A', type: 'primary', projectId: 1 },
@@ -3902,5 +3929,15 @@ export const initialData: Database = {
     allSubfloorTests: [],      // Aggregated from all projects for company-wide reporting
     allSiteConditions: [],     // Active site conditions across all projects
     allSafetyIncidents: [],    // Safety incident log for OSHA compliance
-    allComplianceChecklists: [] // Compliance records for auditing
+    allComplianceChecklists: [], // Compliance records for auditing
+    // ══════════════════════════════════════════════════════════════════
+    // WAREHOUSE MANAGEMENT SYSTEM - Mock Data
+    // ══════════════════════════════════════════════════════════════════
+    warehouseLocations: [],    // Initialized from warehouse-mock-data.ts on first load
+    inventoryTransactions: [], // Complete audit trail
+    stockReservations: [],     // Materials allocated to jobs
+    stockTransfers: [],        // In-transit and completed transfers
+    enhancedLots: [],          // Lot/dye batch tracking
+    cycleCounts: [],           // Physical inventory verification
+    reorderSuggestions: []     // AI-generated restocking recommendations
 };

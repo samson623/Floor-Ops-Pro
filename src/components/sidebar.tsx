@@ -22,7 +22,8 @@ import {
     Home,
     Truck,
     Users,
-    Brain
+    Brain,
+    Warehouse
 } from 'lucide-react';
 
 interface NavItem {
@@ -76,6 +77,7 @@ function SidebarContent() {
                 { href: '/schedule', label: 'Master Schedule', icon: <Calendar className="w-5 h-5" />, requiredPermission: 'VIEW_SCHEDULE' },
                 { href: '/daily-logs', label: 'Daily Logs', icon: <FileText className="w-5 h-5" />, requiredPermission: 'VIEW_DAILY_LOGS' },
                 { href: '/intelligence', label: 'Intelligence', icon: <Brain className="w-5 h-5" />, requiredPermission: 'VIEW_INTELLIGENCE_CENTER' },
+                { href: '/warehouse', label: 'Warehouse', icon: <Warehouse className="w-5 h-5" />, requiredPermission: 'VIEW_INVENTORY' },
                 { href: '/materials', label: 'Materials', icon: <Truck className="w-5 h-5" />, badge: data.deliveries?.filter(d => d.status === 'scheduled' || d.status === 'arrived').length || 0, requiredPermission: 'VIEW_MATERIALS' },
                 { href: '/inventory', label: 'Inventory', icon: <Package className="w-5 h-5" />, requiredPermission: 'VIEW_MATERIALS' },
                 { href: '/vendors', label: 'Vendors', icon: <Store className="w-5 h-5" />, requiredPermission: 'VIEW_MATERIALS' },

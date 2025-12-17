@@ -1804,7 +1804,15 @@ export function useData(): DataContextType {
             allSubfloorTests: [],
             allSiteConditions: [],
             allSafetyIncidents: [],
-            allComplianceChecklists: []
+            allComplianceChecklists: [],
+            // Warehouse Management System
+            warehouseLocations: [],
+            inventoryTransactions: [],
+            stockReservations: [],
+            stockTransfers: [],
+            enhancedLots: [],
+            cycleCounts: [],
+            reorderSuggestions: []
         };
         return {
             data: emptyData,

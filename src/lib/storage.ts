@@ -2,8 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Database, initialData, Project } from './data';
+import {
+    MOCK_WAREHOUSE_LOCATIONS,
+    MOCK_TRANSACTIONS,
+    MOCK_RESERVATIONS,
+    MOCK_TRANSFERS,
+    MOCK_ENHANCED_LOTS,
+    MOCK_CYCLE_COUNTS,
+    MOCK_REORDER_SUGGESTIONS
+} from './warehouse-mock-data';
 
 const STORAGE_KEY = 'floorops-pro-data';
+
 
 export function useLocalStorage(): [Database, (data: Database) => void, boolean] {
     const [data, setData] = useState<Database>(initialData);
@@ -59,6 +69,30 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
                         senderRole: m.senderRole || 'system'
                     })),
                     notifications: parsed.notifications || initialData.notifications,
+                    // ══════════════════════════════════════════════════════════════════
+                    // WAREHOUSE MANAGEMENT SYSTEM - Initialize with mock data
+                    // ══════════════════════════════════════════════════════════════════
+                    warehouseLocations: parsed.warehouseLocations?.length > 0
+                        ? parsed.warehouseLocations
+                        : MOCK_WAREHOUSE_LOCATIONS,
+                    inventoryTransactions: parsed.inventoryTransactions?.length > 0
+                        ? parsed.inventoryTransactions
+                        : MOCK_TRANSACTIONS,
+                    stockReservations: parsed.stockReservations?.length > 0
+                        ? parsed.stockReservations
+                        : MOCK_RESERVATIONS,
+                    stockTransfers: parsed.stockTransfers?.length > 0
+                        ? parsed.stockTransfers
+                        : MOCK_TRANSFERS,
+                    enhancedLots: parsed.enhancedLots?.length > 0
+                        ? parsed.enhancedLots
+                        : MOCK_ENHANCED_LOTS,
+                    cycleCounts: parsed.cycleCounts?.length > 0
+                        ? parsed.cycleCounts
+                        : MOCK_CYCLE_COUNTS,
+                    reorderSuggestions: parsed.reorderSuggestions?.length > 0
+                        ? parsed.reorderSuggestions
+                        : MOCK_REORDER_SUGGESTIONS,
                 };
                 setData(merged);
             }

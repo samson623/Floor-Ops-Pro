@@ -7,7 +7,7 @@
  * User roles in the flooring operations hierarchy.
  * Each role has distinct responsibilities and access levels.
  */
-export type UserRole = 'owner' | 'pm' | 'foreman' | 'installer' | 'office_admin' | 'sub' | 'client';
+export type UserRole = 'owner' | 'pm' | 'foreman' | 'installer' | 'office_admin' | 'sub' | 'client' | 'warehouse_manager' | 'warehouse_staff';
 
 export interface RoleInfo {
     role: UserRole;
@@ -53,6 +53,18 @@ export const ROLE_DEFINITIONS: Record<UserRole, Omit<RoleInfo, 'role'>> = {
         description: 'External contractor with limited access to assigned work',
         color: 'hsl(199, 89%, 48%)', // Cyan
         icon: '🤝'
+    },
+    warehouse_manager: {
+        label: 'Warehouse Manager',
+        description: 'Full warehouse control: receiving, transfers, adjustments, locations',
+        color: 'hsl(25, 85%, 50%)', // Brown-orange
+        icon: '📦'
+    },
+    warehouse_staff: {
+        label: 'Warehouse Staff',
+        description: 'Warehouse operations: receive, pick, stage, transfer materials',
+        color: 'hsl(180, 60%, 45%)', // Teal
+        icon: '🏭'
     },
     client: {
         label: 'Client',
@@ -183,7 +195,65 @@ export type Permission =
 
     // Phase Photos (System of Record)
     | 'VIEW_PHASE_PHOTOS'           // View phase-organized photo documentation
-    | 'TAG_PHASE_PHOTOS';           // Tag/categorize photos by phase
+    | 'TAG_PHASE_PHOTOS'            // Tag/categorize photos by phase
+
+    // ══════════════════════════════════════════════════════════════════
+    // WAREHOUSE MANAGEMENT PERMISSIONS
+    // ══════════════════════════════════════════════════════════════════
+
+    // Inventory Management
+    | 'VIEW_INVENTORY'              // View inventory levels and stock
+    | 'ADD_INVENTORY'               // Add new inventory items
+    | 'EDIT_INVENTORY'              // Edit inventory item details
+    | 'DELETE_INVENTORY'            // Delete inventory items
+    | 'ADJUST_INVENTORY'            // Make stock adjustments (count corrections)
+
+    // Warehouse Locations
+    | 'VIEW_LOCATIONS'              // View warehouse location hierarchy
+    | 'MANAGE_LOCATIONS'            // Create, edit, delete warehouse locations
+
+    // Receiving
+    | 'VIEW_RECEIVING'              // View pending and completed receipts
+    | 'PERFORM_RECEIVING'           // Receive deliveries, QC check, put-away
+
+    // Stock Transfers
+    | 'VIEW_TRANSFERS'              // View transfer orders and history
+    | 'CREATE_TRANSFER'             // Create new transfer orders
+    | 'APPROVE_TRANSFER'            // Approve transfer orders
+    | 'PICK_TRANSFER'               // Pick materials for transfer
+    | 'RECEIVE_TRANSFER'            // Confirm receipt of transferred materials
+
+    // Stock Allocations
+    | 'VIEW_ALLOCATIONS'            // View stock reservations for jobs
+    | 'ALLOCATE_STOCK'              // Reserve stock for specific jobs
+    | 'DEALLOCATE_STOCK'            // Release stock reservations
+
+    // Stock Issuance
+    | 'ISSUE_MATERIALS'             // Issue materials to jobs
+    | 'RETURN_MATERIALS'            // Process material returns from jobs
+
+    // Lot/Dye Batch Tracking
+    | 'VIEW_LOTS'                   // View lot/dye batch information
+    | 'MANAGE_LOTS'                 // Update lot status, quality holds
+
+    // Cycle Counting
+    | 'VIEW_CYCLE_COUNTS'           // View cycle count schedules and results
+    | 'PERFORM_CYCLE_COUNT'         // Execute physical inventory counts
+    | 'APPROVE_CYCLE_COUNT'         // Approve count variances and adjustments
+
+    // Damage & Scrap
+    | 'RECORD_DAMAGE'               // Record damaged materials
+    | 'APPROVE_SCRAP'               // Approve material write-offs
+
+    // Reorder Management
+    | 'VIEW_REORDER_ALERTS'         // View low stock and reorder alerts
+    | 'CREATE_REORDER'              // Create reorder suggestions
+
+    // Warehouse Reporting
+    | 'VIEW_WAREHOUSE_REPORTS'      // View warehouse analytics and reports
+
+    // Warehouse Transaction History
+    | 'VIEW_TRANSACTIONS';          // View all inventory transaction history
 
 /**
  * Permission sets for each role.
@@ -191,33 +261,105 @@ export type Permission =
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
     owner: [
-        // Full access to everything
+        // ══════════════════════════════════════════════════════════════════
+        // OWNER HAS EVERY SINGLE PERMISSION - FULL SYSTEM ACCESS
+        // ══════════════════════════════════════════════════════════════════
+
+        // Financial Permissions
         'VIEW_PRICING', 'VIEW_BUDGET', 'EDIT_BUDGET', 'VIEW_MARGINS', 'APPROVE_EXPENSES',
-        'VIEW_ALL_PROJECTS', 'CREATE_PROJECT', 'EDIT_PROJECT', 'DELETE_PROJECT',
+
+        // Project Permissions
+        'VIEW_ALL_PROJECTS', 'VIEW_ASSIGNED_PROJECTS', 'CREATE_PROJECT', 'EDIT_PROJECT', 'DELETE_PROJECT',
+
+        // Estimates & Sales
         'VIEW_ESTIMATES', 'CREATE_ESTIMATE', 'EDIT_ESTIMATE', 'SEND_ESTIMATE', 'APPROVE_ESTIMATE',
+
+        // Punch List
         'VIEW_PUNCH_LIST', 'CREATE_PUNCH_ITEM', 'EDIT_PUNCH_ITEM', 'COMPLETE_PUNCH_ITEM', 'DELETE_PUNCH_ITEM',
+
+        // Photos & Documentation
         'VIEW_PHOTOS', 'UPLOAD_PHOTOS', 'DELETE_PHOTOS',
+
+        // Daily Logs
         'VIEW_DAILY_LOGS', 'CREATE_DAILY_LOG', 'EDIT_DAILY_LOG',
+
+        // Change Orders
         'VIEW_CHANGE_ORDERS', 'CREATE_CHANGE_ORDER', 'SUBMIT_CHANGE_ORDER', 'APPROVE_CHANGE_ORDER',
+
+        // Schedule & Crew Management
         'VIEW_SCHEDULE', 'EDIT_SCHEDULE', 'ASSIGN_CREWS', 'VIEW_CREW_DETAILS', 'MANAGE_CREW_AVAILABILITY', 'RESOLVE_BLOCKERS',
+
+        // Materials & Inventory (base)
         'VIEW_MATERIALS', 'MANAGE_MATERIALS', 'CREATE_PO', 'APPROVE_PO', 'RECEIVE_DELIVERY',
+
+        // Invoicing
         'VIEW_CLIENT_INVOICES', 'CREATE_CLIENT_INVOICE', 'SEND_INVOICE',
         'VIEW_SUB_INVOICES', 'SUBMIT_SUB_INVOICE', 'APPROVE_SUB_INVOICE',
+
+        // Walkthroughs
         'VIEW_WALKTHROUGHS', 'CREATE_WALKTHROUGH', 'CONDUCT_WALKTHROUGH', 'SIGN_OFF_PROJECT',
+
+        // Team Management
         'VIEW_TEAM', 'MANAGE_USERS', 'ASSIGN_USERS',
-        'VIEW_ALL_MESSAGES', 'SEND_MESSAGES',
+
+        // Communication
+        'VIEW_ALL_MESSAGES', 'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES',
+
+        // AI & Intelligence
         'VIEW_INTELLIGENCE_CENTER', 'USE_AI_ASSISTANT',
-        // Full safety & compliance access
+
+        // Safety & Compliance
         'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT', 'MANAGE_SAFETY_INCIDENTS',
         'VIEW_MOISTURE_TESTS', 'CREATE_MOISTURE_TEST',
         'VIEW_SUBFLOOR_TESTS', 'CREATE_SUBFLOOR_TEST',
         'VIEW_SITE_CONDITIONS', 'MANAGE_SITE_CONDITIONS',
         'VIEW_COMPLIANCE_CHECKLISTS', 'MANAGE_COMPLIANCE_CHECKLISTS',
-        // System of Record - full access
+
+        // System of Record
         'VIEW_CONTRACT_SCOPE', 'EDIT_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
         'VIEW_SCHEDULE_DEPENDENCIES', 'EDIT_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
         'VIEW_DELIVERY_TRACKING', 'MANAGE_DELIVERY_TRACKING',
-        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS'
+        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS',
+
+        // ══════════════════════════════════════════════════════════════════
+        // WAREHOUSE MANAGEMENT - OWNER HAS FULL ACCESS
+        // ══════════════════════════════════════════════════════════════════
+
+        // Inventory Management
+        'VIEW_INVENTORY', 'ADD_INVENTORY', 'EDIT_INVENTORY', 'DELETE_INVENTORY', 'ADJUST_INVENTORY',
+
+        // Warehouse Locations
+        'VIEW_LOCATIONS', 'MANAGE_LOCATIONS',
+
+        // Receiving
+        'VIEW_RECEIVING', 'PERFORM_RECEIVING',
+
+        // Stock Transfers
+        'VIEW_TRANSFERS', 'CREATE_TRANSFER', 'APPROVE_TRANSFER', 'PICK_TRANSFER', 'RECEIVE_TRANSFER',
+
+        // Stock Allocations
+        'VIEW_ALLOCATIONS', 'ALLOCATE_STOCK', 'DEALLOCATE_STOCK',
+
+        // Stock Issuance
+        'ISSUE_MATERIALS', 'RETURN_MATERIALS',
+
+        // Lot/Dye Batch Tracking
+        'VIEW_LOTS', 'MANAGE_LOTS',
+
+        // Cycle Counting
+        'VIEW_CYCLE_COUNTS', 'PERFORM_CYCLE_COUNT', 'APPROVE_CYCLE_COUNT',
+
+        // Damage & Scrap
+        'RECORD_DAMAGE', 'APPROVE_SCRAP',
+
+        // Reorder Management
+        'VIEW_REORDER_ALERTS', 'CREATE_REORDER',
+
+        // Warehouse Reporting
+        'VIEW_WAREHOUSE_REPORTS',
+
+        // Transaction History
+        'VIEW_TRANSACTIONS'
     ],
 
     pm: [
@@ -247,7 +389,21 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_CONTRACT_SCOPE', 'EDIT_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
         'VIEW_SCHEDULE_DEPENDENCIES', 'EDIT_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
         'VIEW_DELIVERY_TRACKING', 'MANAGE_DELIVERY_TRACKING',
-        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS'
+        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS',
+
+        // Warehouse - PM has full visibility and allocation control
+        'VIEW_INVENTORY', 'ADD_INVENTORY', 'EDIT_INVENTORY',
+        'VIEW_LOCATIONS',
+        'VIEW_RECEIVING', 'PERFORM_RECEIVING',
+        'VIEW_TRANSFERS', 'CREATE_TRANSFER', 'APPROVE_TRANSFER', 'RECEIVE_TRANSFER',
+        'VIEW_ALLOCATIONS', 'ALLOCATE_STOCK', 'DEALLOCATE_STOCK',
+        'ISSUE_MATERIALS', 'RETURN_MATERIALS',
+        'VIEW_LOTS', 'MANAGE_LOTS',
+        'VIEW_CYCLE_COUNTS',
+        'RECORD_DAMAGE',
+        'VIEW_REORDER_ALERTS', 'CREATE_REORDER',
+        'VIEW_WAREHOUSE_REPORTS',
+        'VIEW_TRANSACTIONS'
     ],
 
     foreman: [
@@ -273,7 +429,19 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
         'VIEW_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
         'VIEW_DELIVERY_TRACKING', 'MANAGE_DELIVERY_TRACKING',
-        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS'
+        'VIEW_PHASE_PHOTOS', 'TAG_PHASE_PHOTOS',
+
+        // Warehouse - Foreman can view stock, receive at jobsite, issue materials
+        'VIEW_INVENTORY',
+        'VIEW_LOCATIONS',
+        'VIEW_RECEIVING', 'PERFORM_RECEIVING',
+        'VIEW_TRANSFERS', 'RECEIVE_TRANSFER',
+        'VIEW_ALLOCATIONS',
+        'ISSUE_MATERIALS', 'RETURN_MATERIALS',
+        'VIEW_LOTS',
+        'RECORD_DAMAGE',
+        'VIEW_REORDER_ALERTS',
+        'VIEW_TRANSACTIONS'
     ],
 
     installer: [
@@ -354,6 +522,64 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
         'VIEW_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
         'VIEW_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
         'VIEW_PHASE_PHOTOS'
+    ],
+
+    // ══════════════════════════════════════════════════════════════════
+    // WAREHOUSE ROLES
+    // ══════════════════════════════════════════════════════════════════
+
+    warehouse_manager: [
+        // Full warehouse control - can order materials
+        'VIEW_ASSIGNED_PROJECTS', 'VIEW_ALL_PROJECTS',
+        'VIEW_MATERIALS', 'MANAGE_MATERIALS', 'CREATE_PO', 'APPROVE_PO', 'RECEIVE_DELIVERY',
+        'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES',
+        'VIEW_INTELLIGENCE_CENTER', 'USE_AI_ASSISTANT',
+
+        // Full Warehouse Permissions
+        'VIEW_INVENTORY', 'ADD_INVENTORY', 'EDIT_INVENTORY', 'ADJUST_INVENTORY',
+        'VIEW_LOCATIONS', 'MANAGE_LOCATIONS',
+        'VIEW_RECEIVING', 'PERFORM_RECEIVING',
+        'VIEW_TRANSFERS', 'CREATE_TRANSFER', 'APPROVE_TRANSFER', 'PICK_TRANSFER', 'RECEIVE_TRANSFER',
+        'VIEW_ALLOCATIONS', 'ALLOCATE_STOCK', 'DEALLOCATE_STOCK',
+        'ISSUE_MATERIALS', 'RETURN_MATERIALS',
+        'VIEW_LOTS', 'MANAGE_LOTS',
+        'VIEW_CYCLE_COUNTS', 'PERFORM_CYCLE_COUNT', 'APPROVE_CYCLE_COUNT',
+        'RECORD_DAMAGE', 'APPROVE_SCRAP',
+        'VIEW_REORDER_ALERTS', 'CREATE_REORDER',
+        'VIEW_WAREHOUSE_REPORTS',
+        'VIEW_TRANSACTIONS',
+
+        // Delivery tracking
+        'VIEW_DELIVERY_TRACKING', 'MANAGE_DELIVERY_TRACKING',
+
+        // Safety - view and report
+        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT'
+    ],
+
+    warehouse_staff: [
+        // Warehouse operations - no adjustments or approvals
+        'VIEW_ASSIGNED_PROJECTS',
+        'VIEW_MATERIALS', 'RECEIVE_DELIVERY',
+        'VIEW_PROJECT_MESSAGES', 'SEND_MESSAGES',
+
+        // Warehouse Permissions (operational only)
+        'VIEW_INVENTORY',
+        'VIEW_LOCATIONS',
+        'VIEW_RECEIVING', 'PERFORM_RECEIVING',
+        'VIEW_TRANSFERS', 'CREATE_TRANSFER', 'PICK_TRANSFER', 'RECEIVE_TRANSFER',
+        'VIEW_ALLOCATIONS',
+        'ISSUE_MATERIALS', 'RETURN_MATERIALS',
+        'VIEW_LOTS',
+        'VIEW_CYCLE_COUNTS', 'PERFORM_CYCLE_COUNT',
+        'RECORD_DAMAGE',
+        'VIEW_REORDER_ALERTS',
+        'VIEW_TRANSACTIONS',
+
+        // Delivery tracking
+        'VIEW_DELIVERY_TRACKING',
+
+        // Safety - view and report
+        'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT'
     ]
 };
 
@@ -422,7 +648,7 @@ export function getRoleInfo(role: UserRole): RoleInfo {
  * Get all roles sorted by hierarchy level.
  */
 export function getAllRoles(): RoleInfo[] {
-    const order: UserRole[] = ['owner', 'pm', 'foreman', 'installer', 'office_admin', 'sub', 'client'];
+    const order: UserRole[] = ['owner', 'pm', 'foreman', 'installer', 'office_admin', 'warehouse_manager', 'warehouse_staff', 'sub', 'client'];
     return order.map(role => getRoleInfo(role));
 }
 
@@ -525,5 +751,27 @@ export const DEFAULT_USERS: User[] = [
         assignedCrewIds: [],
         active: true,
         createdAt: '2024-04-01T00:00:00Z'
+    },
+    {
+        id: 8,
+        name: 'Marcus Thompson',
+        email: 'marcus@floorops.com',
+        phone: '(555) 100-0008',
+        role: 'warehouse_manager',
+        assignedProjectIds: [],
+        assignedCrewIds: [],
+        active: true,
+        createdAt: '2024-01-10T00:00:00Z'
+    },
+    {
+        id: 9,
+        name: 'Lisa Nguyen',
+        email: 'lisa@floorops.com',
+        phone: '(555) 100-0009',
+        role: 'warehouse_staff',
+        assignedProjectIds: [],
+        assignedCrewIds: [],
+        active: true,
+        createdAt: '2024-02-20T00:00:00Z'
     }
 ];

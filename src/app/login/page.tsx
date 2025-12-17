@@ -41,6 +41,16 @@ const ROLE_CAPABILITIES: Record<UserRole, { description: string; highlights: str
         highlights: ['Invoices', 'Purchase orders', 'Vendor coordination', 'Scheduling'],
         icon: <FileText className="w-5 h-5" />
     },
+    warehouse_manager: {
+        description: 'Full warehouse control: receiving, transfers, inventory adjustments, locations',
+        highlights: ['Inventory management', 'Receiving', 'Stock transfers', 'Cycle counting'],
+        icon: <Briefcase className="w-5 h-5" />
+    },
+    warehouse_staff: {
+        description: 'Warehouse operations: receive, pick, stage, and transfer materials',
+        highlights: ['Receiving', 'Picking', 'Transfers', 'Job staging'],
+        icon: <Wrench className="w-5 h-5" />
+    },
     client: {
         description: 'Project visibility with approval workflows and communication',
         highlights: ['Project status', 'Photo gallery', 'Approvals', 'Messages'],
