@@ -70,6 +70,12 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
                     })),
                     notifications: parsed.notifications || initialData.notifications,
                     // ══════════════════════════════════════════════════════════════════
+                    // INVENTORY - Restore full mock data if localStorage has fewer items
+                    // ══════════════════════════════════════════════════════════════════
+                    inventory: (parsed.inventory && parsed.inventory.length >= initialData.inventory.length)
+                        ? parsed.inventory
+                        : initialData.inventory,
+                    // ══════════════════════════════════════════════════════════════════
                     // WAREHOUSE MANAGEMENT SYSTEM - Initialize with mock data
                     // Force load mock data for demo if existing data is missing/empty
                     // ══════════════════════════════════════════════════════════════════

@@ -130,6 +130,8 @@ export default function WarehousePage() {
                                         delete parsed.enhancedLots;
                                         delete parsed.cycleCounts;
                                         delete parsed.reorderSuggestions;
+                                        // Also clear inventory to restore full mock data
+                                        delete parsed.inventory;
                                         localStorage.setItem('floorops-pro-data', JSON.stringify(parsed));
                                         window.location.reload();
                                     }
