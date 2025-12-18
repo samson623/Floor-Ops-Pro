@@ -658,3 +658,162 @@ export interface WarehouseMetrics {
 
     asOf: string;
 }
+
+// ─────────────────────────────────────────────────────────────────
+// WAREHOUSE REPORTS
+// Analytics and operational report data types
+// ─────────────────────────────────────────────────────────────────
+
+// Inventory Valuation Report
+export interface InventoryValuationByCategory {
+    category: string;
+    totalUnits: number;
+    totalValue: number;
+    percentOfTotal: number;
+    itemCount: number;
+    avgCostPerUnit: number;
+}
+
+export interface InventoryValuationReport {
+    reportDate: string;
+    totalInventoryValue: number;
+    byCategory: InventoryValuationByCategory[];
+    topValueItems: {
+        itemId: number;
+        itemName: string;
+        sku: string;
+        quantity: number;
+        unitCost: number;
+        totalValue: number;
+        percentOfTotal: number;
+    }[];
+    breakdown: {
+        rawMaterials: number;
+        finishedGoods: number;
+        accessories: number;
+        consumables: number;
+    };
+}
+
+// Stock Movement Report
+export interface StockMovementSummary {
+    period: string;
+    totalTransactions: number;
+    receives: { count: number; totalUnits: number; totalValue: number };
+    transfers: { count: number; totalUnits: number };
+    issues: { count: number; totalUnits: number; totalValue: number };
+    adjustments: { count: number; netChange: number; reasons: { reason: string; count: number }[] };
+    byDay: { date: string; receives: number; transfers: number; issues: number; adjustments: number }[];
+}
+
+// Turnover Analysis Report
+export interface ItemTurnoverAnalysis {
+    itemId: number;
+    itemName: string;
+    sku: string;
+    category: string;
+    avgStock: number;
+    totalIssued: number;
+    turnoverRate: number;
+    daysOnHand: number;
+    classification: 'fast' | 'medium' | 'slow' | 'obsolete';
+    lastIssueDate: string;
+    trend: 'increasing' | 'stable' | 'decreasing';
+}
+
+export interface TurnoverAnalysisReport {
+    reportDate: string;
+    period: string;
+    overallTurnoverRate: number;
+    avgDaysOnHand: number;
+    items: ItemTurnoverAnalysis[];
+    summary: { fastMoving: number; mediumMoving: number; slowMoving: number; obsolete: number };
+}
+
+// ABC Analysis Report
+export type ABCClassification = 'A' | 'B' | 'C';
+
+export interface ABCAnalysisItem {
+    itemId: number;
+    itemName: string;
+    sku: string;
+    category: string;
+    annualUsage: number;
+    unitCost: number;
+    annualValue: number;
+    percentOfTotalValue: number;
+    cumulativePercent: number;
+    classification: ABCClassification;
+    recommendedAction: string;
+}
+
+export interface ABCAnalysisReport {
+    reportDate: string;
+    totalAnnualValue: number;
+    items: ABCAnalysisItem[];
+    summary: {
+        classA: { itemCount: number; percentOfItems: number; totalValue: number; percentOfValue: number };
+        classB: { itemCount: number; percentOfItems: number; totalValue: number; percentOfValue: number };
+        classC: { itemCount: number; percentOfItems: number; totalValue: number; percentOfValue: number };
+    };
+}
+
+// Lot Traceability Report
+export interface LotTraceabilityEvent {
+    timestamp: string;
+    eventType: 'received' | 'moved' | 'allocated' | 'issued' | 'returned' | 'adjusted' | 'damaged';
+    quantity: number;
+    location: string;
+    performedBy: string;
+    reference?: string;
+    notes?: string;
+}
+
+export interface LotTraceabilityReport {
+    lotId: string;
+    lotNumber: string;
+    dyeLot?: string;
+    itemId: number;
+    itemName: string;
+    sku: string;
+    vendorName: string;
+    poNumber?: string;
+    receivedDate: string;
+    originalQuantity: number;
+    currentQuantity: number;
+    percentRemaining: number;
+    status: LotStatus;
+    currentLocations: { locationCode: string; locationName: string; quantity: number }[];
+    events: LotTraceabilityEvent[];
+    currentAllocations: { projectId: number; projectName: string; quantity: number; allocatedDate: string }[];
+    qcStatus: 'pending' | 'passed' | 'failed';
+    qcNotes?: string;
+    warnings: string[];
+}
+
+// Cycle Count Accuracy Report
+export interface CycleCountAccuracyByLocation {
+    locationCode: string;
+    locationName: string;
+    countsPerformed: number;
+    totalItemsCounted: number;
+    itemsWithVariance: number;
+    avgAccuracy: number;
+    lastCountDate: string;
+    trend: 'improving' | 'stable' | 'declining';
+}
+
+export interface CycleCountAccuracyReport {
+    reportDate: string;
+    period: string;
+    overallAccuracy: number;
+    totalCountsPerformed: number;
+    totalItemsCounted: number;
+    totalVarianceCount: number;
+    totalVarianceValue: number;
+    byLocation: CycleCountAccuracyByLocation[];
+    recentCounts: { countId: string; date: string; locationCode: string; itemsCounted: number; varianceCount: number; accuracy: number; countedBy: string }[];
+    topVarianceItems: { itemId: number; itemName: string; sku: string; varianceCount: number; lastVariance: number; lastCountDate: string; reason?: string }[];
+    recommendations: string[];
+}
+

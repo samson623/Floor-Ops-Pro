@@ -9,6 +9,7 @@ import { LocationDetailModal } from '@/components/warehouse-location-detail-moda
 import { TransferDetailModal } from '@/components/warehouse-transfer-detail-modal';
 import { LotDetailModal } from '@/components/warehouse-lot-detail-modal';
 import { TransactionHistoryModal } from '@/components/warehouse-transaction-history-modal';
+import { WarehouseReportModal } from '@/components/warehouse-report-modal';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -75,6 +76,11 @@ export default function WarehousePage() {
     const [showLotDetail, setShowLotDetail] = useState(false);
     const [selectedLot, setSelectedLot] = useState<EnhancedMaterialLot | null>(null);
     const [showTransactionHistory, setShowTransactionHistory] = useState(false);
+
+    // Report modal state
+    type ReportType = 'inventory-valuation' | 'stock-movement' | 'turnover' | 'abc' | 'lot-trace' | 'cycle-count';
+    const [showReportModal, setShowReportModal] = useState(false);
+    const [selectedReportType, setSelectedReportType] = useState<ReportType | null>(null);
 
     // Get location stats
     const locations = data.warehouseLocations || [];
@@ -634,14 +640,21 @@ export default function WarehousePage() {
                                 <CardContent>
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                                         {[
-                                            { title: 'Inventory Valuation', icon: BarChart3, desc: 'Total inventory value by category' },
-                                            { title: 'Stock Movement', icon: ArrowUpDown, desc: 'History of all inventory transactions' },
-                                            { title: 'Turnover Analysis', icon: RefreshCcw, desc: 'Inventory turnover rates by item' },
-                                            { title: 'ABC Analysis', icon: Layers, desc: 'Item classification by value/volume' },
-                                            { title: 'Lot Traceability', icon: History, desc: 'Complete lot history and lineage' },
-                                            { title: 'Cycle Count Accuracy', icon: ClipboardCheck, desc: 'Count accuracy and variance trends' }
+                                            { title: 'Inventory Valuation', icon: BarChart3, desc: 'Total inventory value by category', key: 'inventory-valuation' as ReportType },
+                                            { title: 'Stock Movement', icon: ArrowUpDown, desc: 'History of all inventory transactions', key: 'stock-movement' as ReportType },
+                                            { title: 'Turnover Analysis', icon: RefreshCcw, desc: 'Inventory turnover rates by item', key: 'turnover' as ReportType },
+                                            { title: 'ABC Analysis', icon: Layers, desc: 'Item classification by value/volume', key: 'abc' as ReportType },
+                                            { title: 'Lot Traceability', icon: History, desc: 'Complete lot history and lineage', key: 'lot-trace' as ReportType },
+                                            { title: 'Cycle Count Accuracy', icon: ClipboardCheck, desc: 'Count accuracy and variance trends', key: 'cycle-count' as ReportType }
                                         ].map((report, idx) => (
-                                            <div key={idx} className="p-4 rounded-lg border hover:bg-muted/30 cursor-pointer transition-colors">
+                                            <div
+                                                key={idx}
+                                                className="p-4 rounded-lg border hover:bg-muted/30 cursor-pointer transition-colors hover:border-primary/50"
+                                                onClick={() => {
+                                                    setSelectedReportType(report.key);
+                                                    setShowReportModal(true);
+                                                }}
+                                            >
                                                 <div className="flex items-center gap-3">
                                                     <div className="p-2 rounded-lg bg-primary/10">
                                                         <report.icon className="w-5 h-5 text-primary" />
@@ -716,6 +729,11 @@ export default function WarehousePage() {
             <AddInventoryItemModal
                 open={showAddItemModal}
                 onClose={() => setShowAddItemModal(false)}
+            />
+            <WarehouseReportModal
+                open={showReportModal}
+                onClose={() => { setShowReportModal(false); setSelectedReportType(null); }}
+                reportType={selectedReportType}
             />
         </div>
     );

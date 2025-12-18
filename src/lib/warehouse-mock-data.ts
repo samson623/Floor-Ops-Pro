@@ -1315,3 +1315,172 @@ export function calculateWarehouseMetrics(): WarehouseMetrics {
         asOf: new Date().toISOString()
     };
 }
+
+// ─────────────────────────────────────────────────────────────────
+// WAREHOUSE REPORTS - MOCK DATA
+// Comprehensive report data for all analytics
+// ─────────────────────────────────────────────────────────────────
+
+import type {
+    InventoryValuationReport,
+    StockMovementSummary,
+    TurnoverAnalysisReport,
+    ABCAnalysisReport,
+    LotTraceabilityReport,
+    CycleCountAccuracyReport
+} from './warehouse-types';
+
+// INVENTORY VALUATION REPORT
+export const MOCK_INVENTORY_VALUATION_REPORT: InventoryValuationReport = {
+    reportDate: new Date().toISOString(),
+    totalInventoryValue: 45680.00,
+    byCategory: [
+        { category: 'LVP Flooring', totalUnits: 1800, totalValue: 6930.00, percentOfTotal: 15.2, itemCount: 2, avgCostPerUnit: 3.85 },
+        { category: 'Hardwood', totalUnits: 380, totalValue: 2090.00, percentOfTotal: 4.6, itemCount: 1, avgCostPerUnit: 5.50 },
+        { category: 'Tile', totalUnits: 450, totalValue: 3037.50, percentOfTotal: 6.7, itemCount: 1, avgCostPerUnit: 6.75 },
+        { category: 'Adhesives & Grout', totalUnits: 60, totalValue: 1521.00, percentOfTotal: 3.3, itemCount: 2, avgCostPerUnit: 25.35 },
+        { category: 'Underlayment', totalUnits: 1678, totalValue: 2842.50, percentOfTotal: 6.2, itemCount: 2, avgCostPerUnit: 1.69 },
+        { category: 'Transitions & Trim', totalUnits: 152, totalValue: 2222.00, percentOfTotal: 4.9, itemCount: 4, avgCostPerUnit: 14.62 },
+        { category: 'Carpet & Pad', totalUnits: 322, totalValue: 1210.00, percentOfTotal: 2.6, itemCount: 2, avgCostPerUnit: 3.76 }
+    ],
+    topValueItems: [
+        { itemId: 1, itemName: 'LVP - Oak Natural', sku: 'LVP-OAK-001', quantity: 1220, unitCost: 3.85, totalValue: 4697.00, percentOfTotal: 10.3 },
+        { itemId: 9, itemName: 'Porcelain Tile - 24x24', sku: 'PT-24-001', quantity: 450, unitCost: 6.75, totalValue: 3037.50, percentOfTotal: 6.7 },
+        { itemId: 11, itemName: 'Shaw Endura LVP - Walnut', sku: 'SH-END-002', quantity: 580, unitCost: 4.50, totalValue: 2610.00, percentOfTotal: 5.7 },
+        { itemId: 2, itemName: 'Hardwood - Maple', sku: 'HW-MAP-002', quantity: 380, unitCost: 5.50, totalValue: 2090.00, percentOfTotal: 4.6 },
+        { itemId: 12, itemName: 'Mapei Ultraflex 2', sku: 'MP-UF2-50', quantity: 35, unitCost: 35.00, totalValue: 1225.00, percentOfTotal: 2.7 }
+    ],
+    breakdown: { rawMaterials: 18520.00, finishedGoods: 12890.00, accessories: 8270.00, consumables: 6000.00 }
+};
+
+// STOCK MOVEMENT SUMMARY REPORT
+export const MOCK_STOCK_MOVEMENT_REPORT: StockMovementSummary = {
+    period: 'Last 30 Days',
+    totalTransactions: 47,
+    receives: { count: 12, totalUnits: 4850, totalValue: 18250.00 },
+    transfers: { count: 18, totalUnits: 2340 },
+    issues: { count: 14, totalUnits: 1890, totalValue: 7250.00 },
+    adjustments: {
+        count: 3,
+        netChange: -5,
+        reasons: [
+            { reason: 'Cycle count variance', count: 1 },
+            { reason: 'Damage', count: 1 },
+            { reason: 'Return to vendor', count: 1 }
+        ]
+    },
+    byDay: [
+        { date: new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], receives: 2, transfers: 1, issues: 1, adjustments: 0 },
+        { date: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], receives: 1, transfers: 2, issues: 2, adjustments: 0 },
+        { date: new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], receives: 0, transfers: 3, issues: 1, adjustments: 0 },
+        { date: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], receives: 1, transfers: 2, issues: 3, adjustments: 1 },
+        { date: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], receives: 2, transfers: 4, issues: 2, adjustments: 0 },
+        { date: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], receives: 3, transfers: 3, issues: 3, adjustments: 1 },
+        { date: new Date().toISOString().split('T')[0], receives: 1, transfers: 1, issues: 1, adjustments: 0 }
+    ]
+};
+
+// TURNOVER ANALYSIS REPORT
+export const MOCK_TURNOVER_ANALYSIS_REPORT: TurnoverAnalysisReport = {
+    reportDate: new Date().toISOString(),
+    period: 'Last 90 Days',
+    overallTurnoverRate: 8.2,
+    avgDaysOnHand: 45,
+    items: [
+        { itemId: 1, itemName: 'LVP - Oak Natural', sku: 'LVP-OAK-001', category: 'LVP Flooring', avgStock: 1100, totalIssued: 2850, turnoverRate: 10.4, daysOnHand: 35, classification: 'fast', lastIssueDate: new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000).toISOString(), trend: 'increasing' },
+        { itemId: 5, itemName: 'Underlayment - Premium', sku: 'UL-PREM-001', category: 'Underlayment', avgStock: 1750, totalIssued: 3200, turnoverRate: 7.3, daysOnHand: 50, classification: 'fast', lastIssueDate: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000).toISOString(), trend: 'stable' },
+        { itemId: 2, itemName: 'Hardwood - Maple', sku: 'HW-MAP-002', category: 'Hardwood', avgStock: 420, totalIssued: 890, turnoverRate: 8.5, daysOnHand: 43, classification: 'fast', lastIssueDate: new Date(now.getTime() - 8 * 24 * 60 * 60 * 1000).toISOString(), trend: 'stable' },
+        { itemId: 3, itemName: 'Tile Adhesive - FlexBond', sku: 'ADH-FB-001', category: 'Adhesives', avgStock: 45, totalIssued: 68, turnoverRate: 6.1, daysOnHand: 60, classification: 'medium', lastIssueDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(), trend: 'stable' },
+        { itemId: 4, itemName: 'T-Molding - Oak', sku: 'TM-OAK-001', category: 'Transitions', avgStock: 26, totalIssued: 32, turnoverRate: 4.9, daysOnHand: 74, classification: 'medium', lastIssueDate: new Date(now.getTime() - 12 * 24 * 60 * 60 * 1000).toISOString(), trend: 'decreasing' },
+        { itemId: 7, itemName: 'Reducer - Oak', sku: 'RED-OAK-001', category: 'Transitions', avgStock: 15, totalIssued: 14, turnoverRate: 3.7, daysOnHand: 99, classification: 'slow', lastIssueDate: new Date(now.getTime() - 18 * 24 * 60 * 60 * 1000).toISOString(), trend: 'stable' },
+        { itemId: 8, itemName: 'Carpet Pad - 8lb', sku: 'CPD-8LB-001', category: 'Carpet', avgStock: 8, totalIssued: 58, turnoverRate: 29.0, daysOnHand: 13, classification: 'fast', lastIssueDate: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(), trend: 'increasing' }
+    ],
+    summary: { fastMoving: 4, mediumMoving: 2, slowMoving: 1, obsolete: 0 }
+};
+
+// ABC ANALYSIS REPORT
+export const MOCK_ABC_ANALYSIS_REPORT: ABCAnalysisReport = {
+    reportDate: new Date().toISOString(),
+    totalAnnualValue: 182720.00,
+    items: [
+        { itemId: 1, itemName: 'LVP - Oak Natural', sku: 'LVP-OAK-001', category: 'LVP Flooring', annualUsage: 11400, unitCost: 3.85, annualValue: 43890.00, percentOfTotalValue: 24.0, cumulativePercent: 24.0, classification: 'A', recommendedAction: 'Maintain safety stock. Monitor closely.' },
+        { itemId: 5, itemName: 'Underlayment - Premium', sku: 'UL-PREM-001', category: 'Underlayment', annualUsage: 12800, unitCost: 0.45, annualValue: 5760.00, percentOfTotalValue: 3.2, cumulativePercent: 27.2, classification: 'A', recommendedAction: 'High volume, low cost. Ensure supply.' },
+        { itemId: 9, itemName: 'Porcelain Tile - 24x24', sku: 'PT-24-001', category: 'Tile', annualUsage: 1800, unitCost: 6.75, annualValue: 12150.00, percentOfTotalValue: 6.7, cumulativePercent: 33.9, classification: 'A', recommendedAction: 'High value. Verify quality.' },
+        { itemId: 2, itemName: 'Hardwood - Maple', sku: 'HW-MAP-002', category: 'Hardwood', annualUsage: 3560, unitCost: 5.50, annualValue: 19580.00, percentOfTotalValue: 10.7, cumulativePercent: 44.6, classification: 'A', recommendedAction: 'Premium product. Maintain quality.' },
+        { itemId: 11, itemName: 'Shaw Endura LVP - Walnut', sku: 'SH-END-002', category: 'LVP Flooring', annualUsage: 2800, unitCost: 4.50, annualValue: 12600.00, percentOfTotalValue: 6.9, cumulativePercent: 51.5, classification: 'A', recommendedAction: 'Growing demand. Increase stock.' },
+        { itemId: 12, itemName: 'Mapei Ultraflex 2', sku: 'MP-UF2-50', category: 'Adhesives', annualUsage: 280, unitCost: 35.00, annualValue: 9800.00, percentOfTotalValue: 5.4, cumulativePercent: 56.9, classification: 'B', recommendedAction: 'Standard inventory management.' },
+        { itemId: 3, itemName: 'Tile Adhesive - FlexBond', sku: 'ADH-FB-001', category: 'Adhesives', annualUsage: 272, unitCost: 28.50, annualValue: 7752.00, percentOfTotalValue: 4.2, cumulativePercent: 61.1, classification: 'B', recommendedAction: 'Standard reorder procedures.' },
+        { itemId: 10, itemName: 'Carpet Tile - Commercial', sku: 'CT-COM-001', category: 'Carpet', annualUsage: 2000, unitCost: 3.25, annualValue: 6500.00, percentOfTotalValue: 3.6, cumulativePercent: 64.7, classification: 'B', recommendedAction: 'Seasonal demand. Adjust stock.' },
+        { itemId: 4, itemName: 'T-Molding - Oak', sku: 'TM-OAK-001', category: 'Transitions', annualUsage: 128, unitCost: 24.00, annualValue: 3072.00, percentOfTotalValue: 1.7, cumulativePercent: 66.4, classification: 'C', recommendedAction: 'Low usage. Order as needed.' },
+        { itemId: 7, itemName: 'Reducer - Oak', sku: 'RED-OAK-001', category: 'Transitions', annualUsage: 56, unitCost: 32.00, annualValue: 1792.00, percentOfTotalValue: 1.0, cumulativePercent: 67.4, classification: 'C', recommendedAction: 'Minimal stock. Order on demand.' }
+    ],
+    summary: {
+        classA: { itemCount: 5, percentOfItems: 50.0, totalValue: 93980.00, percentOfValue: 51.5 },
+        classB: { itemCount: 3, percentOfItems: 30.0, totalValue: 24052.00, percentOfValue: 13.2 },
+        classC: { itemCount: 2, percentOfItems: 20.0, totalValue: 4864.00, percentOfValue: 2.7 }
+    }
+};
+
+// LOT TRACEABILITY REPORT
+export const MOCK_LOT_TRACEABILITY_REPORT: LotTraceabilityReport = {
+    lotId: 'lot-001',
+    lotNumber: 'SH-2024-1203',
+    dyeLot: 'DL-2024-A15',
+    itemId: 1,
+    itemName: 'LVP - Oak Natural',
+    sku: 'LVP-OAK-001',
+    vendorName: 'Shaw Flooring',
+    poNumber: 'PO-2024-0234',
+    receivedDate: '2024-12-03T10:30:00Z',
+    originalQuantity: 800,
+    currentQuantity: 620,
+    percentRemaining: 77.5,
+    status: 'active',
+    currentLocations: [
+        { locationCode: 'A-01-01', locationName: 'Zone A, Aisle 1, Bay 1', quantity: 500 },
+        { locationCode: 'STAGE', locationName: 'Staging Area', quantity: 120 }
+    ],
+    events: [
+        { timestamp: '2024-12-03T10:30:00Z', eventType: 'received', quantity: 800, location: 'MAIN', performedBy: 'Mike Rodriguez', reference: 'PO-2024-0234', notes: 'Full delivery received' },
+        { timestamp: '2024-12-03T14:00:00Z', eventType: 'moved', quantity: 800, location: 'A-01-01', performedBy: 'Mike Rodriguez', notes: 'Moved to primary storage' },
+        { timestamp: '2024-12-10T09:00:00Z', eventType: 'allocated', quantity: 180, location: 'A-01-01', performedBy: 'Sarah Chen', reference: 'Ashford Residence', notes: 'Reserved for job' },
+        { timestamp: '2024-12-12T08:00:00Z', eventType: 'moved', quantity: 300, location: 'STAGE', performedBy: 'Mike Rodriguez', notes: 'Staged for jobs' },
+        { timestamp: '2024-12-13T10:30:00Z', eventType: 'issued', quantity: 180, location: 'TRK-01', performedBy: 'Mike Rodriguez', reference: 'TR-2024-0089', notes: 'Loaded for delivery' }
+    ],
+    currentAllocations: [{ projectId: 1, projectName: 'Ashford Residence', quantity: 180, allocatedDate: '2024-12-10T09:00:00Z' }],
+    qcStatus: 'passed',
+    warnings: ['Multiple dye lots exist for this SKU. Ensure lot consistency for visible areas.']
+};
+
+// CYCLE COUNT ACCURACY REPORT
+export const MOCK_CYCLE_COUNT_ACCURACY_REPORT: CycleCountAccuracyReport = {
+    reportDate: new Date().toISOString(),
+    period: 'Last 90 Days',
+    overallAccuracy: 96.2,
+    totalCountsPerformed: 18,
+    totalItemsCounted: 156,
+    totalVarianceCount: 6,
+    totalVarianceValue: 428.50,
+    byLocation: [
+        { locationCode: 'A-01-01', locationName: 'Zone A, Aisle 1, Bay 1', countsPerformed: 5, totalItemsCounted: 42, itemsWithVariance: 0, avgAccuracy: 100.0, lastCountDate: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(), trend: 'stable' },
+        { locationCode: 'A-01-02', locationName: 'Zone A, Aisle 1, Bay 2', countsPerformed: 4, totalItemsCounted: 28, itemsWithVariance: 1, avgAccuracy: 96.4, lastCountDate: new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000).toISOString(), trend: 'stable' },
+        { locationCode: 'B-03', locationName: 'Zone B, Aisle 3 (Transitions)', countsPerformed: 3, totalItemsCounted: 18, itemsWithVariance: 3, avgAccuracy: 88.9, lastCountDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(), trend: 'declining' },
+        { locationCode: 'B-02', locationName: 'Zone B, Aisle 2 (Adhesives)', countsPerformed: 4, totalItemsCounted: 32, itemsWithVariance: 1, avgAccuracy: 96.9, lastCountDate: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000).toISOString(), trend: 'improving' },
+        { locationCode: 'STAGE', locationName: 'Staging Area', countsPerformed: 2, totalItemsCounted: 36, itemsWithVariance: 1, avgAccuracy: 97.2, lastCountDate: new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString(), trend: 'stable' }
+    ],
+    recentCounts: [
+        { countId: 'cc-002', date: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString(), locationCode: 'A-01-01', itemsCounted: 1, varianceCount: 0, accuracy: 100.0, countedBy: 'Mike Rodriguez' },
+        { countId: 'cc-001', date: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(), locationCode: 'B-03', itemsCounted: 2, varianceCount: 1, accuracy: 94.0, countedBy: 'Emily Parker' }
+    ],
+    topVarianceItems: [
+        { itemId: 4, itemName: 'T-Molding - Oak', sku: 'TM-OAK-001', varianceCount: 2, lastVariance: -3, lastCountDate: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString(), reason: 'Small items prone to breakage' },
+        { itemId: 14, itemName: 'Quarter Round - White', sku: 'QR-WHT-001', varianceCount: 1, lastVariance: -2, lastCountDate: new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000).toISOString(), reason: 'Bin organization issue' }
+    ],
+    recommendations: [
+        'Increase count frequency for Zone B-03 due to declining accuracy',
+        'Implement better organization for small items like T-Molding',
+        'Consider standardizing bin labels for transition items',
+        'Continue current procedures for Zone A - maintaining 100% accuracy'
+    ]
+};
+
