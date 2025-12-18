@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSmartBack } from '@/hooks/use-smart-back';
 import { TopBar } from '@/components/top-bar';
 import { StatCard } from '@/components/stat-card';
 import { ProjectCard } from '@/components/project-card';
@@ -17,6 +18,9 @@ export default function DashboardPage() {
   const { data, getActiveProjects, getTotalPipeline, getOpenPunchCount, addProject } = useData();
   const { canViewPricing, currentUser, can } = usePermissions();
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+
+  // Record this page in navigation history for smart back navigation
+  useSmartBack({ title: 'Dashboard' });
 
   const activeProjects = getActiveProjects();
   const pipeline = getTotalPipeline();

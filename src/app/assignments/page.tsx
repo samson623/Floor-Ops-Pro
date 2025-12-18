@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSmartBack } from '@/hooks/use-smart-back';
 import { TopBar } from '@/components/top-bar';
 import { useData } from '@/components/data-provider';
 import { usePermissions } from '@/components/permission-context';
@@ -29,6 +30,9 @@ export default function AssignmentsPage() {
     const { data } = useData();
     const { currentUser } = usePermissions();
     const [activeTab, setActiveTab] = useState('all');
+
+    // Record this page in navigation history for smart back navigation
+    useSmartBack({ title: 'Assignments' });
 
     const userCanAccessProject = (projectId: number): boolean => {
         if (!currentUser) return false;

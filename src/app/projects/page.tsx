@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSmartBack } from '@/hooks/use-smart-back';
 import { TopBar } from '@/components/top-bar';
 import { ProjectCard } from '@/components/project-card';
 import { useData } from '@/components/data-provider';
@@ -13,6 +14,9 @@ type FilterType = 'all' | 'active' | 'scheduled' | 'pending' | 'completed';
 export default function ProjectsPage() {
     const { data } = useData();
     const [filter, setFilter] = useState<FilterType>('all');
+
+    // Record this page in navigation history for smart back navigation
+    useSmartBack({ title: 'Projects' });
 
     const filteredProjects = data.projects.filter(p => {
         if (filter === 'all') return true;

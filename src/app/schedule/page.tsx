@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSmartBack } from '@/hooks/use-smart-back';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,9 @@ import {
 export default function SchedulePage() {
     const { data } = useData();
     const [activeTab, setActiveTab] = useState('daily');
+
+    // Record this page in navigation history for smart back navigation
+    useSmartBack({ title: 'Schedule' });
 
     // Quick stats
     const activeProjects = data.projects.filter(p => p.status === 'active' || p.status === 'scheduled');

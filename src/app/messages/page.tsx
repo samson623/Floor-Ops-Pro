@@ -1,5 +1,6 @@
 'use client';
 
+import { useSmartBack } from '@/hooks/use-smart-back';
 import { TopBar } from '@/components/top-bar';
 import { useData } from '@/components/data-provider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,6 +14,9 @@ import { Input } from '@/components/ui/input';
 export default function MessagesPage() {
     const router = useRouter();
     const { data } = useData();
+
+    // Record this page in navigation history for smart back navigation
+    useSmartBack({ title: 'Messages' });
 
     const unreadCount = data.messages.filter(m => m.unread).length;
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSmartBack } from '@/hooks/use-smart-back';
 import { TopBar } from '@/components/top-bar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -51,6 +52,9 @@ export default function InvoicesPage() {
     const [selectedInvoice, setSelectedInvoice] = useState<ClientInvoice | null>(null);
     const [showPaymentModal, setShowPaymentModal] = useState<ClientInvoice | null>(null);
     const [showCreateModal, setShowCreateModal] = useState<Project | null>(null);
+
+    // Record this page in navigation history for smart back navigation
+    useSmartBack({ title: 'Invoices' });
 
     const allInvoices = getClientInvoices();
     const outstandingInvoices = getOutstandingInvoices();

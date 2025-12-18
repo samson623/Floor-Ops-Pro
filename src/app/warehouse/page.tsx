@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useSmartBack } from '@/hooks/use-smart-back';
 import { ResponsiveDataView, MobileFilterBar } from '@/components/responsive-data-view';
 import { WarehouseDashboard } from '@/components/warehouse-dashboard';
 import { ReceiveDeliveryModal, TransferModal, AdjustmentModal, QuickOrderModal, AddInventoryItemModal } from '@/components/warehouse-modals';
@@ -51,6 +52,9 @@ export default function WarehousePage() {
     const { can } = usePermissions();
     const [activeTab, setActiveTab] = useState('dashboard');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // Record this page in navigation history for smart back navigation
+    useSmartBack({ title: 'Warehouse' });
 
     // Check permissions
     const canViewInventory = can('VIEW_INVENTORY');

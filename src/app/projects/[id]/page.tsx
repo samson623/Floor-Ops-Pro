@@ -2,6 +2,7 @@
 
 import { use, useState, useEffect, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSmartBack } from '@/hooks/use-smart-back';
 import { TopBar } from '@/components/top-bar';
 import { StatCard } from '@/components/stat-card';
 import { ScheduleItemCard } from '@/components/schedule-item';
@@ -373,15 +374,21 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         setCaptureText('');
     };
 
+    // Smart back navigation - takes you where you came from
+    const { goBack, backLabel } = useSmartBack({
+        title: project?.name || 'Project',
+        fallbackPath: '/projects'
+    });
+
     if (!project) {
         return (
             <div className="flex-1 flex items-center justify-center">
                 <div className="text-center">
                     <h2 className="text-2xl font-bold mb-2">Project Not Found</h2>
                     <p className="text-muted-foreground mb-4">The project you&apos;re looking for doesn&apos;t exist.</p>
-                    <Button onClick={() => router.push('/projects')}>
+                    <Button onClick={goBack}>
                         <ArrowLeft className="w-4 h-4 mr-2" />
-                        Back to Projects
+                        {backLabel}
                     </Button>
                 </div>
             </div>
@@ -439,9 +446,9 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" onClick={() => router.push('/projects')}>
+                            <Button variant="outline" onClick={goBack}>
                                 <ArrowLeft className="w-4 h-4 mr-2" />
-                                Back
+                                {backLabel}
                             </Button>
                             <Button onClick={() => setShowCapture(true)}>
                                 <Zap className="w-4 h-4 mr-2" />

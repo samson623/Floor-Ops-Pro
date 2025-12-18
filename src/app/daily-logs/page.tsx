@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
+import { useSmartBack } from '@/hooks/use-smart-back';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,9 @@ export default function DailyLogsPage() {
     const [showQuickAdd, setShowQuickAdd] = useState(false);
     const [selectedProjectForAdd, setSelectedProjectForAdd] = useState<{ id: number; name: string } | null>(null);
     const [selectedLog, setSelectedLog] = useState<DailyLog | null>(null);
+
+    // Record this page in navigation history for smart back navigation
+    useSmartBack({ title: 'Daily Logs' });
 
     const allLogs = getAllDailyLogs();
     const analytics = getDailyLogAnalytics();
