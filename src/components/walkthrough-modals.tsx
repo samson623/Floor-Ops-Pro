@@ -45,8 +45,10 @@ import {
     Circle,
     Image as ImageIcon,
     Trash2,
-    Edit3
+    Edit3,
+    Loader2
 } from 'lucide-react';
+import { useCameraCapture } from '@/hooks/useCameraCapture';
 
 // ============================================================================
 // ENHANCED PUNCH ITEM MODAL
@@ -87,25 +89,25 @@ export function EnhancedPunchModal({
     const [due, setDue] = useState('');
     const [notes, setNotes] = useState('');
     const [photos, setPhotos] = useState<string[]>([]);
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (!files) return;
+    // Enterprise camera capture
+    const {
+        photos: capturedPhotos,
+        isCapturing,
+        capturePhoto,
+        removePhoto: removeCameraPhoto,
+        clearPhotos
+    } = useCameraCapture({ maxPhotos: 10 });
 
-        Array.from(files).forEach(file => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                if (event.target?.result) {
-                    setPhotos(prev => [...prev, event.target!.result as string]);
-                }
-            };
-            reader.readAsDataURL(file);
-        });
-    };
-
+    // Sync captured photos to local state
+    useEffect(() => {
+        setPhotos(capturedPhotos.map(p => p.url));
+    }, [capturedPhotos]);
     const removePhoto = (index: number) => {
-        setPhotos(prev => prev.filter((_, i) => i !== index));
+        const photoToRemove = capturedPhotos[index];
+        if (photoToRemove) {
+            removeCameraPhoto(photoToRemove.id);
+        }
     };
 
     const handleCreate = () => {
@@ -139,7 +141,7 @@ export function EnhancedPunchModal({
         setLocation('');
         setDue('');
         setNotes('');
-        setPhotos([]);
+        clearPhotos();
         onClose();
         toast.success('Punch item added!');
     };
@@ -264,9 +266,9 @@ export function EnhancedPunchModal({
                             <Camera className="w-3 h-3" /> Photos
                         </label>
                         <div className="flex flex-wrap gap-2 mt-1">
-                            {photos.map((photo, idx) => (
-                                <div key={idx} className="relative w-16 h-16 rounded-lg overflow-hidden border">
-                                    <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                            {capturedPhotos.map((photo, idx) => (
+                                <div key={photo.id} className="relative w-16 h-16 rounded-lg overflow-hidden border">
+                                    <img src={photo.url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
                                     <button
                                         onClick={() => removePhoto(idx)}
                                         className="absolute top-0 right-0 bg-destructive text-destructive-foreground rounded-bl-lg p-0.5"
@@ -276,20 +278,13 @@ export function EnhancedPunchModal({
                                 </div>
                             ))}
                             <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-16 h-16 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+                                onClick={capturePhoto}
+                                disabled={isCapturing}
+                                className="w-16 h-16 border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-muted-foreground hover:border-primary hover:text-primary transition-colors disabled:opacity-50"
                             >
-                                <Plus className="w-5 h-5" />
-                                <span className="text-[10px]">Add</span>
+                                {isCapturing ? <Loader2 className="w-5 h-5 animate-spin" /> : <Camera className="w-5 h-5" />}
+                                <span className="text-[10px]">{isCapturing ? '...' : 'Take'}</span>
                             </button>
-                            <input
-                                ref={fileInputRef}
-                                type="file"
-                                accept="image/*"
-                                multiple
-                                className="hidden"
-                                onChange={handlePhotoUpload}
-                            />
                         </div>
                     </div>
 

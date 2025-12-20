@@ -30,8 +30,10 @@ import {
     ChevronRight,
     ZoomIn,
     Download,
-    Link2
+    Link2,
+    Loader2
 } from 'lucide-react';
+import { useCameraCapture } from '@/hooks/useCameraCapture';
 
 interface PhotosTabEnhancedProps {
     project: Project;
@@ -58,6 +60,15 @@ export function PhotosTabEnhanced({ project, onUpdate }: PhotosTabEnhancedProps)
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPhoto, setSelectedPhoto] = useState<PhasePhoto | null>(null);
     const [comparisonPhotos, setComparisonPhotos] = useState<{ before: PhasePhoto | null; after: PhasePhoto | null }>({ before: null, after: null });
+
+    // Enterprise camera capture with permissions
+    const {
+        photos: capturedPhotos,
+        isCapturing,
+        hasPermission: canUploadPhotos,
+        capturePhoto,
+        removePhoto: removeCameraPhoto
+    } = useCameraCapture({ maxPhotos: 20, captureLocation: true });
 
     const phasePhotos = project.phasePhotos || [];
     const legacyPhotos = project.photos || [];
@@ -233,9 +244,9 @@ export function PhotosTabEnhanced({ project, onUpdate }: PhotosTabEnhancedProps)
                             Document project progress with phase-organized photos. Track before/after comparisons and link photos to punch items.
                         </p>
                         <PermissionGate permission="VIEW_PHASE_PHOTOS">
-                            <Button>
-                                <Plus className="w-4 h-4 mr-2" />
-                                Add Photo
+                            <Button onClick={capturePhoto} disabled={isCapturing}>
+                                {isCapturing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />}
+                                Take Photo
                             </Button>
                         </PermissionGate>
                     </CardContent>
@@ -369,9 +380,9 @@ export function PhotosTabEnhanced({ project, onUpdate }: PhotosTabEnhancedProps)
                 </div>
 
                 <PermissionGate permission="TAG_PHASE_PHOTOS">
-                    <Button size="sm">
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Photo
+                    <Button size="sm" onClick={capturePhoto} disabled={isCapturing}>
+                        {isCapturing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Camera className="w-4 h-4 mr-2" />}
+                        Take Photo
                     </Button>
                 </PermissionGate>
             </div>

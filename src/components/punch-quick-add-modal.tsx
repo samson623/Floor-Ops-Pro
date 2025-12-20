@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import {
     Camera, MapPin, User, Calendar, Flame, AlertTriangle, Circle,
-    Mic, MicOff, X, Plus, Sparkles
+    Mic, MicOff, X, Plus, Sparkles, Loader2, RefreshCw
 } from 'lucide-react';
 import { PunchItem, PunchItemPriority, PunchItemCategory, PunchItemHistoryEntry } from '@/lib/data';
+import { useCameraCapture, CapturedPhoto } from '@/hooks/useCameraCapture';
 
 interface QuickAddPunchModalProps {
     open: boolean;
@@ -81,11 +82,23 @@ export function QuickAddPunchModal({
     const [location, setLocation] = useState(defaultLocation || '');
     const [assignee, setAssignee] = useState('');
     const [dueDate, setDueDate] = useState('');
-    const [photos, setPhotos] = useState<string[]>([]);
     const [isRecording, setIsRecording] = useState(false);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [suggestions, setSuggestions] = useState<ReturnType<typeof analyzeTextForSuggestions>>({});
-    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    // Enterprise camera capture with permissions
+    const {
+        photos: capturedPhotos,
+        isCapturing,
+        hasPermission,
+        capturePhoto,
+        removePhoto: removeCameraPhoto,
+        retake,
+        clearPhotos
+    } = useCameraCapture({ maxPhotos: 5 });
+
+    // Convert captured photos to URL strings for backward compatibility
+    const photos = capturedPhotos.map(p => p.url);
 
     const handleDescriptionChange = (value: string) => {
         setDescription(value);
@@ -105,21 +118,14 @@ export function QuickAddPunchModal({
     };
 
     const handlePhotoCapture = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = e.target.files;
-        if (files && files.length > 0) {
-            // In production, upload to Supabase storage
-            // For now, create object URLs
-            const newPhotos = Array.from(files).map(f => URL.createObjectURL(f));
-            setPhotos([...photos, ...newPhotos]);
-        }
+        capturePhoto();
     };
 
     const removePhoto = (index: number) => {
-        setPhotos(photos.filter((_, i) => i !== index));
+        const photoToRemove = capturedPhotos[index];
+        if (photoToRemove) {
+            removeCameraPhoto(photoToRemove.id);
+        }
     };
 
     const getDefaultDueDate = (): string => {
@@ -173,7 +179,7 @@ export function QuickAddPunchModal({
         setLocation(defaultLocation || '');
         setAssignee('');
         setDueDate('');
-        setPhotos([]);
+        clearPhotos();
         setSuggestions({});
         setShowSuggestions(false);
         onOpenChange(false);
@@ -219,32 +225,59 @@ export function QuickAddPunchModal({
                             </Select>
                         </div>
                     )}
-                    {/* Photo Capture Area */}
-                    <Card className="border-dashed">
-                        <CardContent className="p-4">
-                            {photos.length > 0 ? (
-                                <div className="flex gap-2 overflow-x-auto pb-2">
-                                    {photos.map((photo, idx) => (
-                                        <div key={idx} className="relative flex-shrink-0 w-20 h-20 rounded-lg bg-muted overflow-hidden">
-                                            <img src={photo} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
-                                            <button onClick={() => removePhoto(idx)} className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center">
-                                                <X className="w-3 h-3" />
+                    {/* Photo Capture Area - Mobile-First Camera Access */}
+                    {hasPermission && (
+                        <Card className="border-dashed">
+                            <CardContent className="p-4">
+                                {capturedPhotos.length > 0 ? (
+                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                        {capturedPhotos.map((photo, idx) => (
+                                            <div key={photo.id} className="relative flex-shrink-0 w-20 h-20 rounded-lg bg-muted overflow-hidden group">
+                                                <img src={photo.url} alt={`Photo ${idx + 1}`} className="w-full h-full object-cover" />
+                                                {/* Retake button */}
+                                                <button
+                                                    onClick={() => retake(photo.id)}
+                                                    className="absolute bottom-1 left-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                >
+                                                    <RefreshCw className="w-3 h-3" />
+                                                </button>
+                                                {/* Remove button */}
+                                                <button
+                                                    onClick={() => removePhoto(idx)}
+                                                    className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                        {capturedPhotos.length < 5 && (
+                                            <button
+                                                onClick={handlePhotoCapture}
+                                                disabled={isCapturing}
+                                                className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                                            >
+                                                {isCapturing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
                                             </button>
-                                        </div>
-                                    ))}
-                                    <button onClick={handlePhotoCapture} className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors">
-                                        <Plus className="w-6 h-6" />
+                                        )}
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handlePhotoCapture}
+                                        disabled={isCapturing}
+                                        className="w-full py-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors rounded-lg disabled:opacity-50"
+                                    >
+                                        {isCapturing ? (
+                                            <Loader2 className="w-10 h-10 mb-2 animate-spin" />
+                                        ) : (
+                                            <Camera className="w-10 h-10 mb-2" />
+                                        )}
+                                        <span className="text-sm font-medium">Tap to take photo</span>
+                                        <span className="text-xs text-muted-foreground/60 mt-1">Opens your camera</span>
                                     </button>
-                                </div>
-                            ) : (
-                                <button onClick={handlePhotoCapture} className="w-full py-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors rounded-lg">
-                                    <Camera className="w-10 h-10 mb-2" />
-                                    <span className="text-sm">Tap to add photo</span>
-                                </button>
-                            )}
-                            <input ref={fileInputRef} type="file" accept="image/*" capture="environment" multiple onChange={handleFileChange} className="hidden" />
-                        </CardContent>
-                    </Card>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* Description with Voice Input */}
                     <div className="relative">

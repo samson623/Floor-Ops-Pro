@@ -14,9 +14,10 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
     X, Camera, MapPin, User, Calendar, Clock, CheckCircle2, AlertTriangle,
     Flame, Image, MessageSquare, History, ChevronLeft, ChevronRight, Edit2,
-    Save, Trash2, UserPlus, Send, Eye, EyeOff
+    Save, Trash2, UserPlus, Send, Eye, EyeOff, Loader2, RefreshCw
 } from 'lucide-react';
 import { PunchItem, PunchItemPhoto, PunchItemHistoryEntry, PunchItemPriority, PunchItemCategory, PunchItemStatus } from '@/lib/data';
+import { useCameraCapture } from '@/hooks/useCameraCapture';
 
 interface PunchItemDetailModalProps {
     open: boolean;
@@ -70,6 +71,16 @@ export function PunchItemDetailModal({
     const [newNote, setNewNote] = useState('');
     const [activeTab, setActiveTab] = useState('details');
     const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
+
+    // Enterprise camera capture with permissions
+    const {
+        photos: capturedPhotos,
+        isCapturing,
+        hasPermission: canUploadPhotos,
+        capturePhoto,
+        removePhoto: removeCameraPhoto,
+        retake
+    } = useCameraCapture({ maxPhotos: 10, captureLocation: true });
 
     useEffect(() => {
         if (open) {
@@ -361,13 +372,70 @@ export function PunchItemDetailModal({
                                         </button>
                                     ))}
                                 </div>
-                                <Button variant="outline" className="gap-2 w-full"><Camera className="w-4 h-4" />Add Photo</Button>
+                                {/* New Captured Photos Preview */}
+                                {capturedPhotos.length > 0 && (
+                                    <div className="border-t pt-4">
+                                        <p className="text-xs text-muted-foreground mb-2">New Photos ({capturedPhotos.length})</p>
+                                        <div className="flex gap-2 overflow-x-auto pb-2">
+                                            {capturedPhotos.map((photo, idx) => (
+                                                <div key={photo.id} className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden group">
+                                                    <img src={photo.url} alt={`New photo ${idx + 1}`} className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={() => removeCameraPhoto(photo.id)}
+                                                        className="absolute top-1 right-1 w-4 h-4 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X className="w-2 h-2" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {canUploadPhotos && (
+                                    <Button
+                                        variant="outline"
+                                        className="gap-2 w-full"
+                                        onClick={capturePhoto}
+                                        disabled={isCapturing}
+                                    >
+                                        {isCapturing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                                        Take Photo
+                                    </Button>
+                                )}
                             </div>
                         ) : (
                             <div className="text-center py-12">
                                 <Camera className="w-12 h-12 mx-auto mb-4 text-muted-foreground/30" />
                                 <p className="text-muted-foreground">No photos attached</p>
-                                <Button variant="outline" className="mt-4 gap-2"><Camera className="w-4 h-4" />Add Photo</Button>
+                                {/* New Captured Photos Preview */}
+                                {capturedPhotos.length > 0 && (
+                                    <div className="mt-4">
+                                        <div className="flex gap-2 justify-center overflow-x-auto pb-2">
+                                            {capturedPhotos.map((photo, idx) => (
+                                                <div key={photo.id} className="relative flex-shrink-0 w-16 h-16 rounded-lg overflow-hidden group">
+                                                    <img src={photo.url} alt={`New photo ${idx + 1}`} className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={() => removeCameraPhoto(photo.id)}
+                                                        className="absolute top-1 right-1 w-4 h-4 rounded-full bg-black/50 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                                                    >
+                                                        <X className="w-2 h-2" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                                {canUploadPhotos && (
+                                    <Button
+                                        variant="outline"
+                                        className="mt-4 gap-2"
+                                        onClick={capturePhoto}
+                                        disabled={isCapturing}
+                                    >
+                                        {isCapturing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
+                                        Take Photo
+                                    </Button>
+                                )}
                             </div>
                         )}
                     </TabsContent>
