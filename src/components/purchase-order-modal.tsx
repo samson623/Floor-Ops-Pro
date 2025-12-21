@@ -107,7 +107,7 @@ export function PurchaseOrderModal({ open, onOpenChange, poId }: PurchaseOrderMo
 
         try {
             const vendor = data.vendors.find(v => v.id === Number(vendorId));
-            const project = projectId ? data.projects.find(p => p.id === Number(projectId)) : null;
+            const project = projectId && projectId !== 'stock' ? data.projects.find(p => p.id === Number(projectId)) : null;
             const { subtotal, tax, total } = calculateTotals();
 
             const poData = {
@@ -193,7 +193,7 @@ export function PurchaseOrderModal({ open, onOpenChange, poId }: PurchaseOrderMo
                                     <SelectValue placeholder="Select project or leave for stock" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Stock Order</SelectItem>
+                                    <SelectItem value="stock">Stock Order</SelectItem>
                                     {data.projects.map(project => (
                                         <SelectItem key={project.id} value={String(project.id)}>
                                             {project.name}
