@@ -72,6 +72,7 @@ interface DataContextType {
 
     // Estimate operations
     getEstimate: (id: number) => Estimate | undefined;
+    addEstimate: (estimate: Omit<Estimate, 'id'>) => number;
     updateEstimate: (id: number, updates: Partial<Estimate>) => void;
     convertEstimateToProject: (estimateId: number) => void;
 
@@ -698,6 +699,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
     const getEstimate = useCallback((id: number) => {
         return data.estimates.find(e => e.id === id);
     }, [data.estimates]);
+
+    const addEstimate = useCallback((estimate: Omit<Estimate, 'id'>) => {
+        const newId = Math.max(0, ...data.estimates.map(e => e.id)) + 1;
+        const newEstimate: Estimate = { ...estimate, id: newId };
+        saveData({ ...data, estimates: [...data.estimates, newEstimate] });
+        return newId;
+    }, [data, saveData]);
 
     const updateEstimate = useCallback((id: number, updates: Partial<Estimate>) => {
         const newEstimates = data.estimates.map(e =>
@@ -1672,6 +1680,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
             getAllDailyLogs,
             getDailyLogAnalytics,
             getEstimate,
+            addEstimate,
             updateEstimate,
             convertEstimateToProject,
             getActiveProjects,
@@ -1837,6 +1846,7 @@ export function useData(): DataContextType {
                 totalDelayMinutes: 0, delaysByType: {}, averageCrewSize: 0, logsWithPhotos: 0
             }),
             getEstimate: () => undefined,
+            addEstimate: () => 0,
             updateEstimate: () => { },
             convertEstimateToProject: () => { },
             getActiveProjects: () => [],

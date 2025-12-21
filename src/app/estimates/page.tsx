@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Plus, FileText, Send, Check, X } from 'lucide-react';
+import { CreateEstimateModal } from '@/components/estimate-modal';
 
 const statusConfig = {
     draft: { label: 'Draft', icon: FileText, className: 'bg-muted text-muted-foreground' },
@@ -28,6 +29,7 @@ export default function EstimatesPage() {
     const [filter, setFilter] = useState<FilterType>('all');
     const [selectedEstimate, setSelectedEstimate] = useState<number | null>(null);
     const [estimateTab, setEstimateTab] = useState<EstimateTab>('takeoff');
+    const [showCreateModal, setShowCreateModal] = useState(false);
 
     const filteredEstimates = data.estimates.filter(e => {
         if (filter === 'all') return true;
@@ -493,7 +495,7 @@ export default function EstimatesPage() {
                 breadcrumb="Sales Pipeline"
                 showNewProject={false}
             >
-                <Button onClick={() => toast.info('New estimate form coming soon')} className="hidden sm:flex">
+                <Button onClick={() => setShowCreateModal(true)} className="hidden sm:flex">
                     <Plus className="w-4 h-4 mr-2" />
                     New Estimate
                 </Button>
@@ -618,6 +620,13 @@ export default function EstimatesPage() {
                     </div>
                 )}
             </div>
+
+            {/* Create Estimate Modal */}
+            <CreateEstimateModal
+                open={showCreateModal}
+                onClose={() => setShowCreateModal(false)}
+                onCreated={(id) => setSelectedEstimate(id)}
+            />
         </>
     );
 }
