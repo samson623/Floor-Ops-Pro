@@ -109,7 +109,10 @@ export default function MaterialsPage() {
                 breadcrumb="Operations"
                 showNewProject={false}
             >
-                <Button onClick={() => setShowPOModal(true)} size="sm">
+                <Button onClick={() => {
+                    setSelectedPO(null);
+                    setShowPOModal(true);
+                }} size="sm">
                     <Plus className="w-4 h-4 mr-2" />
                     New PO
                 </Button>
@@ -254,7 +257,14 @@ export default function MaterialsPage() {
                                         {pos.map(po => {
                                             const config = poStatusConfig[po.status];
                                             return (
-                                                <div key={po.id} className="py-3 flex items-center justify-between hover:bg-muted/50 -mx-6 px-6 transition-colors cursor-pointer">
+                                                <div
+                                                    key={po.id}
+                                                    className="py-3 flex items-center justify-between hover:bg-muted/50 -mx-6 px-6 transition-colors cursor-pointer"
+                                                    onClick={() => {
+                                                        setSelectedPO(po.id);
+                                                        setShowPOModal(true);
+                                                    }}
+                                                >
                                                     <div className="flex-1 min-w-0">
                                                         <div className="flex items-center gap-2">
                                                             <span className="font-medium">{po.poNumber}</span>

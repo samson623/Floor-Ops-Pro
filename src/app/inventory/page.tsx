@@ -12,14 +12,39 @@ import { cn } from '@/lib/utils';
 import { Plus, Package, AlertTriangle, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { AddInventoryModal } from '@/components/project-modals';
+import { PurchaseOrderModal } from '@/components/purchase-order-modal';
+import { InventoryItem } from '@/lib/data';
 
 export default function InventoryPage() {
-    const { data, addInventoryItem } = useData();
+    const { data, addInventoryItem, isLoaded } = useData();
     const [showAddModal, setShowAddModal] = useState(false);
+    const [showPOModal, setShowPOModal] = useState(false);
+    const [selectedItemForOrder, setSelectedItemForOrder] = useState<InventoryItem | null>(null);
 
-    const totalStock = data.inventory.reduce((s, i) => s + i.stock, 0);
-    const totalReserved = data.inventory.reduce((s, i) => s + i.reserved, 0);
-    const lowStockItems = data.inventory.filter(i => i.stock - i.reserved < 5);
+    // Ensure inventory data exists with safe defaults
+    const inventory = data?.inventory || [];
+    const totalStock = inventory.reduce((s, i) => s + (i?.stock || 0), 0);
+    const totalReserved = inventory.reduce((s, i) => s + (i?.reserved || 0), 0);
+    const lowStockItems = inventory.filter(i => (i?.stock || 0) - (i?.reserved || 0) < 5);
+
+    // Loading state
+    if (!isLoaded) {
+        return (
+            <>
+                <TopBar
+                    title="Inventory"
+                    breadcrumb="Global Stock"
+                    showNewProject={false}
+                />
+                <div className="flex-1 flex items-center justify-center p-8">
+                    <div className="text-center space-y-4">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+                        <p className="text-muted-foreground">Loading inventory...</p>
+                    </div>
+                </div>
+            </>
+        );
+    }
 
     return (
         <>
@@ -44,7 +69,7 @@ export default function InventoryPage() {
                                     <Package className="w-6 h-6 text-primary" />
                                 </div>
                                 <div>
-                                    <div className="text-2xl font-bold">{data.inventory.length}</div>
+                                    <div className="text-2xl font-bold">{inventory.length}</div>
                                     <div className="text-sm text-muted-foreground">Items</div>
                                 </div>
                             </div>
@@ -103,19 +128,19 @@ export default function InventoryPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {data.inventory.map(item => {
-                                        const available = item.stock - item.reserved;
+                                    {inventory.map(item => {
+                                        const available = (item?.stock || 0) - (item?.reserved || 0);
                                         const isLow = available < 5;
-                                        const percentage = (available / item.stock) * 100;
+                                        const percentage = item?.stock ? (available / item.stock) * 100 : 0;
 
                                         return (
-                                            <tr key={item.id} className="border-b last:border-0 hover:bg-muted/30">
+                                            <tr key={item?.id || Math.random()} className="border-b last:border-0 hover:bg-muted/30">
                                                 <td className="p-4">
-                                                    <div className="font-medium">{item.name}</div>
+                                                    <div className="font-medium">{item?.name || 'Unknown'}</div>
                                                 </td>
-                                                <td className="p-4 text-muted-foreground font-mono text-sm">{item.sku}</td>
-                                                <td className="p-4">{item.stock}</td>
-                                                <td className="p-4 text-warning">{item.reserved}</td>
+                                                <td className="p-4 text-muted-foreground font-mono text-sm">{item?.sku || '-'}</td>
+                                                <td className="p-4">{item?.stock || 0}</td>
+                                                <td className="p-4 text-warning">{item?.reserved || 0}</td>
                                                 <td className="p-4">
                                                     <div className="flex items-center gap-3">
                                                         <span className={cn('font-semibold', isLow && 'text-warning')}>
@@ -135,7 +160,10 @@ export default function InventoryPage() {
                                                     </Badge>
                                                 </td>
                                                 <td className="p-4">
-                                                    <Button size="sm" variant="secondary" onClick={() => toast.success('Reorder...')}>
+                                                    <Button size="sm" variant="secondary" onClick={() => {
+                                                        setSelectedItemForOrder(item);
+                                                        setShowPOModal(true);
+                                                    }}>
                                                         Order
                                                     </Button>
                                                 </td>
@@ -157,7 +185,16 @@ export default function InventoryPage() {
                     addInventoryItem(item);
                 }}
             />
+
+            {/* Purchase Order Modal */}
+            <PurchaseOrderModal
+                open={showPOModal}
+                onOpenChange={(open) => {
+                    setShowPOModal(open);
+                    if (!open) setSelectedItemForOrder(null);
+                }}
+                initialItem={selectedItemForOrder}
+            />
         </>
     );
 }
-

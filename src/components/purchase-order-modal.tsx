@@ -10,12 +10,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useData } from '@/components/data-provider';
 import { toast } from 'sonner';
 import { Plus, Trash2, Package, Calendar, DollarSign, Hash } from 'lucide-react';
-import { POLineItem } from '@/lib/data';
+import { POLineItem, InventoryItem } from '@/lib/data';
 
 interface PurchaseOrderModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     poId?: string | null;
+    initialItem?: InventoryItem | null;
 }
 
 interface LineItemForm {
@@ -28,7 +29,7 @@ interface LineItemForm {
     lotNumber: string;
 }
 
-export function PurchaseOrderModal({ open, onOpenChange, poId }: PurchaseOrderModalProps) {
+export function PurchaseOrderModal({ open, onOpenChange, poId, initialItem }: PurchaseOrderModalProps) {
     const { data, createPO, updatePO } = useData();
     const [vendorId, setVendorId] = useState<string>('');
     const [projectId, setProjectId] = useState<string>('');
@@ -58,6 +59,21 @@ export function PurchaseOrderModal({ open, onOpenChange, poId }: PurchaseOrderMo
                         lotNumber: li.lotNumber || '',
                     })));
                 }
+            } else if (initialItem) {
+                // Pre-fill with inventory item data
+                setVendorId('');
+                setProjectId('');
+                setExpectedDeliveryDate('');
+                setNotes(`Reorder for ${initialItem.name}`);
+                setLineItems([{
+                    id: `temp-${Date.now()}`,
+                    materialName: initialItem.name || '',
+                    sku: initialItem.sku || '',
+                    quantity: 0,
+                    unit: 'sf',
+                    unitCost: 0,
+                    lotNumber: '',
+                }]);
             } else {
                 // New PO - reset form
                 setVendorId('');
@@ -67,7 +83,7 @@ export function PurchaseOrderModal({ open, onOpenChange, poId }: PurchaseOrderMo
                 setLineItems([{ id: `temp-${Date.now()}`, materialName: '', sku: '', quantity: 0, unit: 'sf', unitCost: 0, lotNumber: '' }]);
             }
         }
-    }, [open, poId, data.purchaseOrders]);
+    }, [open, poId, initialItem, data.purchaseOrders]);
 
     const addLineItem = () => {
         setLineItems([...lineItems, { id: `temp-${Date.now()}`, materialName: '', sku: '', quantity: 0, unit: 'sf', unitCost: 0, lotNumber: '' }]);
