@@ -281,7 +281,7 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName, i
 
     return (
         <Dialog open={open} onOpenChange={() => onClose()}>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-2xl max-h-[90vh] sm:max-h-[90vh] h-[100dvh] sm:h-auto overflow-y-auto p-4 sm:p-6">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <FileText className="h-5 w-5 text-primary" />
@@ -293,8 +293,8 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName, i
                 </DialogHeader>
 
                 <div className="space-y-6 py-4">
-                    {/* Date & Weather Row */}
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* Date & Phase Row - Stack on mobile */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                             <Label>Date</Label>
                             <Input
@@ -322,21 +322,21 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName, i
                     {/* Weather Selection */}
                     <div>
                         <Label className="mb-2 block">Weather</Label>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="grid grid-cols-4 sm:flex sm:flex-wrap gap-2">
                             {WEATHER_OPTIONS.map((w) => (
                                 <button
                                     key={w.value}
                                     type="button"
                                     onClick={() => setWeather(w.value)}
                                     className={cn(
-                                        "flex items-center gap-2 px-3 py-2 rounded-lg border transition-all",
+                                        "flex flex-col sm:flex-row items-center gap-1 sm:gap-2 px-2 sm:px-3 py-3 sm:py-2 rounded-lg border transition-all min-h-[48px] touch-target-sm",
                                         weather === w.value
                                             ? "border-primary bg-primary/10 ring-2 ring-primary/20"
-                                            : "border-border hover:bg-accent"
+                                            : "border-border hover:bg-accent active:scale-95"
                                     )}
                                 >
                                     {w.icon}
-                                    <span className="text-sm">{w.label}</span>
+                                    <span className="text-xs sm:text-sm">{w.label}</span>
                                 </button>
                             ))}
                         </div>
@@ -353,7 +353,7 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName, i
                     </div>
 
                     {/* Work Completed */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="col-span-2">
                             <Label>Work Completed</Label>
                             <Textarea
@@ -402,50 +402,52 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName, i
                         {showCrewSection && (
                             <div className="mt-4 space-y-3">
                                 {crewMembers.map((member, idx) => (
-                                    <div key={member.id} className="flex items-center gap-2">
+                                    <div key={member.id} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 p-3 sm:p-0 bg-muted/30 sm:bg-transparent rounded-lg sm:rounded-none">
                                         <Input
                                             placeholder="Name"
                                             value={member.name}
                                             onChange={(e) => updateCrewMember(idx, { name: e.target.value })}
-                                            className="flex-1"
+                                            className="flex-1 h-12 sm:h-9"
                                         />
-                                        <Select
-                                            value={member.role}
-                                            onValueChange={(v) => updateCrewMember(idx, { role: v as CrewMemberLog['role'] })}
-                                        >
-                                            <SelectTrigger className="w-32">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="lead">Lead</SelectItem>
-                                                <SelectItem value="installer">Installer</SelectItem>
-                                                <SelectItem value="helper">Helper</SelectItem>
-                                                <SelectItem value="apprentice">Apprentice</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <Input
-                                            type="number"
-                                            value={member.hoursWorked}
-                                            onChange={(e) => updateCrewMember(idx, { hoursWorked: Number(e.target.value) })}
-                                            className="w-16"
-                                        />
-                                        <span className="text-sm text-muted-foreground">hrs</span>
-                                        <Button
-                                            type="button"
-                                            variant="ghost"
-                                            size="icon"
-                                            onClick={() => removeCrewMember(idx)}
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </Button>
+                                        <div className="flex items-center gap-2">
+                                            <Select
+                                                value={member.role}
+                                                onValueChange={(v) => updateCrewMember(idx, { role: v as CrewMemberLog['role'] })}
+                                            >
+                                                <SelectTrigger className="flex-1 sm:w-32 h-12 sm:h-9">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="lead">Lead</SelectItem>
+                                                    <SelectItem value="installer">Installer</SelectItem>
+                                                    <SelectItem value="helper">Helper</SelectItem>
+                                                    <SelectItem value="apprentice">Apprentice</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <Input
+                                                type="number"
+                                                value={member.hoursWorked}
+                                                onChange={(e) => updateCrewMember(idx, { hoursWorked: Number(e.target.value) })}
+                                                className="w-20 h-12 sm:h-9"
+                                            />
+                                            <span className="text-sm text-muted-foreground">hrs</span>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-12 w-12 sm:h-9 sm:w-9"
+                                                onClick={() => removeCrewMember(idx)}
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </Button>
+                                        </div>
                                     </div>
                                 ))}
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    size="sm"
                                     onClick={addCrewMember}
-                                    className="w-full"
+                                    className="w-full h-12 sm:h-9"
                                 >
                                     <Plus className="h-4 w-4 mr-2" />
                                     Add Crew Member
@@ -499,7 +501,7 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName, i
 
                                 {/* Add new delay */}
                                 <div className="space-y-2 pt-2 border-t">
-                                    <div className="grid grid-cols-2 gap-2">
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                         <Select value={newDelayType} onValueChange={(v) => setNewDelayType(v as DelayType)}>
                                             <SelectTrigger>
                                                 <SelectValue />
@@ -587,20 +589,21 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName, i
                 </div>
 
                 {/* Footer */}
-                <div className="flex justify-between items-center pt-4 border-t">
-                    <div className="text-sm text-muted-foreground">
+                {/* Footer - Sticky on mobile for thumb access */}
+                <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-4 border-t sticky bottom-0 bg-background pb-safe">
+                    <div className="text-sm text-muted-foreground text-center sm:text-left">
                         {crewMembers.length > 0 && (
                             <span>{crewMembers.length} crew • {totalHours} hours</span>
                         )}
                     </div>
-                    <div className="flex gap-2">
-                        <Button variant="outline" onClick={onClose}>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        <Button variant="outline" onClick={onClose} className="h-12 sm:h-9 order-2 sm:order-1">
                             Cancel
                         </Button>
                         <Button
                             onClick={handleSubmit}
                             disabled={isSubmitting}
-                            className="min-w-[120px]"
+                            className="min-w-[120px] h-12 sm:h-9 order-1 sm:order-2"
                         >
                             {isSubmitting ? (
                                 <span className="flex items-center gap-2">

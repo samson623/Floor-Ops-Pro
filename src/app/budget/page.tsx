@@ -215,7 +215,7 @@ export default function BudgetPage() {
 
                 {/* Main Content */}
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="p-4 lg:p-6">
-                    <TabsList className="flex-wrap h-auto gap-1 mb-6 bg-muted/50 p-1">
+                    <TabsList className="flex flex-nowrap overflow-x-auto h-auto gap-1 mb-6 bg-muted/50 p-1 mobile-tabs lg:flex-wrap">
                         <TabsTrigger value="overview" className="data-[state=active]:shadow-sm">📊 Overview</TabsTrigger>
                         <TabsTrigger value="labor" className="relative">
                             👷 Labor
@@ -275,7 +275,7 @@ export default function BudgetPage() {
                                         </CardHeader>
                                         <CardContent className="pt-4 space-y-4">
                                             {/* Financial Overview */}
-                                            <div className="grid grid-cols-4 gap-3">
+                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
                                                 <div className="text-center p-2 rounded-lg bg-muted/50">
                                                     <div className="text-sm font-bold">${(budget.totalRevenue / 1000).toFixed(1)}K</div>
                                                     <div className="text-xs text-muted-foreground">Revenue</div>
@@ -590,7 +590,7 @@ export default function BudgetPage() {
                     {/* Alerts Tab */}
                     <TabsContent value="alerts" className="space-y-6 mt-0">
                         {/* Active Alerts Summary */}
-                        <div className="grid grid-cols-3 gap-4">
+                        <div className="grid grid-cols-3 gap-2 md:gap-4">
                             <Card className="border-red-500/30 bg-red-500/5">
                                 <CardContent className="pt-4 text-center">
                                     <div className="text-3xl font-bold text-red-500">{metrics.criticalAlerts.length}</div>

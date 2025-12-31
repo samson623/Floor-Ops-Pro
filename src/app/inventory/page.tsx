@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Plus, Package, AlertTriangle, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -108,13 +107,14 @@ export default function InventoryPage() {
                     <Input placeholder="Search inventory..." className="pl-9" />
                 </div>
 
-                {/* Inventory Table */}
+                {/* Inventory - Mobile Cards / Desktop Table */}
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-base">Inventory Items</CardTitle>
                     </CardHeader>
                     <CardContent className="p-0">
-                        <div className="overflow-x-auto">
+                        {/* Desktop Table */}
+                        <div className="hidden md:block overflow-x-auto">
                             <table className="w-full">
                                 <thead>
                                     <tr className="border-b bg-muted/50">
@@ -128,13 +128,13 @@ export default function InventoryPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {inventory.map(item => {
+                                    {inventory.map((item, index) => {
                                         const available = (item?.stock || 0) - (item?.reserved || 0);
                                         const isLow = available < 5;
                                         const percentage = item?.stock ? (available / item.stock) * 100 : 0;
 
                                         return (
-                                            <tr key={item?.id || Math.random()} className="border-b last:border-0 hover:bg-muted/30">
+                                            <tr key={item?.id ?? `inv-row-${index}`} className="border-b last:border-0 hover:bg-muted/30">
                                                 <td className="p-4">
                                                     <div className="font-medium">{item?.name || 'Unknown'}</div>
                                                 </td>
@@ -172,6 +172,69 @@ export default function InventoryPage() {
                                     })}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* Mobile Cards */}
+                        <div className="md:hidden space-y-3 p-4">
+                            {inventory.map((item, index) => {
+                                const available = (item?.stock || 0) - (item?.reserved || 0);
+                                const isLow = available < 5;
+                                const percentage = item?.stock ? (available / item.stock) * 100 : 0;
+
+                                return (
+                                    <div key={item?.id ?? `inv-card-${index}`} className="mobile-card">
+                                        <div className="mobile-card-header">
+                                            <div>
+                                                <div className="mobile-card-title">{item?.name || 'Unknown'}</div>
+                                                <div className="text-xs text-muted-foreground font-mono mt-0.5">{item?.sku || '-'}</div>
+                                            </div>
+                                            <Badge className={cn(
+                                                'shrink-0',
+                                                isLow ? 'bg-warning/10 text-warning' : 'bg-success/10 text-success'
+                                            )}>
+                                                {isLow ? 'Low' : 'OK'}
+                                            </Badge>
+                                        </div>
+
+                                        <div className="grid grid-cols-3 gap-2 text-sm">
+                                            <div>
+                                                <div className="text-muted-foreground text-xs">Stock</div>
+                                                <div className="font-semibold">{item?.stock || 0}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground text-xs">Reserved</div>
+                                                <div className="font-semibold text-warning">{item?.reserved || 0}</div>
+                                            </div>
+                                            <div>
+                                                <div className="text-muted-foreground text-xs">Available</div>
+                                                <div className={cn('font-semibold', isLow && 'text-warning')}>{available}</div>
+                                            </div>
+                                        </div>
+
+                                        <div className="mt-3">
+                                            <Progress
+                                                value={percentage}
+                                                className={cn('h-2', isLow && '[&>div]:bg-warning')}
+                                            />
+                                        </div>
+
+                                        <div className="mobile-card-actions">
+                                            <Button
+                                                size="sm"
+                                                variant="secondary"
+                                                className="flex-1 h-11"
+                                                onClick={() => {
+                                                    setSelectedItemForOrder(item);
+                                                    setShowPOModal(true);
+                                                }}
+                                            >
+                                                <Plus className="w-4 h-4 mr-2" />
+                                                Order More
+                                            </Button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </CardContent>
                 </Card>

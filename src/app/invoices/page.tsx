@@ -156,7 +156,7 @@ export default function InvoicesPage() {
                 showNewProject={false}
             />
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
                 {/* Stats Cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                     <Card className={cn(
@@ -294,7 +294,7 @@ export default function InvoicesPage() {
 
                 {/* Tabs */}
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabFilter)}>
-                    <TabsList>
+                    <TabsList className="flex flex-nowrap overflow-x-auto mobile-tabs">
                         <TabsTrigger value="all">All ({allInvoices.length})</TabsTrigger>
                         <TabsTrigger value="outstanding" className="text-amber-600">
                             Outstanding ({outstandingInvoices.length})
@@ -316,59 +316,113 @@ export default function InvoicesPage() {
                                         {filteredInvoices.map(invoice => (
                                             <div
                                                 key={invoice.id}
-                                                className="flex items-center justify-between p-4 hover:bg-muted/50 cursor-pointer transition-colors"
+                                                className="p-4 hover:bg-muted/50 cursor-pointer transition-colors"
                                                 onClick={() => setSelectedInvoice(invoice)}
                                             >
-                                                <div className="flex items-center gap-4">
-                                                    <div className="p-2 rounded-lg bg-primary/10">
-                                                        <ReceiptText className="w-5 h-5 text-primary" />
-                                                    </div>
-                                                    <div>
+                                                {/* Mobile Layout */}
+                                                <div className="md:hidden space-y-3">
+                                                    <div className="flex items-start justify-between gap-2">
                                                         <div className="flex items-center gap-2">
-                                                            <span className="font-mono font-semibold">{invoice.invoiceNumber}</span>
-                                                            <InvoiceStatusBadge status={invoice.status} />
-                                                            <Badge variant="outline" className="text-xs">
-                                                                {invoice.type}
-                                                            </Badge>
+                                                            <div className="p-2 rounded-lg bg-primary/10">
+                                                                <ReceiptText className="w-4 h-4 text-primary" />
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-mono font-semibold text-sm">{invoice.invoiceNumber}</span>
+                                                                <div className="flex items-center gap-1 mt-0.5">
+                                                                    <InvoiceStatusBadge status={invoice.status} />
+                                                                    <Badge variant="outline" className="text-xs">
+                                                                        {invoice.type}
+                                                                    </Badge>
+                                                                </div>
+                                                            </div>
                                                         </div>
-                                                        <div className="text-sm text-muted-foreground">
-                                                            {invoice.clientName} • {invoice.projectName}
+                                                        <div className="text-right shrink-0">
+                                                            <div className="text-lg font-bold">${invoice.total.toLocaleString()}</div>
+                                                            {invoice.balance > 0 && invoice.balance < invoice.total && (
+                                                                <div className="text-xs text-amber-600">
+                                                                    Bal: ${invoice.balance.toLocaleString()}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                </div>
-                                                <div className="flex items-center gap-6">
-                                                    <div className="text-right">
-                                                        <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                                    <div className="text-sm text-muted-foreground">
+                                                        {invoice.clientName} • {invoice.projectName}
+                                                    </div>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="text-xs text-muted-foreground flex items-center gap-1">
                                                             <Calendar className="w-3 h-3" />
                                                             Due: {invoice.dueDate}
                                                         </div>
-                                                        {invoice.retainageAmount > 0 && (
-                                                            <div className="text-xs text-blue-500">
-                                                                +${invoice.retainageAmount.toLocaleString()} retainage
-                                                            </div>
+                                                        {invoice.status !== 'paid' && invoice.status !== 'void' && invoice.status !== 'draft' && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-10"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setShowPaymentModal(invoice);
+                                                                }}
+                                                            >
+                                                                <DollarSign className="w-4 h-4 mr-1" />
+                                                                Record Payment
+                                                            </Button>
                                                         )}
                                                     </div>
-                                                    <div className="text-right min-w-[100px]">
-                                                        <div className="text-lg font-bold">${invoice.total.toLocaleString()}</div>
-                                                        {invoice.balance > 0 && invoice.balance < invoice.total && (
-                                                            <div className="text-sm text-amber-600">
-                                                                Bal: ${invoice.balance.toLocaleString()}
+                                                </div>
+
+                                                {/* Desktop Layout */}
+                                                <div className="hidden md:flex items-center justify-between">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="p-2 rounded-lg bg-primary/10">
+                                                            <ReceiptText className="w-5 h-5 text-primary" />
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="font-mono font-semibold">{invoice.invoiceNumber}</span>
+                                                                <InvoiceStatusBadge status={invoice.status} />
+                                                                <Badge variant="outline" className="text-xs">
+                                                                    {invoice.type}
+                                                                </Badge>
                                                             </div>
+                                                            <div className="text-sm text-muted-foreground">
+                                                                {invoice.clientName} • {invoice.projectName}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-6">
+                                                        <div className="text-right">
+                                                            <div className="text-sm text-muted-foreground flex items-center gap-1">
+                                                                <Calendar className="w-3 h-3" />
+                                                                Due: {invoice.dueDate}
+                                                            </div>
+                                                            {invoice.retainageAmount > 0 && (
+                                                                <div className="text-xs text-blue-500">
+                                                                    +${invoice.retainageAmount.toLocaleString()} retainage
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <div className="text-right min-w-[100px]">
+                                                            <div className="text-lg font-bold">${invoice.total.toLocaleString()}</div>
+                                                            {invoice.balance > 0 && invoice.balance < invoice.total && (
+                                                                <div className="text-sm text-amber-600">
+                                                                    Bal: ${invoice.balance.toLocaleString()}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {invoice.status !== 'paid' && invoice.status !== 'void' && invoice.status !== 'draft' && (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setShowPaymentModal(invoice);
+                                                                }}
+                                                            >
+                                                                <DollarSign className="w-4 h-4 mr-1" />
+                                                                Pay
+                                                            </Button>
                                                         )}
                                                     </div>
-                                                    {invoice.status !== 'paid' && invoice.status !== 'void' && invoice.status !== 'draft' && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setShowPaymentModal(invoice);
-                                                            }}
-                                                        >
-                                                            <DollarSign className="w-4 h-4 mr-1" />
-                                                            Pay
-                                                        </Button>
-                                                    )}
                                                 </div>
                                             </div>
                                         ))}

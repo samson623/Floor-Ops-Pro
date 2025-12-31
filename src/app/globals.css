@@ -318,9 +318,18 @@
 /* Horizontal scrolling tabs for mobile */
 @layer components {
   .mobile-tabs {
-    @apply flex gap-1 overflow-x-auto pb-1 -mx-2 px-2;
-
+    @apply flex gap-1 overflow-x-auto pb-1 -mx-2 px-2 justify-start;
     scroll-snap-type: x mandatory;
+    max-width: 100%;
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+  }
+
+  .mobile-tabs::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari/Opera */
   }
 
   .mobile-tabs>* {

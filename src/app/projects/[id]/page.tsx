@@ -374,6 +374,10 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
         setCaptureText('');
     };
 
+    // Permissions - must be called unconditionally (Rules of Hooks)
+    const { canViewPricing, can } = usePermissions();
+    const showPricing = canViewPricing();
+
     // Smart back navigation - takes you where you came from
     const { goBack, backLabel } = useSmartBack({
         title: project?.name || 'Project',
@@ -394,9 +398,6 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
             </div>
         );
     }
-
-    const { canViewPricing, can } = usePermissions();
-    const showPricing = canViewPricing();
 
     const status = statusConfig[project.status];
     const openPunch = project.punchList.filter(i => !i.completed);
@@ -486,16 +487,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
 
                 {/* Tabs */}
                 <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as TabType)} className="p-4 lg:p-6">
-                    <TabsList className="flex-wrap h-auto gap-1 mb-6 bg-muted/50 p-1">
-                        <TabsTrigger value="overview" className="data-[state=active]:shadow-sm">📋 Overview</TabsTrigger>
-                        <TabsTrigger value="timeline">📈 Timeline</TabsTrigger>
+                    <TabsList className="flex flex-nowrap overflow-x-auto h-auto gap-1 mb-6 bg-muted/50 p-1.5 lg:flex-wrap w-full lg:w-auto justify-start mobile-tabs">
+                        <TabsTrigger value="overview" className="data-[state=active]:shadow-sm flex-shrink-0">📋 Overview</TabsTrigger>
+                        <TabsTrigger value="timeline" className="flex-shrink-0">📈 Timeline</TabsTrigger>
                         {can('VIEW_CONTRACT_SCOPE') && (
-                            <TabsTrigger value="scope">📜 Scope</TabsTrigger>
+                            <TabsTrigger value="scope" className="flex-shrink-0">📜 Scope</TabsTrigger>
                         )}
-                        <TabsTrigger value="schedule">📅 Schedule</TabsTrigger>
-                        <TabsTrigger value="logs">📝 Daily Logs</TabsTrigger>
-                        <TabsTrigger value="photos">📷 Photos</TabsTrigger>
-                        <TabsTrigger value="punch" className="relative">
+                        <TabsTrigger value="schedule" className="flex-shrink-0">📅 Schedule</TabsTrigger>
+                        <TabsTrigger value="logs" className="flex-shrink-0">📝 Daily Logs</TabsTrigger>
+                        <TabsTrigger value="photos" className="flex-shrink-0">📷 Photos</TabsTrigger>
+                        <TabsTrigger value="punch" className="relative flex-shrink-0">
                             🔧 Punch List
                             {openPunch.length > 0 && (
                                 <Badge className="ml-1 h-5 px-1.5 bg-destructive text-destructive-foreground text-xs">
@@ -503,11 +504,11 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 </Badge>
                             )}
                         </TabsTrigger>
-                        <TabsTrigger value="materials">📦 Materials</TabsTrigger>
-                        <TabsTrigger value="changeorders">🔄 Change Orders</TabsTrigger>
-                        {showPricing && <TabsTrigger value="financials">💰 Financials</TabsTrigger>}
+                        <TabsTrigger value="materials" className="flex-shrink-0">📦 Materials</TabsTrigger>
+                        <TabsTrigger value="changeorders" className="flex-shrink-0">🔄 Change Orders</TabsTrigger>
+                        {showPricing && <TabsTrigger value="financials" className="flex-shrink-0">💰 Financials</TabsTrigger>}
                         {can('VIEW_CLIENT_INVOICES') && (
-                            <TabsTrigger value="invoices" className="relative">
+                            <TabsTrigger value="invoices" className="relative flex-shrink-0">
                                 🧾 Invoices
                                 {getClientInvoicesByProject(project.id).filter(inv => inv.status === 'sent' || inv.status === 'partial').length > 0 && (
                                     <Badge className="ml-1 h-5 px-1.5 bg-amber-500 text-white text-xs">
@@ -516,7 +517,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 )}
                             </TabsTrigger>
                         )}
-                        <TabsTrigger value="walkthrough" className="relative">
+                        <TabsTrigger value="walkthrough" className="relative flex-shrink-0">
                             ✅ Walkthrough
                             {getWalkthroughsByProject(project.id).filter(w => w.status === 'scheduled').length > 0 && (
                                 <Badge className="ml-1 h-5 px-1.5 bg-primary text-primary-foreground text-xs">
@@ -525,7 +526,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                             )}
                         </TabsTrigger>
                         {can('VIEW_SAFETY_RECORDS') && (
-                            <TabsTrigger value="safety" className="relative">
+                            <TabsTrigger value="safety" className="relative flex-shrink-0">
                                 🛡️ Safety
                                 {(project.siteConditions || []).filter(c => c.riskLevel === 'critical' || c.riskLevel === 'high').filter(c => c.status === 'active').length > 0 && (
                                     <Badge className="ml-1 h-5 px-1.5 bg-red-500 text-white text-xs">
@@ -534,7 +535,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 )}
                             </TabsTrigger>
                         )}
-                        <TabsTrigger value="communication" className="relative">
+                        <TabsTrigger value="communication" className="relative flex-shrink-0">
                             <div className="flex items-center gap-2">
                                 <MessageSquare className="w-4 h-4" />
                                 <span>Communication</span>

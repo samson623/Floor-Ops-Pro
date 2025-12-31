@@ -152,7 +152,6 @@ export function QuickAddPunchModal({
         const newItem: Omit<PunchItem, 'id'> = {
             text: description,
             priority,
-            category: category || 'other',
             reporter: currentUserName,
             reportedDate: now.split('T')[0],
             due: dueDate || getDefaultDueDate(),
@@ -161,7 +160,6 @@ export function QuickAddPunchModal({
             location: location || undefined,
             assignedTo: assignee || undefined,
             assignedDate: assignee ? now : undefined,
-            assignedBy: assignee ? currentUserName : undefined,
             photos: photos.length > 0 ? photos : undefined,
             visibleToClient: priority === 'critical' || priority === 'high',
             verificationRequired: priority === 'critical',
@@ -186,18 +184,21 @@ export function QuickAddPunchModal({
     };
 
     const toggleVoiceRecording = () => {
-        // Voice-to-text would integrate with Web Speech API or OpenAI Whisper
-        // For now, just toggle the state
+        // Voice recording toggle - currently a placeholder
+        // In production, this would use Web Speech API
         setIsRecording(!isRecording);
         if (!isRecording) {
-            // TODO: Start recording with Web Speech API
-            setTimeout(() => setIsRecording(false), 3000); // Mock: stop after 3s
+            // Simulate starting recording
+            console.log('Voice recording started');
+        } else {
+            // Simulate stopping recording
+            console.log('Voice recording stopped');
         }
     };
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-md">
+            <DialogContent className="max-w-md h-[100dvh] sm:h-auto max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto p-4 sm:p-6">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Plus className="w-5 h-5" />Quick Add Punch Item
@@ -254,7 +255,7 @@ export function QuickAddPunchModal({
                                             <button
                                                 onClick={handlePhotoCapture}
                                                 disabled={isCapturing}
-                                                className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors disabled:opacity-50"
+                                                className="flex-shrink-0 w-20 h-20 rounded-lg border-2 border-dashed flex items-center justify-center text-muted-foreground hover:bg-muted/50 active:scale-95 transition-all disabled:opacity-50 touch-target"
                                             >
                                                 {isCapturing ? <Loader2 className="w-6 h-6 animate-spin" /> : <Plus className="w-6 h-6" />}
                                             </button>
@@ -264,7 +265,7 @@ export function QuickAddPunchModal({
                                     <button
                                         onClick={handlePhotoCapture}
                                         disabled={isCapturing}
-                                        className="w-full py-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors rounded-lg disabled:opacity-50"
+                                        className="w-full py-8 flex flex-col items-center justify-center text-muted-foreground hover:bg-muted/50 active:scale-[0.98] transition-all rounded-lg disabled:opacity-50 min-h-[120px] touch-action-manipulation"
                                     >
                                         {isCapturing ? (
                                             <Loader2 className="w-10 h-10 mb-2 animate-spin" />
@@ -333,7 +334,7 @@ export function QuickAddPunchModal({
                                     key={p.value}
                                     type="button"
                                     onClick={() => setPriority(p.value)}
-                                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${priority === p.value ? p.color : 'border-muted bg-muted/30'
+                                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all min-h-[60px] active:scale-95 touch-action-manipulation ${priority === p.value ? p.color : 'border-muted bg-muted/30'
                                         }`}
                                 >
                                     {p.icon}
@@ -352,7 +353,7 @@ export function QuickAddPunchModal({
                                     key={c.value}
                                     type="button"
                                     onClick={() => setCategory(category === c.value ? '' : c.value)}
-                                    className={`px-3 py-1.5 rounded-full text-sm transition-all ${category === c.value
+                                    className={`px-4 py-2 rounded-full text-sm transition-all min-h-[44px] active:scale-95 ${category === c.value
                                         ? 'bg-primary text-primary-foreground'
                                         : 'bg-muted hover:bg-muted/80'
                                         }`}
@@ -406,7 +407,7 @@ export function QuickAddPunchModal({
                     <Button
                         onClick={handleSubmit}
                         disabled={!description.trim()}
-                        className="w-full gap-2"
+                        className="w-full gap-2 h-14 text-base sticky bottom-0"
                         size="lg"
                     >
                         <Plus className="w-5 h-5" />
