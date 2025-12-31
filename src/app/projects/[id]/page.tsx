@@ -599,7 +599,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                                 <CardContent className="space-y-3">
                                     <Button variant="secondary" className="w-full justify-start" onClick={() => setShowPhotoCapture(true)}>
                                         <Camera className="w-4 h-4 mr-2" />
-                                        📷 Capture Photo
+                                        Capture Photo
                                     </Button>
                                     <Button variant="secondary" className="w-full justify-start" onClick={() => setShowNewLog(true)}>
                                         📝 Add Daily Log
