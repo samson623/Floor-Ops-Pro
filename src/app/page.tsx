@@ -34,7 +34,7 @@ export default function DashboardPage() {
     <>
       <TopBar
         title="Dashboard"
-        breadcrumb={currentUser ? `Welcome back, ${currentUser.name.split(' ')[0]}` : 'Overview'}
+        breadcrumb={currentUser?.name ? `Welcome back, ${currentUser.name.split(' ')[0]}` : 'Overview'}
         onNewProject={() => setShowNewProjectModal(true)}
         showNewProject={can('CREATE_PROJECT')}
       />

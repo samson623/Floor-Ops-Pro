@@ -8,6 +8,7 @@ import {
     Sparkles,
     Upload,
     Mic,
+    MicOff,
     Send,
     AlertTriangle,
     CheckCircle2,
@@ -33,6 +34,52 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { buildAIContext } from '@/lib/ai-context';
+import { useCallback } from 'react';
+
+// Type declarations for Web Speech API
+interface SpeechRecognitionEvent extends Event {
+    results: SpeechRecognitionResultList;
+    resultIndex: number;
+}
+
+interface SpeechRecognitionResultList {
+    length: number;
+    item(index: number): SpeechRecognitionResult;
+    [index: number]: SpeechRecognitionResult;
+}
+
+interface SpeechRecognitionResult {
+    isFinal: boolean;
+    length: number;
+    item(index: number): SpeechRecognitionAlternative;
+    [index: number]: SpeechRecognitionAlternative;
+}
+
+interface SpeechRecognitionAlternative {
+    transcript: string;
+    confidence: number;
+}
+
+interface SpeechRecognition extends EventTarget {
+    continuous: boolean;
+    interimResults: boolean;
+    lang: string;
+    onresult: ((event: SpeechRecognitionEvent) => void) | null;
+    onerror: ((event: Event) => void) | null;
+    onend: (() => void) | null;
+    onstart: (() => void) | null;
+    start(): void;
+    stop(): void;
+    abort(): void;
+}
+
+declare global {
+    interface Window {
+        SpeechRecognition: new () => SpeechRecognition;
+        webkitSpeechRecognition: new () => SpeechRecognition;
+    }
+}
 
 export function IntelligenceCenter() {
     const { can, getCurrentRoleInfo } = usePermissions();
@@ -42,13 +89,67 @@ export function IntelligenceCenter() {
     const [isAnalyzing, setIsAnalyzing] = useState(false);
     const [analysisComplete, setAnalysisComplete] = useState(false);
     const [activeTab, setActiveTab] = useState('insights');
+    const [aiResponse, setAiResponse] = useState<string | null>(null);
+    const [isListening, setIsListening] = useState(false);
+    const [speechSupported, setSpeechSupported] = useState(false);
+    const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+    // --- Speech Recognition Logic ---
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (SpeechRecognitionApi) {
+                setSpeechSupported(true);
+                const recognition = new SpeechRecognitionApi();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = (event: SpeechRecognitionEvent) => {
+                    let finalTranscript = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const transcript = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            finalTranscript += transcript;
+                        }
+                    }
+                    if (finalTranscript) {
+                        setInputValue(prev => (prev ? prev + ' ' : '') + finalTranscript);
+                    }
+                };
+
+                recognition.onend = () => setIsListening(false);
+                recognition.onerror = () => setIsListening(false);
+                recognitionRef.current = recognition;
+            }
+        }
+        return () => {
+            if (recognitionRef.current) recognitionRef.current.abort();
+        };
+    }, []);
+
+    const toggleListening = useCallback(() => {
+        if (!recognitionRef.current) return;
+        if (isListening) {
+            recognitionRef.current.stop();
+        } else {
+            try {
+                recognitionRef.current.start();
+                setIsListening(true);
+                setInputMode('voice');
+            } catch (error) {
+                console.error('Speech recognition error:', error);
+                setIsListening(false);
+            }
+        }
+    }, [isListening]);
 
     // --- Derive Real Intelligence Data ---
 
     // 1. Get open high-priority punch items
     const activePunchItems = data.projects.flatMap(p =>
         (p.punchList || []).filter(i => !i.completed).map(i => ({
-            id: i.id,
+            id: `${p.id}-${i.id}`, // Unique key combining project and item ID
             task: i.text,
             location: i.location ? `${i.location} (${p.name})` : p.name,
             trade: i.category,
@@ -129,19 +230,39 @@ export function IntelligenceCenter() {
         );
     }
 
-    // Simulate analysis process
-    const handleAnalyze = () => {
+    // Real AI Analysis
+    const handleAnalyze = async () => {
         if (!inputValue.trim()) return;
         setIsAnalyzing(true);
         setAnalysisComplete(false);
 
-        // "Processing" simulation
-        setTimeout(() => {
-            setIsAnalyzing(false);
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    messages: [
+                        { role: 'user', content: inputValue }
+                    ],
+                    projectContext: buildAIContext(data)
+                }),
+            });
+
+            if (!response.ok) throw new Error('Failed to analyze');
+
+            const responseData = await response.json();
+            setAiResponse(responseData.content);
             setAnalysisComplete(true);
             setActiveTab('action-plan');
-        }, 2000);
+            setInputValue(''); // Clear the text field after successful analysis
+        } catch (error) {
+            console.error('AI Analysis Error:', error);
+            setAiResponse("Sorry, I couldn't connect to the AI brain right now. Please check your connection and API key.");
+        } finally {
+            setIsAnalyzing(false);
+        }
     };
+
 
     const handleQuickQuery = (query: string) => {
         setInputValue(query);
@@ -165,7 +286,7 @@ export function IntelligenceCenter() {
                 </div>
                 <div className="flex items-center gap-2 bg-muted/50 p-1 rounded-lg">
                     <Badge variant="outline" className="bg-background text-xs">
-                        GPT-4 Turbo
+                        GPT-5 Nano
                     </Badge>
                     <Badge variant="outline" className="bg-background text-xs">
                         Flooring Knwoledge Base Active
@@ -196,14 +317,20 @@ export function IntelligenceCenter() {
                                     <TabsTrigger
                                         value="text"
                                         className="gap-2"
-                                        onClick={() => setInputMode('text')}
+                                        onClick={() => {
+                                            setInputMode('text');
+                                            if (isListening) recognitionRef.current?.stop();
+                                        }}
                                     >
                                         <FileText className="w-4 h-4" /> Text
                                     </TabsTrigger>
                                     <TabsTrigger
                                         value="voice"
                                         className="gap-2"
-                                        onClick={() => setInputMode('voice')}
+                                        onClick={() => {
+                                            setInputMode('voice');
+                                            if (!isListening) toggleListening();
+                                        }}
                                     >
                                         <Mic className="w-4 h-4" /> Voice
                                     </TabsTrigger>
@@ -211,15 +338,15 @@ export function IntelligenceCenter() {
                             </Tabs>
 
                             <div className="relative flex-1 min-h-[240px]">
-                                {inputMode === 'text' ? (
+                                {inputMode === 'text' || (!isListening && inputValue) ? (
                                     <Textarea
-                                        className="h-full resize-none p-4 text-base leading-relaxed bg-background border focus:border-primary transition-all"
+                                        className="h-full min-h-[240px] resize-none p-4 text-base leading-relaxed bg-background border focus:border-primary transition-all"
                                         placeholder="e.g. 'Walked the site today. Room 302 has moisture issues. We're waiting on adhesive delivery for carpet tiles. The transition strip near the elevator is loose and needs fixing.'"
                                         value={inputValue}
                                         onChange={(e) => setInputValue(e.target.value)}
                                     />
                                 ) : (
-                                    <div className="h-full bg-muted/30 border-2 border-dashed rounded-lg flex items-center justify-center flex-col gap-4">
+                                    <div className="h-full min-h-[240px] bg-muted/30 border-2 border-dashed rounded-lg flex items-center justify-center flex-col gap-4">
                                         <div className="relative">
                                             <div className="w-20 h-20 rounded-full bg-red-500 flex items-center justify-center shadow-lg animate-pulse">
                                                 <Mic className="w-10 h-10 text-white" />
@@ -228,14 +355,15 @@ export function IntelligenceCenter() {
                                         </div>
                                         <div className="text-center space-y-2">
                                             <p className="font-semibold text-lg">Recording...</p>
-                                            <p className="text-sm text-muted-foreground">Click "Text" tab to stop</p>
+                                            <p className="text-sm text-muted-foreground">Go ahead, Derek. I'm listening.</p>
                                         </div>
                                         <Button
-                                            variant="outline"
+                                            variant="destructive"
                                             size="sm"
-                                            onClick={() => setInputMode('text')}
+                                            onClick={toggleListening}
+                                            className="gap-2"
                                         >
-                                            Stop Recording
+                                            <MicOff className="w-4 h-4" /> Stop Recording
                                         </Button>
                                     </div>
                                 )}
@@ -395,7 +523,23 @@ export function IntelligenceCenter() {
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="space-y-6">
+                                    <div className="space-y-6 animate-in fade-in duration-700">
+                                        {/* AI Executive Summary */}
+                                        {aiResponse && (
+                                            <Card className="border-l-4 border-l-primary bg-gradient-to-br from-primary/5 to-transparent overflow-hidden">
+                                                <CardHeader className="pb-2">
+                                                    <CardTitle className="text-base font-bold flex items-center gap-2">
+                                                        <Sparkles className="w-4 h-4 text-primary" />
+                                                        AI Executive Summary
+                                                    </CardTitle>
+                                                </CardHeader>
+                                                <CardContent>
+                                                    <div className="text-sm leading-relaxed prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                                                        {aiResponse}
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        )}
                                         {/* 1. Daily Plan Section */}
                                         <div className="space-y-3">
                                             <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">

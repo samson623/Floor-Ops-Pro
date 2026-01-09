@@ -13,7 +13,7 @@ import {
     Camera, MapPin, User, Calendar, Flame, AlertTriangle, Circle,
     Mic, MicOff, X, Plus, Sparkles, Loader2, RefreshCw
 } from 'lucide-react';
-import { PunchItem, PunchItemPriority, PunchItemCategory, PunchItemHistoryEntry } from '@/lib/data';
+import { PunchItem, PunchItemPriority, PunchItemCategory, PunchItemHistoryEntry, PunchItemPhoto } from '@/lib/data';
 import { useCameraCapture, CapturedPhoto } from '@/hooks/useCameraCapture';
 
 interface QuickAddPunchModalProps {
@@ -97,8 +97,15 @@ export function QuickAddPunchModal({
         clearPhotos
     } = useCameraCapture({ maxPhotos: 5 });
 
-    // Convert captured photos to URL strings for backward compatibility
-    const photos = capturedPhotos.map(p => p.url);
+    // Convert captured photos to PunchItemPhoto objects for richer metadata
+    const photos: PunchItemPhoto[] = capturedPhotos.map(p => ({
+        id: p.id,
+        url: p.url,
+        timestamp: p.timestamp,
+        takenBy: p.takenBy,
+        type: 'issue',
+        caption: 'Captured via Quick Add'
+    }));
 
     const handleDescriptionChange = (value: string) => {
         setDescription(value);
@@ -184,15 +191,40 @@ export function QuickAddPunchModal({
     };
 
     const toggleVoiceRecording = () => {
-        // Voice recording toggle - currently a placeholder
-        // In production, this would use Web Speech API
-        setIsRecording(!isRecording);
-        if (!isRecording) {
-            // Simulate starting recording
-            console.log('Voice recording started');
+        if (isRecording) {
+            setIsRecording(false);
+            // Ideally we would stop the recognition instance here if we stored it in a ref
         } else {
-            // Simulate stopping recording
-            console.log('Voice recording stopped');
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            if (SpeechRecognition) {
+                setIsRecording(true);
+                const recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.lang = 'en-US';
+
+                recognition.onresult = (event: any) => {
+                    const transcript = event.results[0][0].transcript;
+                    const newDescription = description ? `${description} ${transcript}` : transcript;
+                    setDescription(newDescription);
+                    handleDescriptionChange(newDescription);
+                    setIsRecording(false);
+                };
+
+                recognition.onerror = (event: any) => {
+                    console.error('Speech recognition error', event.error);
+                    setIsRecording(false);
+                };
+
+                recognition.onend = () => {
+                    setIsRecording(false);
+                };
+
+                recognition.start();
+            } else {
+                console.warn('Speech recognition not supported in this browser.');
+                // Fallback or UI notification could go here
+            }
         }
     };
 

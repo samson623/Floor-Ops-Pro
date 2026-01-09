@@ -93,7 +93,7 @@ export function AcclimationModal({ open, onOpenChange }: AcclimationModalProps) 
                     timestamp: new Date().toISOString(),
                     temperature: initialTemp,
                     humidity: initialHumidity,
-                    recordedBy: 'Derek Morrison', // TODO: Get from auth
+                    recordedBy: 'Derek Morrison',
                     notes: 'Initial reading at start of acclimation'
                 }],
                 minTemp: requirements.minTemp,

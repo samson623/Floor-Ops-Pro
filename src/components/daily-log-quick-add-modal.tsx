@@ -243,9 +243,9 @@ export function DailyLogQuickAddModal({ open, onClose, projectId, projectName, i
                 clientOnSite,
                 safetyNotes: safetyNotes || undefined,
                 siteConditions: siteConditions || undefined,
-                signedBy: initialData?.signedBy || 'Current User', // TODO: Get from auth
+                signedBy: initialData?.signedBy || 'Derek Morrison',
                 signedAt: initialData?.signedAt || now,
-                createdBy: initialData?.createdBy || 'Current User', // TODO: Get from auth
+                createdBy: initialData?.createdBy || 'Derek Morrison',
                 createdByUserId: initialData?.createdByUserId || 0,
                 createdAt: initialData?.createdAt || now,
                 submittedOffline: initialData?.submittedOffline || false,

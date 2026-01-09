@@ -2,12 +2,14 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { usePermissions } from '@/components/permission-context';
+import { useData } from '@/components/data-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Bot, Send, Mic, MicOff, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { buildAIContext } from '@/lib/ai-context';
 
 // Type declarations for Web Speech API
 interface SpeechRecognitionEvent extends Event {
@@ -69,6 +71,7 @@ const initialMessages: Message[] = [
 
 export function AIPanel() {
     const { can } = usePermissions();
+    const { data } = useData();
     const [messages, setMessages] = useState<Message[]>(initialMessages);
     const [input, setInput] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -143,13 +146,15 @@ export function AIPanel() {
         }
     }, [isListening]);
 
+    const [isLoading, setIsLoading] = useState(false);
+
     // Only show AI panel if user has permission
     if (!can('USE_AI_ASSISTANT')) {
         return null;
     }
 
-    const handleSend = () => {
-        if (!input.trim()) return;
+    const handleSend = async () => {
+        if (!input.trim() || isLoading) return;
 
         const userMessage: Message = {
             id: Date.now(),
@@ -157,27 +162,50 @@ export function AIPanel() {
             content: input
         };
 
-        // Simulate AI response
-        const aiResponses: Record<string, string> = {
-            'downtown status': '📊 **Downtown Lobby Renovation**\n\n✅ Progress: 65%\n📋 Open Punch Items: 3\n💰 Margin: 37%\n📅 Due: Dec 20\n\nCurrent Phase: Tile Installation\nNext Up: Carpet Install (Dec 16)',
-            'open punch list': '🔧 **Open Punch Items (4 total)**\n\n**High Priority:**\n• Grout color mismatch near elevator (Downtown - Dec 13)\n• Transition strip loose at hallway (Downtown - Dec 14)\n• Verify moisture levels in exam room (Oakridge - Dec 14)\n\n**Medium Priority:**\n• Minor chip on tile near entrance (Downtown - Dec 15)',
-            'schedule today': '📅 **Today\'s Schedule**\n\n• 7:00 AM - Downtown Tile Install (Team A)\n• 8:00 AM - Oakridge Subfloor Prep (Team B)\n• 2:00 PM - Downtown Client Walk (Derek + PM)\n• 4:00 PM - Lakeside Material Delivery',
-        };
-
-        const responseKey = Object.keys(aiResponses).find(key =>
-            input.toLowerCase().includes(key)
-        );
-
-        const aiMessage: Message = {
-            id: Date.now() + 1,
-            role: 'assistant',
-            content: responseKey
-                ? aiResponses[responseKey]
-                : `I understand you're asking about "${input}". In a production app, this would connect to an AI service. For now, try:\n\n• "downtown status"\n• "open punch list"\n• "schedule today"`
-        };
-
-        setMessages(prev => [...prev, userMessage, aiMessage]);
+        const newMessages = [...messages, userMessage];
+        setMessages(newMessages);
         setInput('');
+        setIsLoading(true);
+
+        try {
+            const response = await fetch('/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    messages: newMessages.map(m => ({
+                        role: m.role,
+                        content: m.content
+                    })),
+                    projectContext: buildAIContext(data)
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to get response from AI');
+            }
+
+            const responseData = await response.json();
+
+            const aiMessage: Message = {
+                id: Date.now() + 1,
+                role: 'assistant',
+                content: responseData.content
+            };
+
+            setMessages(prev => [...prev, aiMessage]);
+        } catch (error) {
+            console.error('AI Error:', error);
+            const errorMessage: Message = {
+                id: Date.now() + 1,
+                role: 'assistant',
+                content: 'Sorry, I encountered an error connecting to the AI service. Please check your API key and try again.'
+            };
+            setMessages(prev => [...prev, errorMessage]);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

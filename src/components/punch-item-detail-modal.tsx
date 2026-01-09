@@ -99,11 +99,64 @@ export function PunchItemDetailModal({
         }
     }, [open, item]);
 
+    const normalizedPhotos = (item.photos || []).map(p => {
+        if (typeof p === 'string') {
+            return {
+                id: p,
+                url: p,
+                timestamp: new Date().toISOString(),
+                takenBy: 'Unknown',
+                type: 'issue' as const
+            } as PunchItemPhoto;
+        }
+        return p as PunchItemPhoto;
+    });
+
     const allPhotos: PunchItemPhoto[] = [
         ...(item.beforePhotos || []),
-        ...((item.photos as PunchItemPhoto[]) || []),
+        ...normalizedPhotos,
         ...(item.afterPhotos || [])
-    ].filter(p => typeof p === 'object');
+    ].filter(p => p && typeof p === 'object');
+
+    // Auto-save captured photos
+    useEffect(() => {
+        if (capturedPhotos.length > 0) {
+            const newPunchPhotos = capturedPhotos.map(p => ({
+                id: p.id,
+                url: p.url,
+                timestamp: p.timestamp,
+                takenBy: p.takenBy,
+                type: 'issue' as const,
+                caption: 'Captured via camera'
+            }));
+
+            const now = new Date().toISOString();
+            const historyEntry: PunchItemHistoryEntry = {
+                id: `h-${Date.now()}`,
+                timestamp: now,
+                userName: currentUserName,
+                action: 'photo-added',
+                newValue: `${newPunchPhotos.length} photo(s) added`
+            };
+
+            const currentPhotos = (item.photos || []).map(p =>
+                typeof p === 'string' ? {
+                    id: p, url: p, timestamp: now, takenBy: 'Unknown', type: 'issue' as const
+                } : p
+            ) as PunchItemPhoto[];
+
+            onUpdate({
+                photos: [...currentPhotos, ...newPunchPhotos],
+                updatedAt: now,
+                history: [...(item.history || []), historyEntry]
+            });
+
+            // Clear local state to prevent duplicates/loops
+            // We need to use a timeout to allow the UI to update or avoid direct state update during render cycle if that was the case (useEffect is post-render so it's fine)
+            // But we must ensure this runs only once per capture batch
+            capturedPhotos.forEach(p => removeCameraPhoto(p.id));
+        }
+    }, [capturedPhotos, currentUserName, item.history, item.photos, onUpdate, removeCameraPhoto]);
 
     const handleSave = () => {
         const now = new Date().toISOString();
