@@ -93,56 +93,113 @@ export function IntelligenceCenter() {
     const [isListening, setIsListening] = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
+    const isStoppingRef = useRef(false);
 
-    // --- Speech Recognition Logic ---
+    // Force stop any active recording
+    const forceStopRecording = useCallback(() => {
+        isStoppingRef.current = true;
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.abort();
+            } catch (e) {
+                // Ignore
+            }
+            recognitionRef.current = null;
+        }
+        setIsListening(false);
+        setTimeout(() => {
+            isStoppingRef.current = false;
+        }, 100);
+    }, []);
+
+    // Create a new speech recognition instance
+    const createRecognitionInstance = useCallback(() => {
+        if (typeof window === 'undefined') return null;
+
+        const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognitionApi) return null;
+
+        const recognition = new SpeechRecognitionApi();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+            if (isStoppingRef.current) return;
+
+            let finalTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
+                }
+            }
+            if (finalTranscript) {
+                setInputValue(prev => (prev ? prev + ' ' : '') + finalTranscript);
+            }
+        };
+
+        recognition.onstart = () => {
+            if (!isStoppingRef.current) {
+                setIsListening(true);
+            }
+        };
+
+        recognition.onend = () => {
+            if (!isStoppingRef.current) {
+                setIsListening(false);
+            }
+            recognitionRef.current = null;
+        };
+
+        recognition.onerror = () => {
+            setIsListening(false);
+            recognitionRef.current = null;
+        };
+
+        return recognition;
+    }, []);
+
+    // Initialize speech recognition support check
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognitionApi) {
                 setSpeechSupported(true);
-                const recognition = new SpeechRecognitionApi();
-                recognition.continuous = true;
-                recognition.interimResults = true;
-                recognition.lang = 'en-US';
-
-                recognition.onresult = (event: SpeechRecognitionEvent) => {
-                    let finalTranscript = '';
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        const transcript = event.results[i][0].transcript;
-                        if (event.results[i].isFinal) {
-                            finalTranscript += transcript;
-                        }
-                    }
-                    if (finalTranscript) {
-                        setInputValue(prev => (prev ? prev + ' ' : '') + finalTranscript);
-                    }
-                };
-
-                recognition.onend = () => setIsListening(false);
-                recognition.onerror = () => setIsListening(false);
-                recognitionRef.current = recognition;
             }
         }
         return () => {
-            if (recognitionRef.current) recognitionRef.current.abort();
+            forceStopRecording();
         };
-    }, []);
+    }, [forceStopRecording]);
 
     const toggleListening = useCallback(() => {
-        if (!recognitionRef.current) return;
+        if (isStoppingRef.current) return;
+
         if (isListening) {
-            recognitionRef.current.stop();
+            forceStopRecording();
         } else {
+            if (recognitionRef.current) {
+                try {
+                    recognitionRef.current.abort();
+                } catch (e) { }
+                recognitionRef.current = null;
+            }
+
+            const recognition = createRecognitionInstance();
+            if (!recognition) return;
+
             try {
-                recognitionRef.current.start();
-                setIsListening(true);
+                recognitionRef.current = recognition;
+                recognition.start();
                 setInputMode('voice');
             } catch (error) {
                 console.error('Speech recognition error:', error);
                 setIsListening(false);
+                recognitionRef.current = null;
             }
         }
-    }, [isListening]);
+    }, [isListening, createRecognitionInstance, forceStopRecording]);
 
     // --- Derive Real Intelligence Data ---
 
@@ -338,7 +395,7 @@ export function IntelligenceCenter() {
                             </Tabs>
 
                             <div className="relative flex-1 min-h-[240px]">
-                                {inputMode === 'text' || (!isListening && inputValue) ? (
+                                {inputMode === 'text' || !isListening ? (
                                     <Textarea
                                         className="h-full min-h-[240px] resize-none p-4 text-base leading-relaxed bg-background border focus:border-primary transition-all"
                                         placeholder="e.g. 'Walked the site today. Room 302 has moisture issues. We're waiting on adhesive delivery for carpet tiles. The transition strip near the elevator is loose and needs fixing.'"

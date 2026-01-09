@@ -2,10 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useData } from './data-provider';
 import { usePermissions } from './permission-context';
 import { getRoleInfo, Permission } from '@/lib/permissions';
+import { getCurrentCompany, type CompanyInfo } from '@/lib/supabase';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
@@ -44,6 +46,13 @@ function SidebarContent() {
     const pathname = usePathname();
     const { data, getUnreadMessageCount } = useData();
     const { currentUser, can, canAny, isLoaded, getCurrentRoleInfo } = usePermissions();
+
+    // Company context - fetch current company name
+    const [company, setCompany] = useState<CompanyInfo | null>(null);
+
+    useEffect(() => {
+        getCurrentCompany().then(setCompany);
+    }, []);
 
     const navSections: NavSection[] = [
         {
@@ -121,8 +130,8 @@ function SidebarContent() {
                     <Home className="w-5 h-5" />
                 </div>
                 <div>
-                    <h1 className="text-lg font-bold tracking-tight">FloorOps Pro</h1>
-                    <p className="text-xs text-sidebar-foreground/60">Enterprise</p>
+                    <h1 className="text-lg font-bold tracking-tight">{company?.name || 'FloorOps Pro'}</h1>
+                    <p className="text-xs text-sidebar-foreground/60 capitalize">{company?.plan || 'Enterprise'}</p>
                 </div>
             </div>
 

@@ -51,6 +51,19 @@ export {
     type ServiceResult,
 } from './services';
 
+// Company Context (Multi-Tenancy)
+export {
+    DEFAULT_COMPANY_SLUG,
+    getDefaultCompanyId,
+    getCurrentCompanyId,
+    clearCompanyCache,
+    setCachedCompanyId,
+    withCompanyId,
+    withKnownCompanyId,
+    getCurrentCompany,
+    type CompanyInfo,
+} from './company-context';
+
 // Hooks
 export {
     // Status

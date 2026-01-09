@@ -14,6 +14,7 @@
  */
 
 import { getSupabaseClient, isSupabaseConfigured } from './client';
+import { getCurrentCompanyId } from './company-context';
 import type {
     Database,
     Project,
@@ -231,14 +232,17 @@ export const ProjectsService = {
 
     async create(project: InsertTables<'projects'>): Promise<ServiceResult<Project>> {
         const client = getClient();
+        const companyId = await getCurrentCompanyId();
+        const projectWithCompany = { ...project, company_id: companyId };
+
         if (!client) {
-            syncQueue.add({ table: 'projects', operation: 'INSERT', data: project });
-            return { data: project as Project, error: null, isOffline: true };
+            syncQueue.add({ table: 'projects', operation: 'INSERT', data: projectWithCompany });
+            return { data: projectWithCompany as unknown as Project, error: null, isOffline: true };
         }
 
         const { data, error } = await client
             .from('projects')
-            .insert(project)
+            .insert(projectWithCompany)
             .select()
             .single();
 
@@ -344,6 +348,9 @@ export const PunchItemsService = {
 
     async create(punchItem: InsertTables<'punch_items'>): Promise<ServiceResult<PunchItem>> {
         const client = getClient();
+        // Punch items inherit company_id from their project, so we don't add it directly
+        // RLS policies use can_access_project() which checks company through project
+
         if (!client) {
             syncQueue.add({ table: 'punch_items', operation: 'INSERT', data: punchItem });
             return { data: punchItem as PunchItem, error: null, isOffline: true };
@@ -434,6 +441,9 @@ export const DailyLogsService = {
 
     async create(dailyLog: InsertTables<'daily_logs'>): Promise<ServiceResult<DailyLog>> {
         const client = getClient();
+        // Daily logs inherit company_id from their project, so we don't add it directly
+        // RLS policies use can_access_project() which checks company through project
+
         if (!client) {
             syncQueue.add({ table: 'daily_logs', operation: 'INSERT', data: dailyLog });
             return { data: dailyLog as DailyLog, error: null, isOffline: true };
@@ -606,14 +616,17 @@ export const PurchaseOrdersService = {
 
     async create(po: InsertTables<'purchase_orders'>): Promise<ServiceResult<PurchaseOrder>> {
         const client = getClient();
+        const companyId = await getCurrentCompanyId();
+        const poWithCompany = { ...po, company_id: companyId };
+
         if (!client) {
-            syncQueue.add({ table: 'purchase_orders', operation: 'INSERT', data: po });
-            return { data: po as PurchaseOrder, error: null, isOffline: true };
+            syncQueue.add({ table: 'purchase_orders', operation: 'INSERT', data: poWithCompany });
+            return { data: poWithCompany as unknown as PurchaseOrder, error: null, isOffline: true };
         }
 
         const { data, error } = await client
             .from('purchase_orders')
-            .insert(po)
+            .insert(poWithCompany)
             .select()
             .single();
 

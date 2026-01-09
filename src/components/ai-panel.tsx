@@ -78,73 +78,129 @@ export function AIPanel() {
     const [isListening, setIsListening] = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
     const recognitionRef = useRef<SpeechRecognition | null>(null);
+    const isStoppingRef = useRef(false);
 
-    // Initialize speech recognition
+    // Force stop any active recording
+    const forceStopRecording = useCallback(() => {
+        isStoppingRef.current = true;
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.abort(); // abort() is more forceful than stop()
+            } catch (e) {
+                // Ignore errors during abort
+            }
+            recognitionRef.current = null;
+        }
+        setIsListening(false);
+        // Reset stopping flag after a short delay
+        setTimeout(() => {
+            isStoppingRef.current = false;
+        }, 100);
+    }, []);
+
+    // Create a new speech recognition instance
+    const createRecognitionInstance = useCallback(() => {
+        if (typeof window === 'undefined') return null;
+
+        const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognitionApi) return null;
+
+        const recognition = new SpeechRecognitionApi();
+        recognition.continuous = false;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
+
+        recognition.onresult = (event: SpeechRecognitionEvent) => {
+            // Don't process results if we're stopping
+            if (isStoppingRef.current) return;
+
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                const transcript = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    finalTranscript += transcript;
+                }
+            }
+
+            // Update input with transcribed text
+            if (finalTranscript) {
+                setInput(prev => prev + finalTranscript);
+            }
+        };
+
+        recognition.onstart = () => {
+            // Only set listening if we're not in stopping mode
+            if (!isStoppingRef.current) {
+                setIsListening(true);
+            }
+        };
+
+        recognition.onend = () => {
+            // Only update state if this wasn't a forced stop
+            if (!isStoppingRef.current) {
+                setIsListening(false);
+            }
+            recognitionRef.current = null;
+        };
+
+        recognition.onerror = (event: Event) => {
+            console.error('Speech recognition error:', event);
+            setIsListening(false);
+            recognitionRef.current = null;
+        };
+
+        return recognition;
+    }, []);
+
+    // Initialize speech recognition support check
     useEffect(() => {
         if (typeof window !== 'undefined') {
             const SpeechRecognitionApi = window.SpeechRecognition || window.webkitSpeechRecognition;
             if (SpeechRecognitionApi) {
                 setSpeechSupported(true);
-                const recognition = new SpeechRecognitionApi();
-                recognition.continuous = false;
-                recognition.interimResults = true;
-                recognition.lang = 'en-US';
-
-                recognition.onresult = (event: SpeechRecognitionEvent) => {
-                    let finalTranscript = '';
-                    let interimTranscript = '';
-
-                    for (let i = event.resultIndex; i < event.results.length; i++) {
-                        const transcript = event.results[i][0].transcript;
-                        if (event.results[i].isFinal) {
-                            finalTranscript += transcript;
-                        } else {
-                            interimTranscript += transcript;
-                        }
-                    }
-
-                    // Update input with transcribed text
-                    if (finalTranscript) {
-                        setInput(prev => prev + finalTranscript);
-                    }
-                };
-
-                recognition.onend = () => {
-                    setIsListening(false);
-                };
-
-                recognition.onerror = () => {
-                    setIsListening(false);
-                };
-
-                recognitionRef.current = recognition;
             }
         }
 
         return () => {
-            if (recognitionRef.current) {
-                recognitionRef.current.abort();
-            }
+            forceStopRecording();
         };
-    }, []);
+    }, [forceStopRecording]);
 
     // Toggle voice recording
     const toggleListening = useCallback(() => {
-        if (!recognitionRef.current) return;
+        // Prevent rapid toggling
+        if (isStoppingRef.current) return;
 
         if (isListening) {
-            recognitionRef.current.stop();
-            setIsListening(false);
+            // Force stop recording
+            forceStopRecording();
         } else {
+            // Make sure any previous instance is fully cleaned up
+            if (recognitionRef.current) {
+                try {
+                    recognitionRef.current.abort();
+                } catch (e) {
+                    // Ignore
+                }
+                recognitionRef.current = null;
+            }
+
+            // Create a fresh recognition instance
+            const recognition = createRecognitionInstance();
+            if (!recognition) return;
+
             try {
-                recognitionRef.current.start();
-                setIsListening(true);
+                recognitionRef.current = recognition;
+                recognition.start();
+                // Note: setIsListening(true) is now handled in onstart
             } catch (error) {
                 console.error('Speech recognition error:', error);
                 setIsListening(false);
+                recognitionRef.current = null;
             }
         }
-    }, [isListening]);
+    }, [isListening, createRecognitionInstance, forceStopRecording]);
 
     const [isLoading, setIsLoading] = useState(false);
 
