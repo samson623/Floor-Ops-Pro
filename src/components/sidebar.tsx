@@ -58,7 +58,7 @@ function SidebarContent() {
         {
             title: 'Main',
             items: [
-                { href: '/', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
+                { href: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-5 h-5" /> },
                 { href: '/projects', label: 'Projects', icon: <FolderKanban className="w-5 h-5" />, badge: data.projects.length },
                 { href: '/assignments', label: 'My Assignments', icon: <Users className="w-5 h-5" /> },
                 { href: '/punch', label: 'Punch List', icon: <FileText className="w-5 h-5" />, badge: data.projects.reduce((acc, p) => acc + p.punchList.filter(i => !i.completed).length, 0) || undefined },
@@ -145,7 +145,7 @@ function SidebarContent() {
                         <div className="space-y-1">
                             {section.items.map((item) => {
                                 const isActive = pathname === item.href ||
-                                    (item.href !== '/' && pathname.startsWith(item.href));
+                                    (item.href !== '/dashboard' && pathname.startsWith(item.href));
 
                                 return (
                                     <Link

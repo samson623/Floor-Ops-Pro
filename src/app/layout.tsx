@@ -28,18 +28,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider>
-          <DataProvider>
-            <PermissionProvider>
-              <div className="flex min-h-screen bg-background">
-                <Sidebar />
-                <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                  {children}
-                </main>
-              </div>
-              <AIPanel />
-              <Toaster richColors position="bottom-right" />
-            </PermissionProvider>
-          </DataProvider>
+          {children}
+          <Toaster richColors position="bottom-right" />
         </ThemeProvider>
       </body>
     </html>

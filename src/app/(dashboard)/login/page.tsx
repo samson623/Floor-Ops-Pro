@@ -96,7 +96,7 @@ export default function LoginPage() {
 
             // Brief delay for visual feedback
             await new Promise(resolve => setTimeout(resolve, 400));
-            router.push('/');
+            router.push('/dashboard');
         }
     };
 

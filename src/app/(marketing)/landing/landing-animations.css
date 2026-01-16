@@ -1,0 +1,554 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   FLOOR OPS PRO - PREMIUM LANDING PAGE ANIMATIONS
+   100x Transformation - World-Class SaaS Experience
+═══════════════════════════════════════════════════════════════════════════ */
+
+/* ─────────────────────────────────────────────────────────────────────────
+   GRADIENT MESH BACKGROUND
+   Creates a living, breathing background that responds to user presence
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes gradient-mesh-1 {
+
+    0%,
+    100% {
+        transform: translate(0%, 0%) scale(1);
+        opacity: 0.4;
+    }
+
+    25% {
+        transform: translate(10%, 15%) scale(1.1);
+        opacity: 0.5;
+    }
+
+    50% {
+        transform: translate(-5%, 10%) scale(0.95);
+        opacity: 0.35;
+    }
+
+    75% {
+        transform: translate(5%, -10%) scale(1.05);
+        opacity: 0.45;
+    }
+}
+
+@keyframes gradient-mesh-2 {
+
+    0%,
+    100% {
+        transform: translate(0%, 0%) scale(1);
+        opacity: 0.3;
+    }
+
+    33% {
+        transform: translate(-15%, 10%) scale(1.15);
+        opacity: 0.4;
+    }
+
+    66% {
+        transform: translate(10%, -15%) scale(0.9);
+        opacity: 0.25;
+    }
+}
+
+@keyframes gradient-mesh-3 {
+
+    0%,
+    100% {
+        transform: translate(0%, 0%) scale(1) rotate(0deg);
+        opacity: 0.25;
+    }
+
+    50% {
+        transform: translate(15%, 20%) scale(1.2) rotate(180deg);
+        opacity: 0.35;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   GLOW & SHIMMER EFFECTS
+   Premium visual accents for a high-end feel
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+@keyframes glow-pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 20px rgba(139, 92, 246, 0.3),
+            0 0 40px rgba(139, 92, 246, 0.15),
+            0 0 60px rgba(139, 92, 246, 0.05);
+    }
+
+    50% {
+        box-shadow: 0 0 30px rgba(139, 92, 246, 0.5),
+            0 0 60px rgba(139, 92, 246, 0.25),
+            0 0 90px rgba(139, 92, 246, 0.1);
+    }
+}
+
+@keyframes border-glow {
+
+    0%,
+    100% {
+        border-color: rgba(139, 92, 246, 0.3);
+        box-shadow: inset 0 0 20px rgba(139, 92, 246, 0.1);
+    }
+
+    50% {
+        border-color: rgba(139, 92, 246, 0.6);
+        box-shadow: inset 0 0 30px rgba(139, 92, 246, 0.2);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   FLOATING & LEVITATION
+   Creates depth and dimension
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(-20px);
+    }
+}
+
+@keyframes float-slow {
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    50% {
+        transform: translateY(-15px) rotate(3deg);
+    }
+}
+
+@keyframes float-delayed {
+
+    0%,
+    100% {
+        transform: translateY(0px) translateX(0px);
+    }
+
+    25% {
+        transform: translateY(-10px) translateX(5px);
+    }
+
+    75% {
+        transform: translateY(-5px) translateX(-5px);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   TEXT ANIMATIONS
+   Premium text reveal effects
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes text-gradient-flow {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+@keyframes text-reveal-up {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+        filter: blur(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+@keyframes text-reveal-scale {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+        filter: blur(5px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+        filter: blur(0);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PARTICLE EFFECTS
+   Ambient motion particles
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes particle-rise {
+    0% {
+        transform: translateY(100vh) translateX(0);
+        opacity: 0;
+    }
+
+    10% {
+        opacity: 1;
+    }
+
+    90% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateY(-100vh) translateX(100px);
+        opacity: 0;
+    }
+}
+
+@keyframes particle-drift {
+
+    0%,
+    100% {
+        transform: translateX(0) translateY(0);
+    }
+
+    25% {
+        transform: translateX(10px) translateY(-15px);
+    }
+
+    50% {
+        transform: translateX(-5px) translateY(-25px);
+    }
+
+    75% {
+        transform: translateX(15px) translateY(-10px);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   3D CARD EFFECTS
+   Interactive tilt and depth
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes card-entrance {
+    from {
+        opacity: 0;
+        transform: perspective(1000px) rotateX(10deg) translateY(50px);
+    }
+
+    to {
+        opacity: 1;
+        transform: perspective(1000px) rotateX(0) translateY(0);
+    }
+}
+
+@keyframes card-hover-glow {
+
+    0%,
+    100% {
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3),
+            0 0 0 1px rgba(139, 92, 246, 0.1);
+    }
+
+    50% {
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4),
+            0 0 0 1px rgba(139, 92, 246, 0.3),
+            0 0 40px rgba(139, 92, 246, 0.1);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   BUTTON EFFECTS
+   Premium interactive feedback
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes button-shine {
+    0% {
+        background-position: -200% center;
+    }
+
+    100% {
+        background-position: 200% center;
+    }
+}
+
+@keyframes button-pulse {
+
+    0%,
+    100% {
+        transform: scale(1);
+        box-shadow: 0 4px 20px rgba(139, 92, 246, 0.4);
+    }
+
+    50% {
+        transform: scale(1.02);
+        box-shadow: 0 8px 30px rgba(139, 92, 246, 0.6);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   COUNTER ANIMATIONS
+   For stats and metrics
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes count-pop {
+    0% {
+        transform: scale(1);
+    }
+
+    50% {
+        transform: scale(1.1);
+    }
+
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   LOGO CAROUSEL
+   Infinite smooth scroll for trust badges
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes scroll-infinite {
+    0% {
+        transform: translateX(0);
+    }
+
+    100% {
+        transform: translateX(-50%);
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   CHAT/AI ANIMATIONS
+   For interactive demo sections
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes typing-dots {
+
+    0%,
+    60%,
+    100% {
+        transform: translateY(0);
+    }
+
+    30% {
+        transform: translateY(-5px);
+    }
+}
+
+@keyframes message-appear {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes voice-wave {
+
+    0%,
+    100% {
+        height: 10%;
+    }
+
+    50% {
+        height: 100%;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SCROLL INDICATORS
+   Visual cues for scrolling
+───────────────────────────────────────────────────────────────────────── */
+
+@keyframes scroll-bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(10px);
+    }
+}
+
+@keyframes scroll-fade {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   UTILITY CLASSES
+───────────────────────────────────────────────────────────────────────── */
+
+.animate-gradient-mesh-1 {
+    animation: gradient-mesh-1 15s ease-in-out infinite;
+}
+
+.animate-gradient-mesh-2 {
+    animation: gradient-mesh-2 20s ease-in-out infinite;
+}
+
+.animate-gradient-mesh-3 {
+    animation: gradient-mesh-3 25s ease-in-out infinite;
+}
+
+.animate-shimmer {
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.1) 50%,
+            transparent 100%);
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+}
+
+.animate-glow-pulse {
+    animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.animate-float {
+    animation: float 6s ease-in-out infinite;
+}
+
+.animate-float-slow {
+    animation: float-slow 8s ease-in-out infinite;
+}
+
+.animate-float-delayed {
+    animation: float-delayed 7s ease-in-out infinite;
+}
+
+.animate-text-gradient {
+    background-size: 200% auto;
+    animation: text-gradient-flow 4s linear infinite;
+}
+
+.animate-scroll-infinite {
+    animation: scroll-infinite 30s linear infinite;
+}
+
+.animate-button-pulse {
+    animation: button-pulse 2s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   ACCESSIBILITY - REDUCED MOTION
+   Respects user preferences
+───────────────────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   PERFORMANCE OPTIMIZATIONS
+   GPU-accelerated only
+───────────────────────────────────────────────────────────────────────── */
+
+.gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+}
+
+/* Smooth scrolling for the entire page */
+html {
+    scroll-behavior: smooth;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   NOISE TEXTURE OVERLAY
+   Adds subtle grain for premium feel
+───────────────────────────────────────────────────────────────────────── */
+
+.noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   GLASSMORPHISM EFFECTS
+───────────────────────────────────────────────────────────────────────── */
+
+.glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.glass-dark {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   GRADIENT TEXT HELPER
+───────────────────────────────────────────────────────────────────────── */
+
+.gradient-text {
+    background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 50%, #10b981 100%);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.gradient-text-animated {
+    background: linear-gradient(135deg, #8b5cf6 0%, #06b6d4 25%, #10b981 50%, #06b6d4 75%, #8b5cf6 100%);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: text-gradient-flow 6s ease infinite;
+}

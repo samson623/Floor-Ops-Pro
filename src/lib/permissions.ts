@@ -773,5 +773,27 @@ export const DEFAULT_USERS: User[] = [
         assignedCrewIds: [],
         active: true,
         createdAt: '2024-02-20T00:00:00Z'
+    },
+    {
+        id: 10,
+        name: 'Carlos Ramirez',
+        email: 'carlos@floorops.com',
+        phone: '(555) 100-0010',
+        role: 'installer',
+        assignedProjectIds: [2, 3],
+        assignedCrewIds: ['crew-b'],
+        active: true,
+        createdAt: '2024-03-05T00:00:00Z'
+    },
+    {
+        id: 11,
+        name: 'Ana Gonzalez',
+        email: 'ana@floorops.com',
+        phone: '(555) 100-0011',
+        role: 'foreman',
+        assignedProjectIds: [3],
+        assignedCrewIds: ['crew-b'],
+        active: true,
+        createdAt: '2024-03-10T00:00:00Z'
     }
 ];
