@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
@@ -8,7 +8,7 @@ import {
     CheckCircle, ArrowRight, Sparkles, BarChart3, Calendar, Users,
     Zap, Shield, Clock, Building2, Hammer, ClipboardCheck,
     DollarSign, Play, MessageSquare, PhoneCall, Mail, ChevronDown,
-    Bot, Cloud, Smartphone, RefreshCw, Lock, Layers, Rocket
+    Bot, Cloud, Smartphone, RefreshCw, Lock, Layers, Rocket, Loader2
 } from 'lucide-react';
 import './landing-animations.css';
 
@@ -328,7 +328,7 @@ function PlatformBadges() {
 // MAIN LANDING PAGE
 // ═══════════════════════════════════════════════════════════════════════════
 
-export default function LandingPage() {
+function LandingPageContent() {
     const [isScrolled, setIsScrolled] = useState(false);
     const searchParams = useSearchParams();
     const clientName = searchParams.get('client');
@@ -612,5 +612,33 @@ export default function LandingPage() {
                 </div>
             </footer>
         </div>
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PAGE WRAPPER WITH SUSPENSE
+// ═══════════════════════════════════════════════════════════════════════════
+
+function LandingPageFallback() {
+    return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-cyan-500 flex items-center justify-center animate-pulse">
+                    <Hammer className="w-8 h-8 text-white" />
+                </div>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Loading...</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default function LandingPage() {
+    return (
+        <Suspense fallback={<LandingPageFallback />}>
+            <LandingPageContent />
+        </Suspense>
     );
 }
