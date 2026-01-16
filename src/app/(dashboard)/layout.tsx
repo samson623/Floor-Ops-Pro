@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { DataProvider } from "@/components/data-provider";
 import { PermissionProvider } from "@/components/permission-context";
+import { AuthGuard } from "@/components/auth-guard";
 import { Sidebar } from "@/components/sidebar";
 import { AIPanel } from "@/components/ai-panel";
 
@@ -17,14 +18,17 @@ export default function DashboardLayout({
     return (
         <DataProvider>
             <PermissionProvider>
-                <div className="flex min-h-screen bg-background">
-                    {!isLoginPage && <Sidebar />}
-                    <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                        {children}
-                    </main>
-                </div>
-                {!isLoginPage && <AIPanel />}
+                <AuthGuard>
+                    <div className="flex min-h-screen bg-background">
+                        {!isLoginPage && <Sidebar />}
+                        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                            {children}
+                        </main>
+                    </div>
+                    {!isLoginPage && <AIPanel />}
+                </AuthGuard>
             </PermissionProvider>
         </DataProvider>
     );
 }
+

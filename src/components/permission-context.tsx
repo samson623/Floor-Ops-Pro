@@ -37,6 +37,7 @@ interface PermissionContextType {
 
     // User operations
     switchUser: (userId: number) => void;
+    signOut: () => void;
     getAllUsers: () => User[];
     getUserById: (id: number) => User | undefined;
     updateUser: (id: number, updates: Partial<User>) => void;
@@ -44,6 +45,9 @@ interface PermissionContextType {
 
     // Role info
     getCurrentRoleInfo: () => RoleInfo | null;
+
+    // Auth state
+    isLoggedIn: boolean;
 }
 
 const PermissionContext = createContext<PermissionContextType | undefined>(undefined);
@@ -173,9 +177,19 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         return getRoleInfo(currentUser.role);
     }, [currentUser]);
 
+    const signOut = useCallback(() => {
+        setCurrentUserId(null);
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem(STORAGE_KEY);
+        }
+    }, []);
+
+    const isLoggedIn = isLoaded && currentUserId !== null;
+
     const value: PermissionContextType = {
         currentUser,
         isLoaded,
+        isLoggedIn,
         can: checkPermission,
         canAny: checkAnyPermission,
         canAll: checkAllPermissions,
@@ -183,6 +197,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         canAccessProject,
         getAccessibleProjectIds,
         switchUser,
+        signOut,
         getAllUsers,
         getUserById,
         updateUser,

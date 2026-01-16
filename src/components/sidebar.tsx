@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useData } from './data-provider';
@@ -25,7 +25,8 @@ import {
     Truck,
     Users,
     Brain,
-    Warehouse
+    Warehouse,
+    LogOut
 } from 'lucide-react';
 
 interface NavItem {
@@ -185,7 +186,7 @@ function SidebarContent() {
             </nav>
 
             {/* User Section */}
-            <div className="p-4 border-t border-sidebar-border">
+            <div className="p-4 border-t border-sidebar-border space-y-3">
                 <div className="flex items-center gap-3">
                     <div
                         className="flex items-center justify-center w-10 h-10 rounded-full text-white text-sm font-bold"
@@ -205,8 +206,31 @@ function SidebarContent() {
                         </div>
                     </div>
                 </div>
+                <SignOutButton />
             </div>
         </div>
+    );
+}
+
+function SignOutButton() {
+    const { signOut } = usePermissions();
+    const router = useRouter();
+
+    const handleSignOut = () => {
+        signOut();
+        router.push('/landing');
+    };
+
+    return (
+        <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
+            onClick={handleSignOut}
+        >
+            <LogOut className="w-4 h-4 mr-2" />
+            Sign Out
+        </Button>
     );
 }
 
