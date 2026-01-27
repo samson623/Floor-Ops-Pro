@@ -14,7 +14,7 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
-    const isLoginPage = pathname === '/login';
+    const isLoginPage = pathname?.startsWith('/login');
 
     return (
         <DataProvider>

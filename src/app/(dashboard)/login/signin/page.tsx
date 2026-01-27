@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePermissions } from '@/components/permission-context';
-import { getRoleInfo } from '@/lib/permissions';
+import { getRoleInfo, UserRole, can } from '@/lib/permissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,8 +12,29 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import {
     Home, ArrowLeft, ArrowRight, Loader2,
-    Lock, Mail, KeyRound
+    Lock, Mail, KeyRound, Shield
 } from 'lucide-react';
+
+// Helper to get a summary of what a role can access
+interface AccessItem {
+    label: string;
+    allowed: boolean;
+}
+
+function getRoleAccessSummary(role: UserRole): AccessItem[] {
+    return [
+        { label: 'View All Projects', allowed: can(role, 'VIEW_ALL_PROJECTS') },
+        { label: 'Financial Data', allowed: can(role, 'VIEW_PRICING') || can(role, 'VIEW_BUDGET') },
+        { label: 'Create/Edit Projects', allowed: can(role, 'CREATE_PROJECT') || can(role, 'EDIT_PROJECT') },
+        { label: 'Manage Punch List', allowed: can(role, 'CREATE_PUNCH_ITEM') || can(role, 'COMPLETE_PUNCH_ITEM') },
+        { label: 'Daily Logs', allowed: can(role, 'VIEW_DAILY_LOGS') },
+        { label: 'Schedule & Crews', allowed: can(role, 'VIEW_SCHEDULE') },
+        { label: 'Invoicing', allowed: can(role, 'VIEW_CLIENT_INVOICES') || can(role, 'CREATE_CLIENT_INVOICE') },
+        { label: 'Warehouse Access', allowed: can(role, 'VIEW_INVENTORY') },
+        { label: 'Team Management', allowed: can(role, 'MANAGE_USERS') },
+        { label: 'AI Assistant', allowed: can(role, 'USE_AI_ASSISTANT') },
+    ];
+}
 
 function SignInForm() {
     const router = useRouter();
@@ -139,6 +160,30 @@ function SignInForm() {
                                         {roleInfo?.label}
                                     </Badge>
                                 </div>
+                            </div>
+
+                            {/* Role Access Information */}
+                            <div className="p-4 rounded-xl bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-slate-700/50">
+                                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                    <Shield className="w-3.5 h-3.5" />
+                                    Role Access
+                                </p>
+                                <div className="space-y-2">
+                                    {getRoleAccessSummary(selectedUser.role).map((access, i) => (
+                                        <div key={i} className="flex items-center gap-2 text-sm">
+                                            <div
+                                                className="w-1.5 h-1.5 rounded-full"
+                                                style={{ backgroundColor: access.allowed ? '#22c55e' : '#ef4444' }}
+                                            />
+                                            <span className={access.allowed ? 'text-slate-300' : 'text-slate-500'}>
+                                                {access.label}
+                                            </span>
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-[10px] text-slate-500 mt-3 pt-3 border-t border-slate-700/50">
+                                    {roleInfo?.description}
+                                </p>
                             </div>
 
                             {/* Credentials Form */}
