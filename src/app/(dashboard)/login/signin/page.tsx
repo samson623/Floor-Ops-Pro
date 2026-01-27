@@ -39,7 +39,7 @@ function getRoleAccessSummary(role: UserRole): AccessItem[] {
 function SignInForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { getAllUsers, switchUser, isLoaded } = usePermissions();
+    const { getAllUsers, signIn, isLoaded } = usePermissions();
 
     const userId = searchParams.get('userId');
     const users = getAllUsers();
@@ -71,7 +71,7 @@ function SignInForm() {
         if (email.toLowerCase() === 'test' && password === '123') {
             setIsLoggingIn(true);
             if (selectedUser) {
-                switchUser(selectedUser.id);
+                signIn(selectedUser.id);
             }
             await new Promise(resolve => setTimeout(resolve, 600));
             router.push('/dashboard');

@@ -38,6 +38,7 @@ interface PermissionContextType {
 
     // User operations
     switchUser: (userId: number) => void;
+    signIn: (userId: number) => void;
     signInAsDemo: () => void;
     signOut: () => void;
     getAllUsers: () => User[];
@@ -175,6 +176,24 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         }
     }, [users]);
 
+    const signIn = useCallback((userId: number) => {
+        const user = users.find(u => u.id === userId);
+        if (user && user.active) {
+            setCurrentUserId(userId);
+            setIsDemoSession(false);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(STORAGE_KEY, userId.toString());
+                localStorage.removeItem(DEMO_SESSION_KEY);
+            }
+            // Update last login
+            setUsers(prev => prev.map(u =>
+                u.id === userId
+                    ? { ...u, lastLoginAt: new Date().toISOString() }
+                    : u
+            ));
+        }
+    }, [users]);
+
     const getAllUsers = useCallback(() => users, [users]);
 
     const getUserById = useCallback((id: number) => users.find(u => u.id === id), [users]);
@@ -238,6 +257,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         canAccessProject,
         getAccessibleProjectIds,
         switchUser,
+        signIn,
         signInAsDemo,
         signOut,
         getAllUsers,
