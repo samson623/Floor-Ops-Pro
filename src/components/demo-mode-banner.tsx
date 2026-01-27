@@ -81,7 +81,7 @@ export function DemoModeBanner() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     transition={{ type: "spring", stiffness: 400, damping: 25 }}
-                    className="fixed bottom-6 left-6 z-50 flex items-center gap-2 px-4 py-3 rounded-full 
+                    className="fixed bottom-6 left-6 z-[200] flex items-center gap-2 px-4 py-3 rounded-full 
                                bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg shadow-violet-500/30
                                hover:shadow-xl hover:shadow-violet-500/40 border border-white/10"
                 >
