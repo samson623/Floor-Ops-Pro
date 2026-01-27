@@ -6,6 +6,7 @@ import { PermissionProvider } from "@/components/permission-context";
 import { AuthGuard } from "@/components/auth-guard";
 import { Sidebar } from "@/components/sidebar";
 import { AIPanel } from "@/components/ai-panel";
+import { DemoModeBanner } from "@/components/demo-mode-banner";
 
 export default function DashboardLayout({
     children,
@@ -19,6 +20,7 @@ export default function DashboardLayout({
         <DataProvider>
             <PermissionProvider>
                 <AuthGuard>
+                    <DemoModeBanner />
                     <div className="flex min-h-screen bg-background">
                         {!isLoginPage && <Sidebar />}
                         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">

@@ -109,12 +109,22 @@ function SidebarContent() {
     ];
 
     // Filter sections based on permissions
+    // IMPORTANT: Hide most sections until a role is selected
     const filteredSections = navSections.filter(section => {
+        // If no user is loaded yet, only show minimal navigation
+        if (!isLoaded || !currentUser) {
+            // Only show Dashboard and Messages when not logged in
+            return section.title === 'Main' || section.title === 'Communication';
+        }
         if (!section.requiredPermissions) return true;
         return canAny(section.requiredPermissions);
     }).map(section => ({
         ...section,
         items: section.items.filter(item => {
+            // If no user, hide items with required permissions
+            if (!isLoaded || !currentUser) {
+                return !item.requiredPermission;
+            }
             if (!item.requiredPermission) return true;
             return can(item.requiredPermission);
         })

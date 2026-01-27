@@ -389,7 +389,7 @@ function LandingPageContent() {
                         <div className="flex items-center gap-4">
                             <Link href="/login" className="hidden sm:block text-muted-foreground hover:text-foreground transition-colors">Sign In</Link>
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Link href="/login" className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all">
+                                <Link href="/demo" className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 transition-all">
                                     Try Demo
                                 </Link>
                             </motion.div>
@@ -431,7 +431,7 @@ function LandingPageContent() {
 
                         <motion.div className="flex flex-col sm:flex-row gap-4 justify-center mb-16" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
                             <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                <Link href="/login" className="px-10 py-5 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-cyan-500 text-white font-semibold text-lg shadow-2xl shadow-primary/40 hover:shadow-primary/60 transition-all flex items-center justify-center gap-3">
+                                <Link href="/demo" className="px-10 py-5 rounded-2xl bg-gradient-to-r from-violet-500 via-purple-500 to-cyan-500 text-white font-semibold text-lg shadow-2xl shadow-primary/40 hover:shadow-primary/60 transition-all flex items-center justify-center gap-3">
                                     Explore the Platform<ArrowRight className="w-5 h-5" />
                                 </Link>
                             </motion.div>
@@ -558,7 +558,7 @@ function LandingPageContent() {
                             <motion.p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>Experience the platform yourself. No credit card required, no commitment.</motion.p>
                             <motion.div className="flex flex-col sm:flex-row gap-4 justify-center" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}>
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                                    <Link href="/login" className="px-10 py-5 rounded-2xl bg-white text-violet-600 font-bold text-lg shadow-2xl hover:shadow-white/30 transition-all flex items-center justify-center gap-3">
+                                    <Link href="/demo" className="px-10 py-5 rounded-2xl bg-white text-violet-600 font-bold text-lg shadow-2xl hover:shadow-white/30 transition-all flex items-center justify-center gap-3">
                                         Try the Demo<ArrowRight className="w-5 h-5" />
                                     </Link>
                                 </motion.div>

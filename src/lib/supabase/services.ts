@@ -31,6 +31,15 @@ import type {
     InsertTables,
     UpdateTables,
 } from './types';
+import {
+    DEMO_PROJECTS,
+    DEMO_PUNCH_ITEMS,
+    DEMO_DAILY_LOGS,
+    DEMO_INVENTORY,
+    DEMO_PURCHASE_ORDERS,
+    DEMO_MESSAGES,
+    DEMO_NOTIFICATIONS
+} from '../demo-data';
 import type { RealtimeChannel, RealtimePostgresChangesPayload, SupabaseClient } from '@supabase/supabase-js';
 
 // Type helper for flexible database access (handles tables not in Database type)
@@ -173,6 +182,57 @@ export interface ServiceResult<T> {
     data: T | null;
     error: Error | null;
     isOffline?: boolean;
+    isDemo?: boolean;
+}
+
+// ============================================================
+// DEMO MODE CHECK HELPER
+// ============================================================
+
+const DEMO_STORAGE_KEY = 'floorops_current_user_id';
+const DEMO_USER_ID = 99;
+
+/**
+ * Check if the current user is in demo mode.
+ * Demo users cannot perform create, update, or delete operations.
+ */
+function isDemoMode(): boolean {
+    if (typeof localStorage === 'undefined') return false;
+    try {
+        const userId = localStorage.getItem(DEMO_STORAGE_KEY);
+        return userId === DEMO_USER_ID.toString();
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Helper to return demo mode error for mutation operations.
+ */
+function getDemoModeError<T>(): ServiceResult<T> {
+    return {
+        data: null,
+        error: new Error('Demo mode: Changes are not saved. Sign up to make changes!'),
+        isDemo: true
+    };
+}
+
+/**
+ * Handle demo mode errors with toast notification.
+ * Returns true if the result was a demo mode error.
+ */
+export function handleDemoModeError<T>(result: ServiceResult<T>): boolean {
+    if (result.isDemo && result.error) {
+        // Dynamic import to avoid SSR issues
+        import('sonner').then(({ toast }) => {
+            toast.info('Demo Mode', {
+                description: 'Changes are not saved. Sign up to make real changes!',
+                duration: 4000,
+            });
+        });
+        return true;
+    }
+    return false;
 }
 
 // ============================================================
@@ -181,6 +241,8 @@ export interface ServiceResult<T> {
 
 export const ProjectsService = {
     async getAll(): Promise<ServiceResult<Project[]>> {
+        if (isDemoMode()) return { data: DEMO_PROJECTS, error: null };
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -196,6 +258,11 @@ export const ProjectsService = {
     },
 
     async getById(id: number): Promise<ServiceResult<Project>> {
+        if (isDemoMode()) {
+            const project = DEMO_PROJECTS.find(p => p.id === id);
+            return { data: project || null, error: project ? null : new Error('Project not found') };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -212,6 +279,23 @@ export const ProjectsService = {
     },
 
     async getWithFinancials(id: number): Promise<ServiceResult<Project & { financials: Database['public']['Tables']['project_financials']['Row'] | null }>> {
+        if (isDemoMode()) {
+            const project = DEMO_PROJECTS.find(p => p.id === id);
+            if (!project) return { data: null, error: new Error('Project not found') };
+
+            // Mock financials
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const financials: any = {
+                project_id: id,
+                contract: project.value,
+                costs: project.value * 0.7,
+                margin: project.value * 0.3,
+                updated_at: new Date().toISOString()
+            };
+
+            return { data: { ...project, financials }, error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -231,6 +315,8 @@ export const ProjectsService = {
     },
 
     async create(project: InsertTables<'projects'>): Promise<ServiceResult<Project>> {
+        if (isDemoMode()) return getDemoModeError<Project>();
+
         const client = getClient();
         const companyId = await getCurrentCompanyId();
         const projectWithCompany = { ...project, company_id: companyId };
@@ -250,6 +336,8 @@ export const ProjectsService = {
     },
 
     async update(id: number, updates: UpdateTables<'projects'>): Promise<ServiceResult<Project>> {
+        if (isDemoMode()) return getDemoModeError<Project>();
+
         const client = getClient();
         if (!client) {
             syncQueue.add({ table: 'projects', operation: 'UPDATE', data: { id, ...updates } });
@@ -267,6 +355,8 @@ export const ProjectsService = {
     },
 
     async softDelete(id: number): Promise<ServiceResult<null>> {
+        if (isDemoMode()) return getDemoModeError<null>();
+
         const client = getClient();
         if (!client) {
             syncQueue.add({ table: 'projects', operation: 'UPDATE', data: { id, deleted_at: new Date().toISOString() } });
@@ -282,6 +372,16 @@ export const ProjectsService = {
     },
 
     async search(query: string): Promise<ServiceResult<Project[]>> {
+        if (isDemoMode()) {
+            const lowerQuery = query.toLowerCase();
+            const filtered = DEMO_PROJECTS.filter(p =>
+                p.name.toLowerCase().includes(lowerQuery) ||
+                p.client.toLowerCase().includes(lowerQuery) ||
+                p.key.toLowerCase().includes(lowerQuery)
+            );
+            return { data: filtered, error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -305,6 +405,10 @@ export const ProjectsService = {
 
 export const PunchItemsService = {
     async getByProject(projectId: number): Promise<ServiceResult<PunchItem[]>> {
+        if (isDemoMode()) {
+            return { data: DEMO_PUNCH_ITEMS.filter(i => i.project_id === projectId), error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -321,6 +425,10 @@ export const PunchItemsService = {
     },
 
     async getOpen(): Promise<ServiceResult<PunchItem[]>> {
+        if (isDemoMode()) {
+            return { data: DEMO_PUNCH_ITEMS.filter(i => i.status === 'open' || i.status === 'in-progress'), error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -334,6 +442,11 @@ export const PunchItemsService = {
     },
 
     async getOverdue(): Promise<ServiceResult<PunchItem[]>> {
+        if (isDemoMode()) {
+            const now = new Date();
+            return { data: DEMO_PUNCH_ITEMS.filter(i => new Date(i.due) < now && i.status !== 'completed'), error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -347,6 +460,8 @@ export const PunchItemsService = {
     },
 
     async create(punchItem: InsertTables<'punch_items'>): Promise<ServiceResult<PunchItem>> {
+        if (isDemoMode()) return getDemoModeError<PunchItem>();
+
         const client = getClient();
         // Punch items inherit company_id from their project, so we don't add it directly
         // RLS policies use can_access_project() which checks company through project
@@ -366,6 +481,8 @@ export const PunchItemsService = {
     },
 
     async update(id: number, updates: UpdateTables<'punch_items'>): Promise<ServiceResult<PunchItem>> {
+        if (isDemoMode()) return getDemoModeError<PunchItem>();
+
         const client = getClient();
         if (!client) {
             syncQueue.add({ table: 'punch_items', operation: 'UPDATE', data: { id, ...updates } });
@@ -406,6 +523,10 @@ export const PunchItemsService = {
 
 export const DailyLogsService = {
     async getByProject(projectId: number): Promise<ServiceResult<DailyLog[]>> {
+        if (isDemoMode()) {
+            return { data: DEMO_DAILY_LOGS.filter(l => l.project_id === projectId), error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -440,6 +561,8 @@ export const DailyLogsService = {
     },
 
     async create(dailyLog: InsertTables<'daily_logs'>): Promise<ServiceResult<DailyLog>> {
+        if (isDemoMode()) return getDemoModeError<DailyLog>();
+
         const client = getClient();
         // Daily logs inherit company_id from their project, so we don't add it directly
         // RLS policies use can_access_project() which checks company through project
@@ -459,6 +582,8 @@ export const DailyLogsService = {
     },
 
     async update(id: number, updates: UpdateTables<'daily_logs'>): Promise<ServiceResult<DailyLog>> {
+        if (isDemoMode()) return getDemoModeError<DailyLog>();
+
         const client = getClient();
         if (!client) {
             syncQueue.add({ table: 'daily_logs', operation: 'UPDATE', data: { id, ...updates } });
@@ -489,6 +614,10 @@ export const DailyLogsService = {
 
 export const InventoryService = {
     async getAll(): Promise<ServiceResult<WarehouseInventory[]>> {
+        if (isDemoMode()) {
+            return { data: DEMO_INVENTORY, error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -504,6 +633,10 @@ export const InventoryService = {
     },
 
     async getLowStock(): Promise<ServiceResult<WarehouseInventory[]>> {
+        if (isDemoMode()) {
+            return { data: DEMO_INVENTORY.filter(i => (i.quantity_available || 0) < (i.reorder_point || 0)), error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -517,6 +650,10 @@ export const InventoryService = {
     },
 
     async getByCategory(category: string): Promise<ServiceResult<WarehouseInventory[]>> {
+        if (isDemoMode()) {
+            return { data: DEMO_INVENTORY.filter(i => i.category === category), error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -533,6 +670,8 @@ export const InventoryService = {
     },
 
     async adjustQuantity(id: string, adjustment: number, reason: string): Promise<ServiceResult<WarehouseInventory>> {
+        if (isDemoMode()) return getDemoModeError<WarehouseInventory>();
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -584,6 +723,10 @@ export const InventoryService = {
 
 export const PurchaseOrdersService = {
     async getAll(): Promise<ServiceResult<PurchaseOrder[]>> {
+        if (isDemoMode()) {
+            return { data: DEMO_PURCHASE_ORDERS, error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -599,6 +742,10 @@ export const PurchaseOrdersService = {
     },
 
     async getByProject(projectId: number): Promise<ServiceResult<PurchaseOrder[]>> {
+        if (isDemoMode()) {
+            return { data: DEMO_PURCHASE_ORDERS.filter(po => po.project_id === projectId), error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -615,6 +762,8 @@ export const PurchaseOrdersService = {
     },
 
     async create(po: InsertTables<'purchase_orders'>): Promise<ServiceResult<PurchaseOrder>> {
+        if (isDemoMode()) return getDemoModeError<PurchaseOrder>();
+
         const client = getClient();
         const companyId = await getCurrentCompanyId();
         const poWithCompany = { ...po, company_id: companyId };
@@ -634,6 +783,8 @@ export const PurchaseOrdersService = {
     },
 
     async updateStatus(id: string, status: PurchaseOrder['status']): Promise<ServiceResult<PurchaseOrder>> {
+        if (isDemoMode()) return getDemoModeError<PurchaseOrder>();
+
         const client = getClient();
         if (!client) {
             syncQueue.add({ table: 'purchase_orders', operation: 'UPDATE', data: { id, status } });
@@ -663,6 +814,13 @@ export const PurchaseOrdersService = {
 
 export const MessagesService = {
     async getByProject(projectId: number, limit = 50): Promise<ServiceResult<Message[]>> {
+        if (isDemoMode()) {
+            return {
+                data: DEMO_MESSAGES.filter(m => m.project_id === projectId).reverse(), // Reverse to match chat order
+                error: null
+            };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -679,6 +837,8 @@ export const MessagesService = {
     },
 
     async send(message: InsertTables<'messages'>): Promise<ServiceResult<Message>> {
+        if (isDemoMode()) return getDemoModeError<Message>();
+
         const client = getClient();
         if (!client) {
             syncQueue.add({ table: 'messages', operation: 'INSERT', data: message });
@@ -723,6 +883,10 @@ export const MessagesService = {
 
 export const NotificationsService = {
     async getForUser(userId: string): Promise<ServiceResult<Notification[]>> {
+        if (isDemoMode()) {
+            return { data: DEMO_NOTIFICATIONS, error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -739,6 +903,10 @@ export const NotificationsService = {
     },
 
     async getUnreadCount(userId: string): Promise<ServiceResult<number>> {
+        if (isDemoMode()) {
+            return { data: DEMO_NOTIFICATIONS.filter(n => !n.read).length, error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: 0, error: new Error('Supabase not configured'), isOffline: true };
@@ -815,6 +983,8 @@ export const StorageService = {
         file: File,
         options?: { phase?: string; caption?: string }
     ): Promise<ServiceResult<{ url: string; path: string }>> {
+        if (isDemoMode()) return getDemoModeError<{ url: string; path: string }>();
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -855,6 +1025,8 @@ export const StorageService = {
         punchItemId: number,
         file: File
     ): Promise<ServiceResult<{ url: string; path: string }>> {
+        if (isDemoMode()) return getDemoModeError<{ url: string; path: string }>();
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -885,6 +1057,8 @@ export const StorageService = {
         userId: string,
         file: File
     ): Promise<ServiceResult<{ url: string; path: string }>> {
+        if (isDemoMode()) return getDemoModeError<{ url: string; path: string }>();
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };

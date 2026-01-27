@@ -7,7 +7,7 @@
  * User roles in the flooring operations hierarchy.
  * Each role has distinct responsibilities and access levels.
  */
-export type UserRole = 'owner' | 'pm' | 'foreman' | 'installer' | 'office_admin' | 'sub' | 'client' | 'warehouse_manager' | 'warehouse_staff';
+export type UserRole = 'owner' | 'pm' | 'foreman' | 'installer' | 'office_admin' | 'sub' | 'client' | 'warehouse_manager' | 'warehouse_staff' | 'demo';
 
 export interface RoleInfo {
     role: UserRole;
@@ -71,6 +71,12 @@ export const ROLE_DEFINITIONS: Record<UserRole, Omit<RoleInfo, 'role'>> = {
         description: 'Project owner with view-only access to progress and photos',
         color: 'hsl(150, 10%, 40%)', // Grey-Green
         icon: '👀'
+    },
+    demo: {
+        label: 'Demo User',
+        description: 'Explore Floor Ops Pro with full visibility (read-only)',
+        color: 'hsl(280, 75%, 60%)', // Purple
+        icon: '🎭'
     }
 };
 
@@ -580,6 +586,69 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
         // Safety - view and report
         'VIEW_SAFETY_RECORDS', 'REPORT_SAFETY_INCIDENT'
+    ],
+
+    // ══════════════════════════════════════════════════════════════════
+    // DEMO ROLE - VIEW-ONLY ACCESS TO EVERYTHING
+    // ══════════════════════════════════════════════════════════════════
+
+    demo: [
+        // Financial Permissions (VIEW ONLY)
+        'VIEW_PRICING', 'VIEW_BUDGET', 'VIEW_MARGINS',
+
+        // Project Permissions (VIEW ONLY)
+        'VIEW_ALL_PROJECTS', 'VIEW_ASSIGNED_PROJECTS',
+
+        // Estimates & Sales (VIEW ONLY)
+        'VIEW_ESTIMATES',
+
+        // Punch List (VIEW ONLY)
+        'VIEW_PUNCH_LIST',
+
+        // Photos & Documentation (VIEW ONLY)
+        'VIEW_PHOTOS',
+
+        // Daily Logs (VIEW ONLY)
+        'VIEW_DAILY_LOGS',
+
+        // Change Orders (VIEW ONLY)
+        'VIEW_CHANGE_ORDERS',
+
+        // Schedule & Crew Management (VIEW ONLY)
+        'VIEW_SCHEDULE', 'VIEW_CREW_DETAILS',
+
+        // Materials & Inventory (VIEW ONLY)
+        'VIEW_MATERIALS',
+
+        // Invoicing (VIEW ONLY)
+        'VIEW_CLIENT_INVOICES', 'VIEW_SUB_INVOICES',
+
+        // Walkthroughs (VIEW ONLY)
+        'VIEW_WALKTHROUGHS',
+
+        // Team Management (VIEW ONLY)
+        'VIEW_TEAM',
+
+        // Communication (VIEW ONLY)
+        'VIEW_ALL_MESSAGES', 'VIEW_PROJECT_MESSAGES',
+
+        // AI & Intelligence (VIEW + USE)
+        'VIEW_INTELLIGENCE_CENTER', 'USE_AI_ASSISTANT',
+
+        // Safety & Compliance (VIEW ONLY)
+        'VIEW_SAFETY_RECORDS', 'VIEW_MOISTURE_TESTS', 'VIEW_SUBFLOOR_TESTS',
+        'VIEW_SITE_CONDITIONS', 'VIEW_COMPLIANCE_CHECKLISTS',
+
+        // System of Record (VIEW ONLY)
+        'VIEW_CONTRACT_SCOPE', 'VIEW_SCOPE_HISTORY',
+        'VIEW_SCHEDULE_DEPENDENCIES', 'VIEW_SCHEDULE_VARIANCE',
+        'VIEW_DELIVERY_TRACKING', 'VIEW_PHASE_PHOTOS',
+
+        // Warehouse (VIEW ONLY)
+        'VIEW_INVENTORY', 'VIEW_LOCATIONS', 'VIEW_RECEIVING',
+        'VIEW_TRANSFERS', 'VIEW_ALLOCATIONS', 'VIEW_LOTS',
+        'VIEW_CYCLE_COUNTS', 'VIEW_REORDER_ALERTS',
+        'VIEW_WAREHOUSE_REPORTS', 'VIEW_TRANSACTIONS'
     ]
 };
 
@@ -648,7 +717,7 @@ export function getRoleInfo(role: UserRole): RoleInfo {
  * Get all roles sorted by hierarchy level.
  */
 export function getAllRoles(): RoleInfo[] {
-    const order: UserRole[] = ['owner', 'pm', 'foreman', 'installer', 'office_admin', 'warehouse_manager', 'warehouse_staff', 'sub', 'client'];
+    const order: UserRole[] = ['owner', 'pm', 'foreman', 'installer', 'office_admin', 'warehouse_manager', 'warehouse_staff', 'sub', 'client', 'demo'];
     return order.map(role => getRoleInfo(role));
 }
 
@@ -795,5 +864,16 @@ export const DEFAULT_USERS: User[] = [
         assignedCrewIds: ['crew-b'],
         active: true,
         createdAt: '2024-03-10T00:00:00Z'
+    },
+    {
+        id: 99,
+        name: 'Demo User',
+        email: 'demo@floorops.com',
+        phone: '',
+        role: 'demo',
+        assignedProjectIds: [],
+        assignedCrewIds: [],
+        active: true,
+        createdAt: '2024-01-01T00:00:00Z'
     }
 ];

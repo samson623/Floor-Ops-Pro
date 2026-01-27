@@ -24,6 +24,7 @@ interface PermissionContextType {
     // Current user state
     currentUser: User | null;
     isLoaded: boolean;
+    isDemoMode: boolean;
 
     // Permission checks
     can: (permission: Permission) => boolean;
@@ -37,6 +38,7 @@ interface PermissionContextType {
 
     // User operations
     switchUser: (userId: number) => void;
+    signInAsDemo: () => void;
     signOut: () => void;
     getAllUsers: () => User[];
     getUserById: (id: number) => User | undefined;
@@ -54,6 +56,7 @@ const PermissionContext = createContext<PermissionContextType | undefined>(undef
 
 const STORAGE_KEY = 'floorops_current_user_id';
 const USERS_STORAGE_KEY = 'floorops_users';
+export const DEMO_USER_ID = 99;
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
     const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
@@ -69,7 +72,14 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
                 if (savedUsers) {
                     const parsed = JSON.parse(savedUsers);
                     if (Array.isArray(parsed) && parsed.length > 0) {
-                        setUsers(parsed);
+                        // Ensure demo user is always present (for users with old cached data)
+                        const demoUser = DEFAULT_USERS.find(u => u.id === DEMO_USER_ID);
+                        const hasDemoUser = parsed.some((u: User) => u.id === DEMO_USER_ID);
+                        if (demoUser && !hasDemoUser) {
+                            setUsers([...parsed, demoUser]);
+                        } else {
+                            setUsers(parsed);
+                        }
                     }
                 }
 
@@ -98,6 +108,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     }, [users, isLoaded]);
 
     const currentUser = users.find(u => u.id === currentUserId) || null;
+    const isDemoMode = currentUser?.role === 'demo';
 
     const checkPermission = useCallback((permission: Permission): boolean => {
         if (!currentUser) return false;
@@ -184,11 +195,25 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         }
     }, []);
 
+    const signInAsDemo = useCallback(() => {
+        setCurrentUserId(DEMO_USER_ID);
+        if (typeof window !== 'undefined') {
+            localStorage.setItem(STORAGE_KEY, DEMO_USER_ID.toString());
+        }
+        // Update last login for demo user
+        setUsers(prev => prev.map(u =>
+            u.id === DEMO_USER_ID
+                ? { ...u, lastLoginAt: new Date().toISOString() }
+                : u
+        ));
+    }, []);
+
     const isLoggedIn = isLoaded && currentUserId !== null;
 
     const value: PermissionContextType = {
         currentUser,
         isLoaded,
+        isDemoMode,
         isLoggedIn,
         can: checkPermission,
         canAny: checkAnyPermission,
@@ -197,6 +222,7 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
         canAccessProject,
         getAccessibleProjectIds,
         switchUser,
+        signInAsDemo,
         signOut,
         getAllUsers,
         getUserById,

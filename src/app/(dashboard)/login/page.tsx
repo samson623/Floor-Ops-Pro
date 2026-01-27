@@ -1,308 +1,239 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/components/permission-context';
 import { getRoleInfo, UserRole } from '@/lib/permissions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-    Home, Check, Shield, User, Users, Briefcase, HardHat, Eye,
-    Lock, Unlock, ArrowRight, Building2, Wrench, FileText,
-    DollarSign, Calendar, ClipboardList, Camera, MessageSquare
+    Home, Shield, Briefcase, HardHat, Eye,
+    Building2, Wrench, FileText, Loader2, Lock
 } from 'lucide-react';
 
-// Role capability descriptions for the demo
-const ROLE_CAPABILITIES: Record<UserRole, { description: string; highlights: string[]; icon: React.ReactNode }> = {
-    owner: {
-        description: 'Full system access with complete financial visibility and user management',
-        highlights: ['All financial data & margins', 'User management', 'All projects', 'System settings'],
-        icon: <Shield className="w-5 h-5" />
-    },
-    pm: {
-        description: 'Manage projects end-to-end with budget oversight and team coordination',
-        highlights: ['Project budgets', 'Schedule management', 'Change orders', 'Client communication'],
-        icon: <Briefcase className="w-5 h-5" />
-    },
-    foreman: {
-        description: 'Field leadership with crew management and quality oversight',
-        highlights: ['Crew assignments', 'Punch lists', 'Quality checklists', 'Photo documentation'],
-        icon: <HardHat className="w-5 h-5" />
-    },
-    installer: {
-        description: 'Field work execution with task completion and time tracking',
-        highlights: ['My assignments', 'Punch items', 'Daily logs', 'Photo uploads'],
-        icon: <Wrench className="w-5 h-5" />
-    },
-    office_admin: {
-        description: 'Administrative operations including invoicing and vendor management',
-        highlights: ['Invoices', 'Purchase orders', 'Vendor coordination', 'Scheduling'],
-        icon: <FileText className="w-5 h-5" />
-    },
-    warehouse_manager: {
-        description: 'Full warehouse control: receiving, transfers, inventory adjustments, locations',
-        highlights: ['Inventory management', 'Receiving', 'Stock transfers', 'Cycle counting'],
-        icon: <Briefcase className="w-5 h-5" />
-    },
-    warehouse_staff: {
-        description: 'Warehouse operations: receive, pick, stage, and transfer materials',
-        highlights: ['Receiving', 'Picking', 'Transfers', 'Job staging'],
-        icon: <Wrench className="w-5 h-5" />
-    },
-    client: {
-        description: 'Project visibility with approval workflows and communication',
-        highlights: ['Project status', 'Photo gallery', 'Approvals', 'Messages'],
-        icon: <Building2 className="w-5 h-5" />
-    },
-    sub: {
-        description: 'External contractor access to assigned tasks and documents',
-        highlights: ['Assigned projects', 'Schedule view', 'Communication', 'Safety reports'],
-        icon: <Briefcase className="w-5 h-5" />
-    }
-};
-
-const PERMISSION_ICONS: Record<string, React.ReactNode> = {
-    'Financial': <DollarSign className="w-4 h-4" />,
-    'Projects': <Briefcase className="w-4 h-4" />,
-    'Schedule': <Calendar className="w-4 h-4" />,
-    'Punch List': <ClipboardList className="w-4 h-4" />,
-    'Photos': <Camera className="w-4 h-4" />,
-    'Messages': <MessageSquare className="w-4 h-4" />,
-};
+// All available roles with descriptions
+const AVAILABLE_ROLES: { role: UserRole; label: string; description: string; icon: React.ReactNode }[] = [
+    { role: 'owner', label: 'Owner', description: 'Full system access with complete financial visibility and user management', icon: <Shield className="w-5 h-5" /> },
+    { role: 'pm', label: 'PM', description: 'Manage projects end-to-end with budget oversight and team coordination', icon: <Briefcase className="w-5 h-5" /> },
+    { role: 'foreman', label: 'Foreman', description: 'Field leadership with crew management and quality oversight', icon: <HardHat className="w-5 h-5" /> },
+    { role: 'installer', label: 'Installer', description: 'Field work execution with task completion and time tracking', icon: <Wrench className="w-5 h-5" /> },
+    { role: 'office_admin', label: 'Office Admin', description: 'Administrative operations including invoicing and vendor management', icon: <FileText className="w-5 h-5" /> },
+    { role: 'warehouse_manager', label: 'Warehouse Manager', description: 'Full warehouse control: receiving, transfers, inventory adjustments', icon: <Briefcase className="w-5 h-5" /> },
+    { role: 'warehouse_staff', label: 'Warehouse Staff', description: 'Warehouse operations: receive, pick, stage, and transfer materials', icon: <Wrench className="w-5 h-5" /> },
+    { role: 'client', label: 'Client', description: 'Project visibility with approval workflows and communication', icon: <Building2 className="w-5 h-5" /> },
+    { role: 'sub', label: 'Sub', description: 'External contractor access to assigned tasks and documents', icon: <Briefcase className="w-5 h-5" /> },
+];
 
 export default function LoginPage() {
     const router = useRouter();
-    const { getAllUsers, switchUser, currentUser, isLoaded } = usePermissions();
+    const { getAllUsers, switchUser, signInAsDemo, isLoaded, currentUser } = usePermissions();
+
     const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
     const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-    const users = getAllUsers().filter(u => u.active);
-
-    // Group users by role for better organization
-    const usersByRole = users.reduce((acc, user) => {
-        if (!acc[user.role]) acc[user.role] = [];
-        acc[user.role].push(user);
-        return acc;
-    }, {} as Record<UserRole, typeof users>);
-
+    // Filter out demo user
+    const users = getAllUsers().filter(u => u.active && u.role !== 'demo');
     const selectedUser = users.find(u => u.id === selectedUserId);
 
-    const handleLogin = async () => {
-        if (selectedUserId) {
-            setIsLoggingIn(true);
-            switchUser(selectedUserId);
+    // Handle select account - go to sign-in page
+    const handleSelectAccount = async () => {
+        if (!selectedUserId) return;
+        router.push(`/login/signin?userId=${selectedUserId}`);
+    };
 
-            // Brief delay for visual feedback
-            await new Promise(resolve => setTimeout(resolve, 400));
-            router.push('/dashboard');
+    // Handle Try Demo
+    const handleTryDemo = async () => {
+        setIsLoggingIn(true);
+        signInAsDemo();
+        await new Promise(resolve => setTimeout(resolve, 500));
+        router.push('/dashboard');
+    };
+
+    // Handle keyboard Enter
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && selectedUserId) {
+            handleSelectAccount();
         }
     };
 
-    // Keyboard shortcut: Enter to login
-    useEffect(() => {
-        const handleKeyDown = (e: KeyboardEvent) => {
-            if (e.key === 'Enter' && selectedUserId) {
-                handleLogin();
-            }
-        };
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [selectedUserId]);
-
     if (!isLoaded) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
+            <div className="min-h-screen flex items-center justify-center bg-[#0a0a0f]">
                 <div className="flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center animate-pulse">
-                        <Home className="w-8 h-8 text-primary-foreground" />
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-600 to-cyan-500 flex items-center justify-center animate-pulse shadow-2xl shadow-violet-500/30">
+                        <Home className="w-8 h-8 text-white" />
                     </div>
-                    <p className="text-muted-foreground animate-pulse">Loading...</p>
+                    <div className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-violet-400" />
+                        <p className="text-slate-400">Loading...</p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex bg-gradient-to-br from-background via-background to-primary/5">
-            {/* Left Panel - Branding & Info */}
-            <div className="hidden lg:flex lg:w-2/5 xl:w-1/3 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 flex-col justify-between border-r border-border/50">
-                <div>
-                    <div className="flex items-center gap-3 mb-8">
-                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center shadow-lg">
-                            <Home className="w-6 h-6 text-primary-foreground" />
-                        </div>
-                        <div>
-                            <h1 className="text-2xl font-bold tracking-tight">FloorOps Pro</h1>
-                            <p className="text-sm text-muted-foreground">Enterprise Edition</p>
-                        </div>
+        <div className="min-h-screen flex bg-[#0a0a0f]" onKeyDown={handleKeyDown} tabIndex={0}>
+            {/* Left Panel - Available Roles */}
+            <div className="hidden lg:flex lg:w-[420px] xl:w-[480px] p-8 flex-col border-r border-slate-800/50">
+                {/* Logo */}
+                <div className="flex items-center gap-3 mb-8">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg">
+                        <Home className="w-5 h-5 text-white" />
                     </div>
-
-                    <div className="space-y-6">
-                        <div>
-                            <h2 className="text-lg font-semibold mb-2">Role-Based Access Control</h2>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                Each role in FloorOps Pro has tailored permissions that match real-world flooring
-                                operations. From owners with full financial visibility to installers focused on
-                                field execution.
-                            </p>
-                        </div>
-
-                        <div className="space-y-3">
-                            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Available Roles</h3>
-                            {Object.entries(ROLE_CAPABILITIES).map(([role, info]) => (
-                                <div key={role} className="flex items-start gap-3 p-3 rounded-lg bg-background/50 border border-border/50">
-                                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-                                        {info.icon}
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="font-medium capitalize text-sm">{role.replace('_', ' ')}</p>
-                                        <p className="text-xs text-muted-foreground line-clamp-2">{info.description}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                    <div>
+                        <h1 className="text-lg font-bold text-white tracking-tight">FloorOps Pro</h1>
+                        <p className="text-xs text-slate-500">Enterprise Edition</p>
                     </div>
                 </div>
 
-                <div className="text-xs text-muted-foreground">
-                    <p>© 2024 FloorOps Pro</p>
-                    <p className="mt-1">Enterprise flooring operations management</p>
+                {/* Title */}
+                <div className="mb-6">
+                    <h2 className="text-base font-semibold text-white mb-2">Role-Based Access Control</h2>
+                    <p className="text-sm text-slate-400 leading-relaxed">
+                        Each role in FloorOps Pro has tailored permissions that match real-world flooring operations. From owners with full financial visibility to installers focused on field execution.
+                    </p>
+                </div>
+
+                {/* Available Roles */}
+                <div className="flex-1 overflow-y-auto">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Available Roles</p>
+                    <div className="space-y-1">
+                        {AVAILABLE_ROLES.map((roleItem) => (
+                            <div
+                                key={roleItem.role}
+                                className="flex items-start gap-3 p-3 rounded-lg hover:bg-slate-800/30 transition-colors"
+                            >
+                                <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center shrink-0 text-slate-400">
+                                    {roleItem.icon}
+                                </div>
+                                <div className="min-w-0">
+                                    <p className="font-medium text-sm text-white">{roleItem.label}</p>
+                                    <p className="text-xs text-slate-500 leading-relaxed">{roleItem.description}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="text-xs text-slate-600 mt-6 pt-6 border-t border-slate-800/50">
+                    <p>© 2025 FloorOps Pro</p>
+                    <p className="mt-0.5">Enterprise flooring operations management</p>
                 </div>
             </div>
 
-            {/* Right Panel - Login */}
+            {/* Right Panel - Sign In */}
             <div className="flex-1 flex items-center justify-center p-4 lg:p-8">
-                <div className="w-full max-w-xl space-y-6">
+                <div className="w-full max-w-md">
                     {/* Mobile Logo */}
                     <div className="lg:hidden text-center mb-8">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/80 shadow-xl mb-4">
-                            <Home className="w-8 h-8 text-primary-foreground" />
+                        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-xl mb-4">
+                            <Home className="w-7 h-7 text-white" />
                         </div>
-                        <h1 className="text-2xl font-bold tracking-tight">FloorOps Pro</h1>
-                        <p className="text-muted-foreground text-sm">Enterprise Edition</p>
+                        <h1 className="text-xl font-bold text-white tracking-tight">FloorOps Pro</h1>
+                        <p className="text-slate-400 text-sm">Enterprise Edition</p>
                     </div>
 
-                    <Card className="shadow-xl border-0 bg-card/80 backdrop-blur-sm">
+                    {/* Sign In Card */}
+                    <Card className="border-0 bg-slate-900/60 backdrop-blur-sm shadow-2xl shadow-black/40">
                         <CardHeader className="pb-4">
-                            <CardTitle className="text-xl flex items-center gap-2">
-                                <Lock className="w-5 h-5 text-primary" />
+                            <CardTitle className="text-lg text-white flex items-center gap-2">
+                                <Lock className="w-4 h-4 text-slate-400" />
                                 Sign In
                             </CardTitle>
-                            <CardDescription>
+                            <CardDescription className="text-slate-400 text-sm">
                                 Select a user account to explore role-based features
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6">
-                            {/* User Selection */}
-                            <div className="space-y-3 max-h-[360px] overflow-y-auto pr-2">
+                        <CardContent className="space-y-4">
+                            {/* User Selection List */}
+                            <div className="space-y-2">
                                 {users.map(user => {
                                     const roleInfo = getRoleInfo(user.role);
                                     const isSelected = selectedUserId === user.id;
                                     const isCurrent = currentUser?.id === user.id;
-                                    const capabilities = ROLE_CAPABILITIES[user.role];
 
                                     return (
                                         <button
                                             key={user.id}
                                             onClick={() => setSelectedUserId(user.id)}
                                             className={`
-                        relative w-full flex items-center gap-4 p-4 rounded-xl border-2 transition-all duration-200 text-left
-                        ${isSelected
-                                                    ? 'border-primary bg-primary/5 shadow-lg ring-2 ring-primary/20'
-                                                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                                w-full flex items-center gap-3 p-3 rounded-xl border transition-all duration-150 text-left
+                                                ${isSelected
+                                                    ? 'border-blue-500/50 bg-blue-500/10'
+                                                    : 'border-slate-800 hover:border-slate-700 hover:bg-slate-800/50'
                                                 }
-                      `}
+                                            `}
                                         >
                                             {/* Avatar */}
                                             <div
-                                                className="flex items-center justify-center w-12 h-12 rounded-full text-white text-lg font-bold shrink-0 shadow-md"
-                                                style={{ backgroundColor: roleInfo?.color || 'hsl(var(--primary))' }}
+                                                className="flex items-center justify-center w-10 h-10 rounded-full text-white text-sm font-semibold shrink-0"
+                                                style={{ backgroundColor: roleInfo?.color || '#3b82f6' }}
                                             >
                                                 {user.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)}
                                             </div>
 
                                             {/* Info */}
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
-                                                    <span className="font-semibold">{user.name}</span>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-medium text-white text-sm">{user.name}</span>
                                                     {isCurrent && (
-                                                        <Badge variant="secondary" className="text-xs">Current Session</Badge>
+                                                        <Badge className="text-[10px] bg-emerald-500/20 text-emerald-400 border-0 py-0 px-1.5">
+                                                            Current Session
+                                                        </Badge>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-2 mt-1">
+                                                <div className="flex items-center gap-2 mt-0.5">
                                                     <Badge
                                                         variant="outline"
-                                                        className="text-xs"
-                                                        style={{ borderColor: roleInfo?.color, color: roleInfo?.color }}
+                                                        className="text-[10px] py-0 px-1.5 border-slate-700"
+                                                        style={{ color: roleInfo?.color }}
                                                     >
-                                                        {roleInfo?.icon} {roleInfo?.label}
+                                                        {roleInfo?.label}
                                                     </Badge>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground mt-1 truncate">{user.email}</p>
+                                                <p className="text-[11px] text-slate-500 mt-0.5">{user.email}</p>
                                             </div>
 
-                                            {/* Selection Indicator */}
+                                            {/* Radio indicator */}
                                             <div className={`
-                        flex items-center justify-center w-6 h-6 rounded-full border-2 shrink-0 transition-all
-                        ${isSelected
-                                                    ? 'border-primary bg-primary text-primary-foreground scale-110'
-                                                    : 'border-muted-foreground/30'
-                                                }
-                      `}>
-                                                {isSelected && <Check className="w-4 h-4" />}
+                                                w-4 h-4 rounded-full border-2 shrink-0 flex items-center justify-center
+                                                ${isSelected ? 'border-blue-500' : 'border-slate-600'}
+                                            `}>
+                                                {isSelected && <div className="w-2 h-2 rounded-full bg-blue-500" />}
                                             </div>
                                         </button>
                                     );
                                 })}
                             </div>
 
-                            {/* Selected User Capabilities */}
-                            {selectedUser && (
-                                <div className="p-4 rounded-xl bg-muted/50 border border-border space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                    <div className="flex items-center gap-2">
-                                        <Unlock className="w-4 h-4 text-primary" />
-                                        <span className="font-medium text-sm">Access Preview</span>
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">
-                                        {ROLE_CAPABILITIES[selectedUser.role].description}
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        {ROLE_CAPABILITIES[selectedUser.role].highlights.map((highlight, i) => (
-                                            <Badge key={i} variant="secondary" className="text-xs">
-                                                {highlight}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Login Button */}
+                            {/* Sign In Button */}
                             <Button
-                                onClick={handleLogin}
+                                onClick={handleSelectAccount}
                                 disabled={!selectedUserId || isLoggingIn}
-                                className="w-full h-12 text-base font-semibold group"
-                                size="lg"
+                                className="w-full h-11 text-sm font-medium bg-blue-600 hover:bg-blue-500 text-white disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                                 {isLoggingIn ? (
                                     <span className="flex items-center gap-2">
-                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        <Loader2 className="w-4 h-4 animate-spin" />
                                         Signing in...
-                                    </span>
-                                ) : selectedUserId ? (
-                                    <span className="flex items-center gap-2">
-                                        Continue to Dashboard
-                                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                                     </span>
                                 ) : (
                                     'Select an Account'
                                 )}
                             </Button>
 
-                            {/* Footer */}
-                            <p className="text-xs text-center text-muted-foreground">
-                                Demo mode • No password required • Press Enter to sign in
+                            {/* Demo Mode Link */}
+                            <p className="text-xs text-center text-slate-500">
+                                <button
+                                    onClick={handleTryDemo}
+                                    className="text-slate-400 hover:text-white transition-colors"
+                                >
+                                    Demo mode
+                                </button>
+                                {' • No password required • Press Enter to sign in'}
                             </p>
                         </CardContent>
                     </Card>
