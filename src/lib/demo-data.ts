@@ -411,9 +411,10 @@ export const DEMO_NOTIFICATIONS: Notification[] = [
         title: 'New Message',
         message: 'Sarah Jenkins: Love the progress so far!',
         link: '/projects/101/messages',
+        action_url: null,
+        project_id: 101,
         read: false,
-        created_at: daysAgo(1),
-        updated_at: daysAgo(1)
+        created_at: daysAgo(1)
     },
     {
         id: 'notif-2',
@@ -422,8 +423,9 @@ export const DEMO_NOTIFICATIONS: Notification[] = [
         title: 'Task Due Soon',
         message: 'Verify subfloor prep for TechHub HQ',
         link: '/projects/102/tasks',
+        action_url: null,
+        project_id: 102,
         read: true,
-        created_at: daysAgo(2),
-        updated_at: daysAgo(2)
+        created_at: daysAgo(2)
     }
 ];

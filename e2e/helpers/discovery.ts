@@ -127,7 +127,7 @@ async function generateSelector(element: Locator): Promise<string> {
                 }
                 const classes = Array.from(current.classList).slice(0, 2).join('.');
                 if (classes) selector += `.${classes}`;
-                const parent = current.parentElement;
+                const parent: Element | null = current.parentElement;
                 if (parent) {
                     const siblings = Array.from(parent.children).filter(c => c.tagName === current!.tagName);
                     if (siblings.length > 1) {
