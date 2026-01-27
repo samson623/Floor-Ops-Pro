@@ -552,6 +552,15 @@ export const DailyLogsService = {
     },
 
     async getByDateRange(projectId: number, startDate: string, endDate: string): Promise<ServiceResult<DailyLog[]>> {
+        if (isDemoMode()) {
+            const filtered = DEMO_DAILY_LOGS.filter(l =>
+                l.project_id === projectId &&
+                l.date >= startDate &&
+                l.date <= endDate
+            );
+            return { data: filtered, error: null };
+        }
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -931,6 +940,8 @@ export const NotificationsService = {
     },
 
     async markAsRead(id: string): Promise<ServiceResult<null>> {
+        if (isDemoMode()) return { data: null, error: null }; // Silent success for UI state
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -945,6 +956,8 @@ export const NotificationsService = {
     },
 
     async markAllAsRead(userId: string): Promise<ServiceResult<null>> {
+        if (isDemoMode()) return { data: null, error: null }; // Silent success for UI state
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
@@ -1099,6 +1112,8 @@ export const StorageService = {
     },
 
     async deleteFile(bucket: string, path: string): Promise<ServiceResult<null>> {
+        if (isDemoMode()) return getDemoModeError<null>();
+
         const client = getClient();
         if (!client) {
             return { data: null, error: new Error('Supabase not configured'), isOffline: true };
