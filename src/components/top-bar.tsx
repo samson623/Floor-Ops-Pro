@@ -3,8 +3,21 @@
 import { useTheme } from './theme-provider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { usePermissions } from './permission-context';
 import { RoleSwitcher } from '@/components/role-switcher';
-import { Sun, Moon, Plus, Search } from 'lucide-react';
+import { Sun, Moon, Plus, Search, ShieldAlert } from 'lucide-react';
+
+function DemoBadge() {
+    const { isDemoMode } = usePermissions();
+    if (!isDemoMode) return null;
+
+    return (
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
+            <ShieldAlert className="w-4 h-4 animate-pulse" />
+            <span className="text-xs font-bold uppercase tracking-wider">Demo Mode</span>
+        </div>
+    );
+}
 
 interface TopBarProps {
     title: string;
@@ -31,6 +44,9 @@ export function TopBar({
                     <h1 className="text-xl lg:text-2xl font-bold tracking-tight truncate">{title}</h1>
                     <p className="text-sm text-muted-foreground truncate">{breadcrumb}</p>
                 </div>
+
+                {/* Demo Mode Badge - Compact & Always Visible */}
+                <DemoBadge />
 
                 {/* Center: Children (optional project selector, etc.) */}
                 {children}

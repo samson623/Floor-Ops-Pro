@@ -6,7 +6,6 @@ import { PermissionProvider } from "@/components/permission-context";
 import { AuthGuard } from "@/components/auth-guard";
 import { Sidebar } from "@/components/sidebar";
 import { AIPanel } from "@/components/ai-panel";
-import { DemoModeBanner } from "@/components/demo-mode-banner";
 import { ScrollToTopButton } from "@/components/ui/scroll-to-top";
 
 export default function DashboardLayout({
@@ -21,7 +20,7 @@ export default function DashboardLayout({
         <DataProvider>
             <PermissionProvider>
                 <AuthGuard>
-                    <DemoModeBanner />
+                    {/* Demo Banner removed - integrated into TopBar */}
                     <div className="flex min-h-screen bg-background">
                         {!isLoginPage && <Sidebar />}
                         <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -30,9 +29,9 @@ export default function DashboardLayout({
                     </div>
                     {!isLoginPage && <AIPanel />}
                     {!isLoginPage && <ScrollToTopButton />}
-                </AuthGuard>
-            </PermissionProvider>
-        </DataProvider>
+                </AuthGuard >
+            </PermissionProvider >
+        </DataProvider >
     );
 }
 
