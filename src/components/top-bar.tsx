@@ -5,16 +5,28 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermissions } from './permission-context';
 import { RoleSwitcher } from '@/components/role-switcher';
-import { Sun, Moon, Plus, Search, ShieldAlert } from 'lucide-react';
+import { Sun, Moon, Plus, Search, ShieldAlert, LogOut } from 'lucide-react';
 
-function DemoBadge() {
-    const { isDemoMode } = usePermissions();
+function DemoMiniBanner() {
+    const { isDemoMode, signOut } = usePermissions();
     if (!isDemoMode) return null;
 
     return (
-        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">
-            <ShieldAlert className="w-4 h-4 animate-pulse" />
-            <span className="text-xs font-bold uppercase tracking-wider">Demo Mode</span>
+        <div className="hidden md:flex items-center pl-3 pr-2 py-1.5 rounded-full bg-gradient-to-r from-violet-600 via-purple-600 to-cyan-600 text-white shadow-lg shadow-purple-500/25 group hover:shadow-purple-500/40 transition-all duration-300 select-none">
+            <div className="flex items-center gap-2 mr-3 border-r border-white/20 pr-3">
+                <ShieldAlert className="w-4 h-4 animate-pulse fill-white/20" />
+                <span className="text-xs font-bold uppercase tracking-wider">Demo Mode</span>
+            </div>
+
+            <span className="text-xs font-medium text-white/90 mr-4 tracking-tight hidden lg:inline-block">Viewing Sample Data</span>
+
+            <button
+                onClick={signOut}
+                className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/10 hover:bg-white/25 active:bg-white/30 text-[10px] font-bold uppercase tracking-wide transition-colors border border-white/10"
+            >
+                <LogOut className="w-3 h-3" />
+                Exit
+            </button>
         </div>
     );
 }
@@ -46,7 +58,8 @@ export function TopBar({
                 </div>
 
                 {/* Demo Mode Badge - Compact & Always Visible */}
-                <DemoBadge />
+                {/* Demo Mini-Banner - Premium & Persistent */}
+                <DemoMiniBanner />
 
                 {/* Center: Children (optional project selector, etc.) */}
                 {children}
