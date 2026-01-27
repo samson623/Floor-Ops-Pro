@@ -190,15 +190,24 @@ export interface ServiceResult<T> {
 // ============================================================
 
 const DEMO_STORAGE_KEY = 'floorops_current_user_id';
+const DEMO_SESSION_KEY = 'floorops_demo_session_active';
 const DEMO_USER_ID = 99;
 
 /**
  * Check if the current user is in demo mode.
  * Demo users cannot perform create, update, or delete operations.
+ * 
+ * Supports both:
+ * 1. Direct login as Demo User (ID 99)
+ * 2. Persistent Demo Session (simulating other roles)
  */
 function isDemoMode(): boolean {
     if (typeof localStorage === 'undefined') return false;
     try {
+        // Check explicit session flag first (Role Switching support)
+        if (localStorage.getItem(DEMO_SESSION_KEY) === 'true') return true;
+
+        // Fallback to user ID check (Standard demo login)
         const userId = localStorage.getItem(DEMO_STORAGE_KEY);
         return userId === DEMO_USER_ID.toString();
     } catch {

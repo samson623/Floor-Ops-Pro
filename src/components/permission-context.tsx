@@ -56,11 +56,13 @@ const PermissionContext = createContext<PermissionContextType | undefined>(undef
 
 const STORAGE_KEY = 'floorops_current_user_id';
 const USERS_STORAGE_KEY = 'floorops_users';
+const DEMO_SESSION_KEY = 'floorops_demo_session_active';
 export const DEMO_USER_ID = 99;
 
 export function PermissionProvider({ children }: { children: ReactNode }) {
     const [users, setUsers] = useState<User[]>(DEFAULT_USERS);
     const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+    const [isDemoSession, setIsDemoSession] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
 
     // Load from localStorage on mount
@@ -96,6 +98,15 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
                 console.error('Failed to load user state:', e);
                 setCurrentUserId(1);
             }
+
+            // Load demo session state
+            try {
+                const demoSession = localStorage.getItem(DEMO_SESSION_KEY) === 'true';
+                setIsDemoSession(demoSession);
+            } catch (e) {
+                console.error('Failed to load demo session:', e);
+            }
+
             setIsLoaded(true);
         }
     }, []);
@@ -108,7 +119,8 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     }, [users, isLoaded]);
 
     const currentUser = users.find(u => u.id === currentUserId) || null;
-    const isDemoMode = currentUser?.role === 'demo';
+    // Demo mode is active if explicitly in a demo session OR if logged in as the specific demo user
+    const isDemoMode = isDemoSession || currentUser?.role === 'demo';
 
     const checkPermission = useCallback((permission: Permission): boolean => {
         if (!currentUser) return false;
@@ -190,15 +202,19 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
 
     const signOut = useCallback(() => {
         setCurrentUserId(null);
+        setIsDemoSession(false);
         if (typeof window !== 'undefined') {
             localStorage.removeItem(STORAGE_KEY);
+            localStorage.removeItem(DEMO_SESSION_KEY);
         }
     }, []);
 
     const signInAsDemo = useCallback(() => {
         setCurrentUserId(DEMO_USER_ID);
+        setIsDemoSession(true);
         if (typeof window !== 'undefined') {
             localStorage.setItem(STORAGE_KEY, DEMO_USER_ID.toString());
+            localStorage.setItem(DEMO_SESSION_KEY, 'true');
         }
         // Update last login for demo user
         setUsers(prev => prev.map(u =>
