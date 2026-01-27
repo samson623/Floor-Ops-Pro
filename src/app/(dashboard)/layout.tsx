@@ -7,6 +7,7 @@ import { AuthGuard } from "@/components/auth-guard";
 import { Sidebar } from "@/components/sidebar";
 import { AIPanel } from "@/components/ai-panel";
 import { DemoModeBanner } from "@/components/demo-mode-banner";
+import { ScrollToTopButton } from "@/components/ui/scroll-to-top";
 
 export default function DashboardLayout({
     children,
@@ -28,6 +29,7 @@ export default function DashboardLayout({
                         </main>
                     </div>
                     {!isLoginPage && <AIPanel />}
+                    {!isLoginPage && <ScrollToTopButton />}
                 </AuthGuard>
             </PermissionProvider>
         </DataProvider>

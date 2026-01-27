@@ -1,6 +1,7 @@
 'use client';
 
 import { PermissionProvider } from '@/components/permission-context';
+import { ScrollToTopButton } from '@/components/ui/scroll-to-top';
 
 export default function MarketingLayout({
     children,
@@ -11,7 +12,9 @@ export default function MarketingLayout({
         <div className="dark">
             <PermissionProvider>
                 {children}
+                <ScrollToTopButton />
             </PermissionProvider>
         </div>
     );
 }
+
