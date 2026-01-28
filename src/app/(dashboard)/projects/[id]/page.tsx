@@ -1,6 +1,6 @@
 'use client';
 
-import { use, useState, useEffect, useCallback } from 'react';
+import { use, useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSmartBack } from '@/hooks/use-smart-back';
 import { TopBar } from '@/components/top-bar';
@@ -84,8 +84,7 @@ const coStatusConfig = {
     executed: { label: 'Executed', className: 'bg-primary/10 text-primary' },
 };
 
-export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
-    const { id } = use(params);
+function ProjectDetailPageContent({ id }: { id: string }) {
     const router = useRouter();
     const searchParams = useSearchParams();
     const {
@@ -1960,5 +1959,16 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ id: st
                 }}
             />
         </>
+    );
+}
+
+// Wrapper component to handle async params and prevent dev tools serialization issues
+export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+    const unwrappedParams = use(params);
+    
+    return (
+        <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+            <ProjectDetailPageContent id={unwrappedParams.id} />
+        </Suspense>
     );
 }
