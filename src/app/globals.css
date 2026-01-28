@@ -392,3 +392,11 @@
     @apply md:hidden space-y-3;
   }
 }
+
+/* Fix Next.js portal positioning */
+@layer base {
+  nextjs-portal {
+    left: 0px !important;
+    top: 0px !important;
+  }
+}
