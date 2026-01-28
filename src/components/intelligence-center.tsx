@@ -36,50 +36,7 @@ import { cn } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { buildAIContext } from '@/lib/ai-context';
 import { useCallback } from 'react';
-
-// Type declarations for Web Speech API
-interface SpeechRecognitionEvent extends Event {
-    results: SpeechRecognitionResultList;
-    resultIndex: number;
-}
-
-interface SpeechRecognitionResultList {
-    length: number;
-    item(index: number): SpeechRecognitionResult;
-    [index: number]: SpeechRecognitionResult;
-}
-
-interface SpeechRecognitionResult {
-    isFinal: boolean;
-    length: number;
-    item(index: number): SpeechRecognitionAlternative;
-    [index: number]: SpeechRecognitionAlternative;
-}
-
-interface SpeechRecognitionAlternative {
-    transcript: string;
-    confidence: number;
-}
-
-interface SpeechRecognition extends EventTarget {
-    continuous: boolean;
-    interimResults: boolean;
-    lang: string;
-    onresult: ((event: SpeechRecognitionEvent) => void) | null;
-    onerror: ((event: Event) => void) | null;
-    onend: (() => void) | null;
-    onstart: (() => void) | null;
-    start(): void;
-    stop(): void;
-    abort(): void;
-}
-
-declare global {
-    interface Window {
-        SpeechRecognition: new () => SpeechRecognition;
-        webkitSpeechRecognition: new () => SpeechRecognition;
-    }
-}
+import type { SpeechRecognitionInstance, SpeechRecognitionEvent } from '@/types/speech-recognition';
 
 export function IntelligenceCenter() {
     const { can, getCurrentRoleInfo } = usePermissions();
@@ -92,7 +49,7 @@ export function IntelligenceCenter() {
     const [aiResponse, setAiResponse] = useState<string | null>(null);
     const [isListening, setIsListening] = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
-    const recognitionRef = useRef<SpeechRecognition | null>(null);
+    const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
     const isStoppingRef = useRef(false);
 
     // Force stop any active recording
