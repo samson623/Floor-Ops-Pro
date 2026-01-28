@@ -35,12 +35,17 @@ interface SpeechRecognitionAlternative {
     confidence: number;
 }
 
+interface SpeechRecognitionErrorEvent extends Event {
+    error: string;
+    message?: string;
+}
+
 interface SpeechRecognition extends EventTarget {
     continuous: boolean;
     interimResults: boolean;
     lang: string;
     onresult: ((event: SpeechRecognitionEvent) => void) | null;
-    onerror: ((event: Event) => void) | null;
+    onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
     onend: (() => void) | null;
     onstart: (() => void) | null;
     start(): void;
@@ -144,8 +149,20 @@ export function AIPanel() {
             recognitionRef.current = null;
         };
 
-        recognition.onerror = (event: Event) => {
-            console.error('Speech recognition error:', event);
+        recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+            // Extract error details from the event
+            const errorType = event.error || 'unknown';
+            const errorMessage = event.message || 'Speech recognition failed';
+            
+            // Only log non-benign errors (ignore 'no-speech' which is common)
+            if (errorType !== 'no-speech') {
+                console.error('Speech recognition error:', {
+                    error: errorType,
+                    message: errorMessage,
+                    type: event.type
+                });
+            }
+            
             setIsListening(false);
             recognitionRef.current = null;
         };
@@ -195,7 +212,10 @@ export function AIPanel() {
                 recognition.start();
                 // Note: setIsListening(true) is now handled in onstart
             } catch (error) {
-                console.error('Speech recognition error:', error);
+                console.error('Speech recognition start error:', {
+                    error: error instanceof Error ? error.message : String(error),
+                    name: error instanceof Error ? error.name : 'Unknown'
+                });
                 setIsListening(false);
                 recognitionRef.current = null;
             }
