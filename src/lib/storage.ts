@@ -13,6 +13,17 @@ import {
 } from './warehouse-mock-data';
 
 const STORAGE_KEY = 'floorops-pro-data';
+const DEMO_SESSION_KEY = 'floorops_demo_session_active';
+
+// Check if currently in demo mode
+function isDemoMode(): boolean {
+    if (typeof window === 'undefined') return false;
+    try {
+        return localStorage.getItem(DEMO_SESSION_KEY) === 'true';
+    } catch {
+        return false;
+    }
+}
 
 
 export function useLocalStorage(): [Database, (data: Database) => void, boolean] {
@@ -22,6 +33,23 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
     // Load data from localStorage on mount
     useEffect(() => {
         try {
+            // In demo mode, always use initial data (don't load from localStorage)
+            if (isDemoMode()) {
+                const freshData: Database = {
+                    ...initialData,
+                    warehouseLocations: MOCK_WAREHOUSE_LOCATIONS,
+                    inventoryTransactions: MOCK_TRANSACTIONS,
+                    stockReservations: MOCK_RESERVATIONS,
+                    stockTransfers: MOCK_TRANSFERS,
+                    enhancedLots: MOCK_ENHANCED_LOTS,
+                    cycleCounts: MOCK_CYCLE_COUNTS,
+                    reorderSuggestions: MOCK_REORDER_SUGGESTIONS,
+                };
+                setData(freshData);
+                setIsLoaded(true);
+                return;
+            }
+
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
                 const parsed = JSON.parse(stored);
@@ -122,8 +150,13 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
         setIsLoaded(true);
     }, []);
 
-    // Save data to localStorage
+    // Save data to localStorage (only if not in demo mode)
     const saveData = useCallback((newData: Database) => {
+        // Don't save in demo mode
+        if (isDemoMode()) {
+            setData(newData); // Update state but don't persist
+            return;
+        }
         try {
             localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
             setData(newData);

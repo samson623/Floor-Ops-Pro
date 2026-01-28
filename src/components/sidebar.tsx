@@ -26,7 +26,8 @@ import {
     Users,
     Brain,
     Warehouse,
-    LogOut
+    LogOut,
+    StickyNote
 } from 'lucide-react';
 
 interface NavItem {
@@ -104,6 +105,7 @@ function SidebarContent() {
             title: 'Communication',
             items: [
                 { href: '/messages', label: 'Messages', icon: <MessageSquare className="w-5 h-5" />, badge: getUnreadMessageCount() },
+                { href: '/notes', label: 'AI Notes', icon: <StickyNote className="w-5 h-5" /> },
             ]
         }
     ];

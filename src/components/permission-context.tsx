@@ -220,15 +220,35 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
     }, [currentUser]);
 
     const signOut = useCallback(() => {
+        // Check if we're in demo mode before clearing
+        const wasDemoMode = isDemoSession || currentUserId === DEMO_USER_ID;
         setCurrentUserId(null);
         setIsDemoSession(false);
         if (typeof window !== 'undefined') {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem(DEMO_SESSION_KEY);
+            
+            // If exiting demo mode, clear all demo-related data
+            if (wasDemoMode) {
+                // Clear app data (will reset to initial on next load)
+                localStorage.removeItem('floorops-pro-data');
+                // Clear AI notes and chat
+                localStorage.removeItem('floorops-ai-notes');
+                localStorage.removeItem('floorops-ai-current-chat');
+            }
         }
-    }, []);
+    }, [isDemoSession, currentUserId]);
 
     const signInAsDemo = useCallback(() => {
+        // Clear any existing demo data when entering demo mode
+        if (typeof window !== 'undefined') {
+            // Clear app data to ensure fresh start
+            localStorage.removeItem('floorops-pro-data');
+            // Clear AI notes and chat
+            localStorage.removeItem('floorops-ai-notes');
+            localStorage.removeItem('floorops-ai-current-chat');
+        }
+        
         setCurrentUserId(DEMO_USER_ID);
         setIsDemoSession(true);
         if (typeof window !== 'undefined') {
