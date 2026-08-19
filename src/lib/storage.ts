@@ -13,6 +13,7 @@ import {
 } from './warehouse-mock-data';
 
 const STORAGE_KEY = 'floorops-pro-data';
+const DEMO_STORAGE_KEY = 'floorops-pro-demo-data'; // Separate key for demo mode data
 const DEMO_SESSION_KEY = 'floorops_demo_session_active';
 
 // Check if currently in demo mode
@@ -33,19 +34,53 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
     // Load data from localStorage on mount
     useEffect(() => {
         try {
-            // In demo mode, always use initial data (don't load from localStorage)
+            // In demo mode, load from demo-specific storage or use initial data
             if (isDemoMode()) {
-                const freshData: Database = {
-                    ...initialData,
-                    warehouseLocations: MOCK_WAREHOUSE_LOCATIONS,
-                    inventoryTransactions: MOCK_TRANSACTIONS,
-                    stockReservations: MOCK_RESERVATIONS,
-                    stockTransfers: MOCK_TRANSFERS,
-                    enhancedLots: MOCK_ENHANCED_LOTS,
-                    cycleCounts: MOCK_CYCLE_COUNTS,
-                    reorderSuggestions: MOCK_REORDER_SUGGESTIONS,
-                };
-                setData(freshData);
+                const demoStored = localStorage.getItem(DEMO_STORAGE_KEY);
+                if (demoStored) {
+                    // Load saved demo session data
+                    const parsed = JSON.parse(demoStored);
+                    const merged: Database = {
+                        ...initialData,
+                        ...parsed,
+                        // Ensure warehouse data is present
+                        warehouseLocations: parsed.warehouseLocations?.length > 0
+                            ? parsed.warehouseLocations
+                            : MOCK_WAREHOUSE_LOCATIONS,
+                        inventoryTransactions: parsed.inventoryTransactions?.length > 0
+                            ? parsed.inventoryTransactions
+                            : MOCK_TRANSACTIONS,
+                        stockReservations: parsed.stockReservations?.length > 0
+                            ? parsed.stockReservations
+                            : MOCK_RESERVATIONS,
+                        stockTransfers: parsed.stockTransfers?.length > 0
+                            ? parsed.stockTransfers
+                            : MOCK_TRANSFERS,
+                        enhancedLots: parsed.enhancedLots?.length > 0
+                            ? parsed.enhancedLots
+                            : MOCK_ENHANCED_LOTS,
+                        cycleCounts: parsed.cycleCounts?.length > 0
+                            ? parsed.cycleCounts
+                            : MOCK_CYCLE_COUNTS,
+                        reorderSuggestions: parsed.reorderSuggestions?.length > 0
+                            ? parsed.reorderSuggestions
+                            : MOCK_REORDER_SUGGESTIONS,
+                    };
+                    setData(merged);
+                } else {
+                    // First time in demo mode - start fresh
+                    const freshData: Database = {
+                        ...initialData,
+                        warehouseLocations: MOCK_WAREHOUSE_LOCATIONS,
+                        inventoryTransactions: MOCK_TRANSACTIONS,
+                        stockReservations: MOCK_RESERVATIONS,
+                        stockTransfers: MOCK_TRANSFERS,
+                        enhancedLots: MOCK_ENHANCED_LOTS,
+                        cycleCounts: MOCK_CYCLE_COUNTS,
+                        reorderSuggestions: MOCK_REORDER_SUGGESTIONS,
+                    };
+                    setData(freshData);
+                }
                 setIsLoaded(true);
                 return;
             }
@@ -150,15 +185,16 @@ export function useLocalStorage(): [Database, (data: Database) => void, boolean]
         setIsLoaded(true);
     }, []);
 
-    // Save data to localStorage (only if not in demo mode)
+    // Save data to localStorage (use demo-specific key in demo mode)
     const saveData = useCallback((newData: Database) => {
-        // Don't save in demo mode
-        if (isDemoMode()) {
-            setData(newData); // Update state but don't persist
-            return;
-        }
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+            if (isDemoMode()) {
+                // Save to demo-specific storage during demo mode
+                localStorage.setItem(DEMO_STORAGE_KEY, JSON.stringify(newData));
+            } else {
+                // Save to regular storage in normal mode
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(newData));
+            }
             setData(newData);
         } catch (error) {
             console.error('Error saving data to localStorage:', error);

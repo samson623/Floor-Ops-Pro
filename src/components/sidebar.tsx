@@ -6,8 +6,9 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { useData } from './data-provider';
 import { usePermissions } from './permission-context';
-import { getRoleInfo, Permission } from '@/lib/permissions';
+import { Permission } from '@/lib/permissions';
 import { getCurrentCompany, type CompanyInfo } from '@/lib/supabase';
+import { loadSavedNotes, onNotesUpdated } from '@/lib/ai-notes';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from '@/components/ui/sheet';
@@ -51,9 +52,38 @@ function SidebarContent() {
 
     // Company context - fetch current company name
     const [company, setCompany] = useState<CompanyInfo | null>(null);
+    const [savedNotesCount, setSavedNotesCount] = useState(0);
 
     useEffect(() => {
-        getCurrentCompany().then(setCompany);
+        let isActive = true;
+
+        getCurrentCompany()
+            .then(remoteCompany => {
+                if (isActive && remoteCompany) setCompany(remoteCompany);
+            })
+            .catch(() => {
+                // The browser-local demo intentionally works without a live company record.
+            });
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
+    // Load saved notes count and listen for updates
+    useEffect(() => {
+        const updateCount = () => {
+            const notes = loadSavedNotes();
+            setSavedNotesCount(notes.length);
+        };
+
+        // Initial load
+        updateCount();
+
+        // Listen for notes updates
+        const unsubscribe = onNotesUpdated(updateCount);
+
+        return unsubscribe;
     }, []);
 
     const navSections: NavSection[] = [
@@ -105,7 +135,7 @@ function SidebarContent() {
             title: 'Communication',
             items: [
                 { href: '/messages', label: 'Messages', icon: <MessageSquare className="w-5 h-5" />, badge: getUnreadMessageCount() },
-                { href: '/notes', label: 'AI Notes', icon: <StickyNote className="w-5 h-5" /> },
+                { href: '/notes', label: 'AI Notes', icon: <StickyNote className="w-5 h-5" />, badge: savedNotesCount > 0 ? savedNotesCount : undefined },
             ]
         }
     ];
@@ -143,7 +173,7 @@ function SidebarContent() {
                     <Home className="w-5 h-5" />
                 </div>
                 <div>
-                    <h1 className="text-lg font-bold tracking-tight">{company?.name || 'FloorOps Pro'}</h1>
+                    <h1 className="text-lg font-bold tracking-tight">{company?.name || 'Tex Flooring'}</h1>
                     <p className="text-xs text-sidebar-foreground/60 capitalize">{company?.plan || 'Enterprise'}</p>
                 </div>
             </div>
@@ -273,4 +303,3 @@ export function Sidebar() {
         </>
     );
 }
-

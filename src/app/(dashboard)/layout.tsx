@@ -23,7 +23,7 @@ export default function DashboardLayout({
                     {/* Demo Banner removed - integrated into TopBar */}
                     <div className="flex min-h-screen bg-background">
                         {!isLoginPage && <Sidebar />}
-                        <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+                        <main className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
                             {children}
                         </main>
                     </div>

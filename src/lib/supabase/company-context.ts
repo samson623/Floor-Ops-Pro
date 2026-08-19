@@ -5,7 +5,7 @@
  * 
  * Features:
  * - Get current company ID for the user
- * - Fallback to default Tex Flooring company
+ * - Fail-closed tenant resolution for authenticated users
  * - Utility to inject company_id into inserts
  * 
  * @author FloorOps Pro Engineering
@@ -62,7 +62,7 @@ export async function getDefaultCompanyId(): Promise<string | null> {
 
 /**
  * Get the current user's company ID
- * Falls back to default company if user has no company assigned
+ * Returns null unless the authenticated user has a company assignment
  */
 export async function getCurrentCompanyId(): Promise<string | null> {
     if (cachedCompanyId) {
@@ -74,25 +74,27 @@ export async function getCurrentCompanyId(): Promise<string | null> {
         return getDefaultCompanyId();
     }
 
-    // Try to get authenticated user's company
-    const { data: { user } } = await client.auth.getUser();
+    // The interactive product demo uses local role selection rather than Supabase Auth.
+    // Avoid querying tenant tables until a real Supabase-authenticated user exists.
+    const { data: { user }, error: authError } = await client.auth.getUser();
 
-    if (user) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { data: profile } = await (client as any)
-            .from('profiles')
-            .select('company_id')
-            .eq('id', user.id)
-            .single();
-
-        if (profile?.company_id) {
-            cachedCompanyId = profile.company_id;
-            return cachedCompanyId;
-        }
+    if (authError || !user) {
+        return null;
     }
 
-    // Fallback to default company
-    return getDefaultCompanyId();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: profile } = await (client as any)
+        .from('profiles')
+        .select('company_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+    if (profile?.company_id) {
+        cachedCompanyId = profile.company_id;
+        return cachedCompanyId;
+    }
+
+    return null;
 }
 
 /**

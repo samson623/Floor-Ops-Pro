@@ -87,8 +87,8 @@ export default function DashboardPage() {
         {/* Two Column Layout */}
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Active Projects */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <Card className="flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 shrink-0">
               <CardTitle className="text-lg font-semibold">Active Projects</CardTitle>
               <Button
                 variant="ghost"
@@ -98,7 +98,7 @@ export default function DashboardPage() {
                 View All
               </Button>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 overflow-y-auto max-h-[400px] min-h-0">
               {activeProjects.length > 0 ? (
                 activeProjects.slice(0, 3).map(project => (
                   <ProjectCard key={project.id} project={project} compact />
@@ -112,8 +112,8 @@ export default function DashboardPage() {
           </Card>
 
           {/* Today's Schedule */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <Card className="flex flex-col">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 shrink-0">
               <CardTitle className="text-lg font-semibold">Today&apos;s Schedule</CardTitle>
               <Button
                 variant="ghost"
@@ -123,7 +123,7 @@ export default function DashboardPage() {
                 Full View
               </Button>
             </CardHeader>
-            <CardContent className="space-y-3">
+            <CardContent className="space-y-3 overflow-y-auto max-h-[400px] min-h-0">
               {data.globalSchedule.length > 0 ? (
                 data.globalSchedule.map(item => (
                   <ScheduleItemCard
@@ -144,8 +144,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Recent Messages */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <Card className="flex flex-col">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 shrink-0">
             <CardTitle className="text-lg font-semibold">Recent Messages</CardTitle>
             <Button
               variant="ghost"
@@ -155,7 +155,7 @@ export default function DashboardPage() {
               View All
             </Button>
           </CardHeader>
-          <CardContent>
+          <CardContent className="overflow-y-auto max-h-[300px] min-h-0">
             <div className="divide-y">
               {data.messages.slice(0, 3).map(message => (
                 <div

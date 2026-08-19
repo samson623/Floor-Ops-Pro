@@ -17,7 +17,9 @@ export interface SavedNote {
 }
 
 const NOTES_STORAGE_KEY = 'floorops-ai-notes';
+const DEMO_NOTES_STORAGE_KEY = 'floorops-ai-notes-demo'; // Demo-specific key
 const CURRENT_CHAT_KEY = 'floorops-ai-current-chat';
+const DEMO_CURRENT_CHAT_KEY = 'floorops-ai-current-chat-demo'; // Demo-specific key
 const DEMO_SESSION_KEY = 'floorops_demo_session_active';
 
 // Check if currently in demo mode
@@ -30,12 +32,31 @@ function isDemoMode(): boolean {
     }
 }
 
-// Load saved notes from localStorage (returns empty array in demo mode)
+// Get the appropriate storage key based on mode
+function getNotesStorageKey(): string {
+    return isDemoMode() ? DEMO_NOTES_STORAGE_KEY : NOTES_STORAGE_KEY;
+}
+
+function getChatStorageKey(): string {
+    return isDemoMode() ? DEMO_CURRENT_CHAT_KEY : CURRENT_CHAT_KEY;
+}
+
+// Custom event name for notes updates
+const NOTES_UPDATED_EVENT = 'floorops-notes-updated';
+
+// Dispatch event when notes are updated
+function dispatchNotesUpdated(): void {
+    if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(NOTES_UPDATED_EVENT));
+    }
+}
+
+// Load saved notes from localStorage (uses demo-specific key in demo mode)
 export function loadSavedNotes(): SavedNote[] {
     if (typeof window === 'undefined') return [];
-    if (isDemoMode()) return []; // Don't load saved notes in demo mode
     try {
-        const stored = localStorage.getItem(NOTES_STORAGE_KEY);
+        const key = getNotesStorageKey();
+        const stored = localStorage.getItem(key);
         return stored ? JSON.parse(stored) : [];
     } catch (e) {
         console.error('Error loading notes:', e);
@@ -43,23 +64,33 @@ export function loadSavedNotes(): SavedNote[] {
     }
 }
 
-// Save notes to localStorage (only if not in demo mode)
+// Save notes to localStorage (uses demo-specific key in demo mode)
 export function saveNotes(notes: SavedNote[]): void {
     if (typeof window === 'undefined') return;
-    if (isDemoMode()) return; // Don't save in demo mode
     try {
-        localStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
+        const key = getNotesStorageKey();
+        localStorage.setItem(key, JSON.stringify(notes));
+        dispatchNotesUpdated();
     } catch (e) {
         console.error('Error saving notes:', e);
     }
 }
 
-// Load current chat from localStorage (returns null in demo mode)
+// Listen for notes updates
+export function onNotesUpdated(callback: () => void): () => void {
+    if (typeof window === 'undefined') return () => {};
+    window.addEventListener(NOTES_UPDATED_EVENT, callback);
+    return () => {
+        window.removeEventListener(NOTES_UPDATED_EVENT, callback);
+    };
+}
+
+// Load current chat from localStorage (uses demo-specific key in demo mode)
 export function loadCurrentChat(): Message[] | null {
     if (typeof window === 'undefined') return null;
-    if (isDemoMode()) return null; // Don't load saved chat in demo mode
     try {
-        const stored = localStorage.getItem(CURRENT_CHAT_KEY);
+        const key = getChatStorageKey();
+        const stored = localStorage.getItem(key);
         return stored ? JSON.parse(stored) : null;
     } catch (e) {
         console.error('Error loading current chat:', e);
@@ -67,21 +98,22 @@ export function loadCurrentChat(): Message[] | null {
     }
 }
 
-// Save current chat to localStorage (only if not in demo mode)
+// Save current chat to localStorage (uses demo-specific key in demo mode)
 export function saveCurrentChat(messages: Message[]): void {
     if (typeof window === 'undefined') return;
-    if (isDemoMode()) return; // Don't save in demo mode
     try {
-        localStorage.setItem(CURRENT_CHAT_KEY, JSON.stringify(messages));
+        const key = getChatStorageKey();
+        localStorage.setItem(key, JSON.stringify(messages));
     } catch (e) {
         console.error('Error saving current chat:', e);
     }
 }
 
-// Clear current chat
+// Clear current chat (clears appropriate key based on mode)
 export function clearCurrentChat(): void {
     if (typeof window === 'undefined') return;
-    localStorage.removeItem(CURRENT_CHAT_KEY);
+    const key = getChatStorageKey();
+    localStorage.removeItem(key);
 }
 
 // Delete a note

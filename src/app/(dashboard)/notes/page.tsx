@@ -236,8 +236,8 @@ export default function NotesPage() {
 
             {/* View Note Dialog */}
             <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-                <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-                    <DialogHeader>
+                <DialogContent className="max-w-4xl h-[90vh] flex flex-col overflow-hidden">
+                    <DialogHeader className="shrink-0">
                         <div className="flex items-start justify-between">
                             <div className="flex-1">
                                 <DialogTitle className="text-2xl mb-2">{selectedNote?.title}</DialogTitle>
@@ -295,8 +295,8 @@ export default function NotesPage() {
                         )}
                     </DialogHeader>
                     
-                    <ScrollArea className="flex-1 mt-4 pr-4">
-                        <div className="space-y-4">
+                    <div className="flex-1 min-h-0 mt-4 overflow-y-auto pr-2">
+                        <div className="space-y-4 pb-4">
                             {selectedNote?.messages.map((message, index) => (
                                 <div
                                     key={message.id || index}
@@ -326,7 +326,7 @@ export default function NotesPage() {
                                 </div>
                             ))}
                         </div>
-                    </ScrollArea>
+                    </div>
                 </DialogContent>
             </Dialog>
         </div>

@@ -110,7 +110,7 @@ export const DEFAULT_CONFIG: CrawlConfig = {
     maxDepth: 6,
     maxClicksPerPage: 35,
     maxTotalActions: 500,
-    baseUrl: 'https://floor-ops-pro.vercel.app',
+    baseUrl: process.env.PLAYWRIGHT_BASE_URL || 'https://floor-ops-pro.vercel.app',
     seedUrls: ['/landing', '/'],
     destructiveKeywords: [
         'delete', 'remove', 'destroy', 'cancel', 'refund',
