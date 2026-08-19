@@ -210,8 +210,10 @@ export async function detectDeadClick(
     // URL changed = not dead
     if (afterUrl !== beforeUrl) return false;
 
-    // Content changed significantly = not dead
-    if (Math.abs(afterContent.length - beforeContent.length) > 100) return false;
+    // Any rendered DOM change counts as an effect. Selection controls often only
+    // update classes or ARIA state, so comparing document length creates false
+    // positives when the before/after markup happens to be the same size.
+    if (afterContent !== beforeContent) return false;
 
     // Check for modal/dialog opened
     const modalVisible = await page.locator('[role="dialog"], [role="alertdialog"], [class*="modal"]').first().isVisible({ timeout: 500 }).catch(() => false);

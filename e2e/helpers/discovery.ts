@@ -176,6 +176,10 @@ export async function filterSafeElements(
     for (const element of elements) {
         const info = await getElementInfo(element);
 
+        // A focusable container without an interactive semantic role is commonly
+        // a framework focus target, not an application control.
+        if (info.role === 'generic') continue;
+
         // Skip destructive elements
         if (isDestructiveElement(info)) continue;
 

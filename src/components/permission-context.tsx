@@ -228,25 +228,24 @@ export function PermissionProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem(STORAGE_KEY);
             localStorage.removeItem(DEMO_SESSION_KEY);
             
-            // If exiting demo mode, clear all demo-related data
+            // If exiting demo mode, clear all demo-specific data (will reset on next demo entry)
             if (wasDemoMode) {
-                // Clear app data (will reset to initial on next load)
-                localStorage.removeItem('floorops-pro-data');
-                // Clear AI notes and chat
-                localStorage.removeItem('floorops-ai-notes');
-                localStorage.removeItem('floorops-ai-current-chat');
+                // Clear demo-specific app data
+                localStorage.removeItem('floorops-pro-demo-data');
+                // Clear demo-specific AI notes and chat
+                localStorage.removeItem('floorops-ai-notes-demo');
+                localStorage.removeItem('floorops-ai-current-chat-demo');
             }
         }
     }, [isDemoSession, currentUserId]);
 
     const signInAsDemo = useCallback(() => {
-        // Clear any existing demo data when entering demo mode
+        // Clear any existing demo data when entering demo mode to start fresh
         if (typeof window !== 'undefined') {
-            // Clear app data to ensure fresh start
-            localStorage.removeItem('floorops-pro-data');
-            // Clear AI notes and chat
-            localStorage.removeItem('floorops-ai-notes');
-            localStorage.removeItem('floorops-ai-current-chat');
+            // Clear demo-specific storage to ensure fresh start each time
+            localStorage.removeItem('floorops-pro-demo-data');
+            localStorage.removeItem('floorops-ai-notes-demo');
+            localStorage.removeItem('floorops-ai-current-chat-demo');
         }
         
         setCurrentUserId(DEMO_USER_ID);

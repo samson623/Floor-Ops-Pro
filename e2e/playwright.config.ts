@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || 'https://floor-ops-pro.vercel.app';
+
 export default defineConfig({
     testDir: '.',
     fullyParallel: false,
@@ -13,7 +15,7 @@ export default defineConfig({
     ],
 
     use: {
-        baseURL: 'https://floor-ops-pro.vercel.app',
+        baseURL,
         trace: 'on-first-retry',
         video: 'on-first-retry',
         screenshot: 'only-on-failure',

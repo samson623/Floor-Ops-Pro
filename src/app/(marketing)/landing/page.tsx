@@ -3,14 +3,90 @@
 import { useState, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { motion, useScroll, useTransform, useInView, AnimatePresence } from 'framer-motion';
+import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import {
     CheckCircle, ArrowRight, Sparkles, BarChart3, Calendar, Users,
-    Zap, Shield, Clock, Building2, Hammer, ClipboardCheck,
+    Zap, Shield, Building2, Hammer, ClipboardCheck,
     DollarSign, Play, MessageSquare, PhoneCall, Mail, ChevronDown,
     Bot, Cloud, Smartphone, RefreshCw, Lock, Layers, Rocket, Loader2
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import './landing-animations.css';
+
+type ConversionIntent = 'overview' | 'pilot' | 'walkthrough';
+
+const CONVERSION_CONTENT: Record<ConversionIntent, { title: string; description: string; subject: string }> = {
+    overview: {
+        title: 'From awarded job to final walkthrough',
+        description: 'See how ownership, project managers, field teams, and the warehouse work from one shared operating view.',
+        subject: 'Floor Ops Pro overview',
+    },
+    pilot: {
+        title: 'Plan your guided pilot',
+        description: 'We begin with discovery and onboarding, then configure Floor Ops Pro around your projects, roles, materials, and reporting needs.',
+        subject: 'Plan a Floor Ops Pro guided pilot',
+    },
+    walkthrough: {
+        title: 'Schedule a focused walkthrough',
+        description: 'Choose the workflows that matter most and we will tailor the demonstration to your flooring operation.',
+        subject: 'Schedule a Floor Ops Pro walkthrough',
+    },
+};
+
+function ConversionDialog({ intent, onOpenChange }: { intent: ConversionIntent | null; onOpenChange: (open: boolean) => void }) {
+    const content = intent ? CONVERSION_CONTENT[intent] : CONVERSION_CONTENT.overview;
+    const emailHref = `mailto:hello@floorops.pro?subject=${encodeURIComponent(content.subject)}&body=${encodeURIComponent('Company:\nTeam size:\nNumber of active projects:\nWhat we want to see:\n')}`;
+
+    return (
+        <Dialog open={intent !== null} onOpenChange={onOpenChange}>
+            <DialogContent className="overflow-hidden border-white/10 bg-slate-950 p-0 text-white sm:max-w-2xl">
+                <div className="h-1.5 bg-gradient-to-r from-violet-500 via-purple-500 to-cyan-500" />
+                <div className="p-7 sm:p-9">
+                    <DialogHeader className="pr-8">
+                        <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                            {intent === 'overview' ? <Play className="h-5 w-5" /> : <PhoneCall className="h-5 w-5" />}
+                        </div>
+                        <DialogTitle className="text-2xl sm:text-3xl">{content.title}</DialogTitle>
+                        <DialogDescription className="text-base leading-relaxed text-slate-400">{content.description}</DialogDescription>
+                    </DialogHeader>
+
+                    {intent === 'overview' && (
+                        <div className="my-7 grid gap-3 sm:grid-cols-2">
+                            {[
+                                ['01', 'Win and plan', 'Estimate, scope, schedule, and assign the work.'],
+                                ['02', 'Mobilize', 'Coordinate crews, materials, purchasing, and warehouse movement.'],
+                                ['03', 'Control the job', 'Track progress, costs, daily logs, changes, and punch items.'],
+                                ['04', 'Close with confidence', 'Complete approvals, invoicing, sign-off, and final reporting.'],
+                            ].map(([number, title, description]) => (
+                                <div key={number} className="border-l border-white/10 py-1 pl-4">
+                                    <span className="text-xs font-semibold tracking-widest text-primary">{number}</span>
+                                    <p className="mt-1 font-semibold">{title}</p>
+                                    <p className="mt-1 text-sm leading-relaxed text-slate-400">{description}</p>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                        <Link href="/login/select" className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 px-5 py-3 font-semibold text-white transition-transform hover:scale-[1.01]">
+                            Open Owner Demo<ArrowRight className="h-4 w-4" />
+                        </Link>
+                        <a href={emailHref} className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white/5 px-5 py-3 font-semibold transition-colors hover:bg-white/10">
+                            <Mail className="h-4 w-4" />Email Floor Ops Pro
+                        </a>
+                    </div>
+                    <p className="mt-4 text-center text-xs text-slate-500">Pilot conversations are handled directly. No payment information is requested.</p>
+                </div>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ANIMATED GRADIENT MESH BACKGROUND
@@ -27,29 +103,23 @@ function GradientMeshBackground() {
     );
 }
 
+const FLOATING_PARTICLES = Array.from({ length: 30 }, (_, i) => ({
+    id: i,
+    left: (i * 37) % 100,
+    top: (i * 61) % 100,
+    size: 2 + (i % 4),
+    delay: (i % 10) * 0.45,
+    duration: 6 + (i % 7),
+}));
+
 // ═══════════════════════════════════════════════════════════════════════════
 // FLOATING PARTICLES
 // ═══════════════════════════════════════════════════════════════════════════
 
 function FloatingParticles() {
-    const [particles, setParticles] = useState<Array<{ id: number; left: number; top: number; size: number; delay: number; duration: number }>>([]);
-
-    useEffect(() => {
-        setParticles(
-            [...Array(30)].map((_, i) => ({
-                id: i,
-                left: Math.random() * 100,
-                top: Math.random() * 100,
-                size: 2 + Math.random() * 4,
-                delay: Math.random() * 5,
-                duration: 5 + Math.random() * 10
-            }))
-        );
-    }, []);
-
     return (
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            {particles.map((p) => (
+            {FLOATING_PARTICLES.map((p) => (
                 <motion.div
                     key={p.id}
                     className="absolute rounded-full bg-gradient-to-r from-violet-400/40 to-cyan-400/40"
@@ -89,14 +159,14 @@ function ScrollIndicator() {
 function CapabilityBadge({ icon: Icon, label, description }: { icon: React.ElementType; label: string; description: string }) {
     return (
         <motion.div
-            className="relative group"
+            className="relative group h-full"
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
         >
             <div className="absolute inset-0 bg-gradient-to-br from-violet-500/10 to-cyan-500/10 rounded-2xl blur-xl group-hover:blur-2xl transition-all duration-500 opacity-0 group-hover:opacity-100" />
-            <div className="relative p-6 rounded-2xl border border-white/5 bg-white/[0.02] backdrop-blur-sm hover:border-primary/30 transition-all duration-500 text-center">
+            <div className="relative flex h-full min-h-40 flex-col items-center justify-center rounded-2xl border border-white/5 bg-white/[0.02] p-5 text-center backdrop-blur-sm transition-all duration-500 hover:border-primary/30 sm:p-6">
                 <Icon className="w-8 h-8 text-primary mx-auto mb-3" />
                 <div className="text-lg font-semibold mb-1">{label}</div>
                 <div className="text-muted-foreground text-sm">{description}</div>
@@ -151,63 +221,6 @@ function FeatureCard({ icon: Icon, title, description, index }: { icon: React.El
                 </motion.div>
                 <h3 className="text-xl font-bold mb-3 group-hover:text-primary transition-colors">{title}</h3>
                 <p className="text-muted-foreground leading-relaxed">{description}</p>
-                <motion.div className="mt-4 flex items-center text-primary text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity" initial={{ x: -10 }} whileHover={{ x: 0 }}>
-                    Learn more <ArrowRight className="w-4 h-4 ml-2" />
-                </motion.div>
-            </div>
-        </motion.div>
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// PRICING CARD
-// ═══════════════════════════════════════════════════════════════════════════
-
-function PricingCard({ name, price, period, description, features, popular = false, cta = "Get Started", delay = 0 }: {
-    name: string; price: number; period: string; description: string; features: string[]; popular?: boolean; cta?: string; delay?: number;
-}) {
-    return (
-        <motion.div
-            className={`relative h-full ${popular ? 'z-10' : ''}`}
-            initial={{ opacity: 0, y: 50, scale: popular ? 1 : 0.95 }}
-            whileInView={{ opacity: 1, y: 0, scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay }}
-            whileHover={{ y: -10, transition: { duration: 0.3 } }}
-        >
-            {popular && (
-                <div className="absolute -inset-[2px] bg-gradient-to-r from-violet-500 via-cyan-500 to-emerald-500 rounded-[28px] blur-sm animate-glow-pulse" />
-            )}
-            <div className={`relative p-8 rounded-3xl h-full ${popular ? 'bg-gradient-to-br from-violet-900/50 via-card to-cyan-900/30 border-2 border-primary/50' : 'bg-gradient-to-br from-card/80 to-card/40 border border-white/10'}`}>
-                {popular && (
-                    <motion.div
-                        className="absolute -top-4 left-1/2 -translate-x-1/2 px-6 py-2 bg-gradient-to-r from-violet-500 to-cyan-500 rounded-full text-sm font-bold text-white shadow-lg shadow-primary/30"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ delay: 0.5, type: "spring" }}
-                    >
-                        <Sparkles className="w-4 h-4 inline mr-2" />Recommended
-                    </motion.div>
-                )}
-                <div className="mb-6 pt-2">
-                    <h3 className="text-2xl font-bold mb-2">{name}</h3>
-                    <p className="text-muted-foreground text-sm">{description}</p>
-                </div>
-                <div className="mb-8">
-                    <span className="text-5xl font-bold gradient-text-animated">${price.toLocaleString()}</span>
-                    <span className="text-muted-foreground ml-2">/{period}</span>
-                </div>
-                <ul className="space-y-4 mb-8">
-                    {features.map((feature, i) => (
-                        <motion.li key={i} className="flex items-start gap-3" initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} transition={{ delay: delay + 0.1 * i }}>
-                            <CheckCircle className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" />
-                            <span className="text-foreground/90">{feature}</span>
-                        </motion.li>
-                    ))}
-                </ul>
-                <motion.button className={`w-full py-4 rounded-xl font-semibold text-lg transition-all duration-300 ${popular ? 'bg-gradient-to-r from-violet-500 to-cyan-500 text-white hover:shadow-xl hover:shadow-primary/30' : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-primary/50'}`} whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
-                    {cta}<ArrowRight className="w-5 h-5 inline ml-2" />
-                </motion.button>
             </div>
         </motion.div>
     );
@@ -217,17 +230,18 @@ function PricingCard({ name, price, period, description, features, popular = fal
 // AI CHAT DEMO
 // ═══════════════════════════════════════════════════════════════════════════
 
+const AI_DEMO_MESSAGES = [
+    { type: 'user', text: "What's our revenue this quarter?" },
+    { type: 'ai', text: 'Your Q4 revenue is $847,250, up 23% from last quarter. The Downtown Lobby project contributed the most at $156K.' },
+    { type: 'user', text: 'Which crew is available next Tuesday?' },
+    { type: 'ai', text: 'Team A is fully available Tuesday. Team B has one job finishing at 2 PM. Would you like me to schedule something?' },
+];
+
 function AIChatDemo() {
     const [currentMessage, setCurrentMessage] = useState(0);
-    const messages = [
-        { type: 'user', text: "What's our revenue this quarter?" },
-        { type: 'ai', text: "Your Q4 revenue is $847,250, up 23% from last quarter. The Downtown Lobby project contributed the most at $156K." },
-        { type: 'user', text: "Which crew is available next Tuesday?" },
-        { type: 'ai', text: "Team A is fully available Tuesday. Team B has one job finishing at 2 PM. Would you like me to schedule something?" },
-    ];
 
     useEffect(() => {
-        const timer = setInterval(() => setCurrentMessage(m => (m + 1) % messages.length), 3000);
+        const timer = setInterval(() => setCurrentMessage(m => (m + 1) % AI_DEMO_MESSAGES.length), 3000);
         return () => clearInterval(timer);
     }, []);
 
@@ -246,7 +260,7 @@ function AIChatDemo() {
                 </div>
                 <div className="space-y-4 min-h-[200px]">
                     <AnimatePresence mode="popLayout">
-                        {messages.slice(0, currentMessage + 1).map((msg, i) => (
+                        {AI_DEMO_MESSAGES.slice(0, currentMessage + 1).map((msg, i) => (
                             <motion.div key={i} initial={{ opacity: 0, y: 20, scale: 0.95 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }} className={`flex ${msg.type === 'user' ? 'justify-end' : ''}`}>
                                 <div className={`px-4 py-3 rounded-2xl max-w-[85%] ${msg.type === 'user' ? 'bg-primary/20 rounded-tr-sm' : 'bg-white/5 rounded-tl-sm'}`}>{msg.text}</div>
                             </motion.div>
@@ -330,6 +344,7 @@ function PlatformBadges() {
 
 function LandingPageContent() {
     const [isScrolled, setIsScrolled] = useState(false);
+    const [conversionIntent, setConversionIntent] = useState<ConversionIntent | null>(null);
     const searchParams = useSearchParams();
     const clientName = searchParams.get('client');
     const heroRef = useRef(null);
@@ -361,6 +376,7 @@ function LandingPageContent() {
     return (
         <div className="min-h-screen bg-background text-foreground relative">
             <GradientMeshBackground />
+            <ConversionDialog intent={conversionIntent} onOpenChange={(open) => !open && setConversionIntent(null)} />
 
             {/* Navigation */}
             <motion.nav
@@ -379,7 +395,7 @@ function LandingPageContent() {
                             <span className="hidden sm:inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Beta</span>
                         </motion.div>
                         <div className="hidden md:flex items-center gap-8">
-                            {['Features', 'Pricing', 'Demo'].map((item) => (
+                            {['Features', 'Pilot', 'Demo'].map((item) => (
                                 <motion.a key={item} href={`#${item.toLowerCase()}`} className="text-muted-foreground hover:text-foreground transition-colors relative group" whileHover={{ y: -2 }}>
                                     {item}
                                     <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-violet-500 to-cyan-500 group-hover:w-full transition-all duration-300" />
@@ -435,14 +451,14 @@ function LandingPageContent() {
                                     Explore the Platform<ArrowRight className="w-5 h-5" />
                                 </Link>
                             </motion.div>
-                            <motion.button className="px-10 py-5 rounded-2xl bg-white/5 border border-white/10 font-semibold text-lg hover:bg-white/10 transition-all flex items-center justify-center gap-3 backdrop-blur-sm" whileHover={{ scale: 1.02, borderColor: 'rgba(139, 92, 246, 0.5)' }}>
+                            <motion.button type="button" onClick={() => setConversionIntent('overview')} className="px-10 py-5 rounded-2xl bg-white/5 border border-white/10 font-semibold text-lg hover:bg-white/10 transition-all flex items-center justify-center gap-3 backdrop-blur-sm" whileHover={{ scale: 1.02, borderColor: 'rgba(139, 92, 246, 0.5)' }}>
                                 <Play className="w-5 h-5" />Watch Overview
                             </motion.button>
                         </motion.div>
 
                         {/* Capability badges instead of fake stats */}
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
-                            <CapabilityBadge icon={Layers} label="Unlimited Projects" description="Scale without limits" />
+                            <CapabilityBadge icon={Layers} label="Project Portfolio" description="Plan capacity as operations grow" />
                             <CapabilityBadge icon={RefreshCw} label="Real-Time Sync" description="Always up to date" />
                             <CapabilityBadge icon={Bot} label="AI Assistant" description="Answers in seconds" />
                             <CapabilityBadge icon={Smartphone} label="Mobile Ready" description="Work from anywhere" />
@@ -507,25 +523,65 @@ function LandingPageContent() {
                 </div>
             </section>
 
-            {/* Pricing */}
-            <section id="pricing" className="py-32 relative z-10">
+            {/* Guided Pilot */}
+            <section id="pilot" className="py-32 relative z-10">
                 <div className="max-w-7xl mx-auto px-6">
-                    <motion.div className="text-center mb-20" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
+                    <motion.div className="max-w-3xl mb-16" initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
                         <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-violet-500/10 to-cyan-500/10 border border-primary/20 mb-6">
-                            <DollarSign className="w-4 h-4 text-primary" />
-                            <span className="text-sm font-medium text-primary">Transparent Pricing</span>
+                            <Rocket className="w-4 h-4 text-primary" />
+                            <span className="text-sm font-medium text-primary">Guided Implementation</span>
                         </div>
-                        <h2 className="text-4xl md:text-6xl font-bold mb-6">Choose Your <span className="gradient-text">Growth Plan</span></h2>
-                        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">No hidden fees. No long-term contracts. Founding customer pricing available.</p>
+                        <h2 className="text-4xl md:text-6xl font-bold mb-6">Start with a <span className="gradient-text">Guided Pilot</span></h2>
+                        <p className="text-xl text-muted-foreground leading-relaxed">Floor Ops Pro is configured around your operation. Every engagement begins with discovery and onboarding—not a self-service trial.</p>
                     </motion.div>
-                    <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
-                        <PricingCard name="Starter" price={599} period="month" description="Perfect for small crews getting started" features={['Up to 5 active projects', '3 team members', 'Basic estimating tools', 'Job scheduling', 'Invoice generation', 'Email support']} delay={0} />
-                        <PricingCard name="Professional" price={999} period="month" description="For growing contractors ready to scale" features={['Unlimited projects', '15 team members', 'Advanced estimating', 'Crew scheduling & tracking', 'Invoicing + payments', 'AI Assistant included', 'Priority support']} popular delay={0.1} cta="Start Free Trial" />
-                        <PricingCard name="Enterprise" price={1499} period="month" description="For operations with multiple locations" features={['Everything in Professional', 'Unlimited team members', 'Multi-location support', 'Custom integrations', 'Advanced analytics', 'Dedicated manager', 'SLA guarantee']} delay={0.2} cta="Contact Sales" />
+                    <div className="grid gap-12 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+                        <div className="border-t border-white/10">
+                            {[
+                                ['01', 'Discover', 'Map your current projects, roles, crews, materials, and reporting needs.'],
+                                ['02', 'Configure', 'Set up workflows, permissions, the data plan, and role-based training.'],
+                                ['03', 'Pilot & prove', 'Run an agreed project scope with direct support and clear success measures.'],
+                            ].map(([number, title, description], index) => (
+                                <motion.div
+                                    key={number}
+                                    className="grid grid-cols-[3.5rem_1fr] gap-5 border-b border-white/10 py-8"
+                                    initial={{ opacity: 0, x: -30 }}
+                                    whileInView={{ opacity: 1, x: 0 }}
+                                    viewport={{ once: true }}
+                                    transition={{ duration: 0.5, delay: index * 0.1 }}
+                                >
+                                    <span className="font-mono text-sm font-semibold tracking-widest text-primary">{number}</span>
+                                    <div>
+                                        <h3 className="text-2xl font-bold">{title}</h3>
+                                        <p className="mt-2 max-w-xl leading-relaxed text-muted-foreground">{description}</p>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                        <motion.div
+                            className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-violet-500/10 via-card/80 to-cyan-500/10 p-8 lg:sticky lg:top-28"
+                            initial={{ opacity: 0, y: 30 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.6, delay: 0.15 }}
+                        >
+                            <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+                            <div className="relative">
+                                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-primary">What defines your pilot</p>
+                                <ul className="mt-6 space-y-4">
+                                    {['Active project volume', 'Locations and warehouse structure', 'Users and role complexity', 'Data migration and integrations', 'Training and support needs'].map((factor) => (
+                                        <li key={factor} className="flex items-center gap-3">
+                                            <CheckCircle className="h-5 w-5 shrink-0 text-emerald-400" />
+                                            <span>{factor}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                                <p className="mt-7 border-t border-white/10 pt-6 leading-relaxed text-muted-foreground">Scope and pricing are set after discovery. Project capacity is agreed for the pilot and adjusted for the full rollout.</p>
+                                <motion.button type="button" onClick={() => setConversionIntent('pilot')} className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-500 to-cyan-500 px-6 py-4 text-lg font-semibold text-white shadow-lg shadow-primary/20 transition-shadow hover:shadow-primary/40" whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+                                    Plan Your Pilot<ArrowRight className="h-5 w-5" />
+                                </motion.button>
+                            </div>
+                        </motion.div>
                     </div>
-                    <motion.p className="text-center text-muted-foreground mt-12" initial={{ opacity: 0 }} whileInView={{ opacity: 1 }} viewport={{ once: true }}>
-                        All plans include a 14-day free trial. No credit card required to start.
-                    </motion.p>
                 </div>
             </section>
 
@@ -555,14 +611,14 @@ function LandingPageContent() {
                         <FloatingParticles />
                         <div className="relative text-center text-white">
                             <motion.h2 className="text-4xl md:text-6xl font-bold mb-6" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>Ready to See It in Action?</motion.h2>
-                            <motion.p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>Experience the platform yourself. No credit card required, no commitment.</motion.p>
+                            <motion.p className="text-xl text-white/80 mb-10 max-w-2xl mx-auto" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.1 }}>Explore the product, then schedule an onboarding conversation tailored to your operation.</motion.p>
                             <motion.div className="flex flex-col sm:flex-row gap-4 justify-center" initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: 0.2 }}>
                                 <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
                                     <Link href="/demo" className="px-10 py-5 rounded-2xl bg-white text-violet-600 font-bold text-lg shadow-2xl hover:shadow-white/30 transition-all flex items-center justify-center gap-3">
                                         Try the Demo<ArrowRight className="w-5 h-5" />
                                     </Link>
                                 </motion.div>
-                                <motion.button className="px-10 py-5 rounded-2xl bg-white/10 border border-white/20 font-semibold text-lg hover:bg-white/20 transition-all flex items-center justify-center gap-3 backdrop-blur-sm" whileHover={{ scale: 1.02 }}>
+                                <motion.button type="button" onClick={() => setConversionIntent('walkthrough')} className="px-10 py-5 rounded-2xl bg-white/10 border border-white/20 font-semibold text-lg hover:bg-white/20 transition-all flex items-center justify-center gap-3 backdrop-blur-sm" whileHover={{ scale: 1.02 }}>
                                     <PhoneCall className="w-5 h-5" />Schedule Walkthrough
                                 </motion.button>
                             </motion.div>
@@ -583,14 +639,18 @@ function LandingPageContent() {
                             </div>
                             <p className="text-muted-foreground mb-6 max-w-sm">Enterprise flooring operations software built specifically for professional contractors. Manage projects, schedule crews, and grow your business.</p>
                             <div className="flex gap-3">
-                                {[MessageSquare, Mail, PhoneCall].map((Icon, i) => (
-                                    <motion.a key={i} href="#" className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-primary/20 hover:text-primary transition-all" whileHover={{ y: -3 }}><Icon className="w-5 h-5" /></motion.a>
+                                {[
+                                    { Icon: MessageSquare, href: '/login/select', label: 'Open the owner demo' },
+                                    { Icon: Mail, href: 'mailto:hello@floorops.pro?subject=Floor%20Ops%20Pro%20question', label: 'Email Floor Ops Pro' },
+                                    { Icon: PhoneCall, href: 'mailto:hello@floorops.pro?subject=Schedule%20a%20Floor%20Ops%20Pro%20walkthrough', label: 'Schedule a walkthrough' },
+                                ].map(({ Icon, href, label }) => (
+                                    <motion.a key={label} href={href} aria-label={label} className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center hover:bg-primary/20 hover:text-primary transition-all" whileHover={{ y: -3 }}><Icon className="w-5 h-5" /></motion.a>
                                 ))}
                             </div>
                         </div>
                         {[
-                            { title: 'Product', links: [{ label: 'Features', href: '#features' }, { label: 'Pricing', href: '#pricing' }, { label: 'Demo', href: '#demo' }] },
-                            { title: 'Contact', links: [{ label: 'Schedule Demo', href: '#' }, { label: 'Email Us', href: 'mailto:hello@floorops.pro' }] }
+                            { title: 'Product', links: [{ label: 'Features', href: '#features' }, { label: 'Pilot', href: '#pilot' }, { label: 'Demo', href: '#demo' }] },
+                            { title: 'Contact', links: [{ label: 'Schedule Demo', href: 'mailto:hello@floorops.pro?subject=Schedule%20a%20Floor%20Ops%20Pro%20demo' }, { label: 'Email Us', href: 'mailto:hello@floorops.pro' }] }
                         ].map((col, i) => (
                             <div key={i}>
                                 <h4 className="font-semibold mb-4">{col.title}</h4>
@@ -605,8 +665,8 @@ function LandingPageContent() {
                     <div className="pt-8 border-t border-white/10 flex flex-col md:flex-row justify-between items-center gap-4">
                         <p className="text-muted-foreground text-sm">© 2026 Floor Ops Pro. All rights reserved.</p>
                         <div className="flex gap-6 text-sm text-muted-foreground">
-                            <a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a>
-                            <a href="#" className="hover:text-foreground transition-colors">Terms of Service</a>
+                            <Link href="/privacy" className="hover:text-foreground transition-colors">Privacy Policy</Link>
+                            <Link href="/terms" className="hover:text-foreground transition-colors">Terms of Service</Link>
                         </div>
                     </div>
                 </div>

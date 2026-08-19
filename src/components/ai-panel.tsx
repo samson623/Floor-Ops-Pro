@@ -18,7 +18,8 @@ import {
     saveCurrentChat, 
     clearCurrentChat,
     deleteNote as deleteNoteUtil,
-    addNote
+    addNote,
+    onNotesUpdated
 } from '@/lib/ai-notes';
 import { useRouter } from 'next/navigation';
 import type { SpeechRecognitionInstance, SpeechRecognitionEvent, SpeechRecognitionErrorEvent } from '@/types/speech-recognition';
@@ -78,6 +79,17 @@ export function AIPanel() {
         if (currentChat && currentChat.length > 1) {
             setMessages(currentChat);
         }
+    }, []);
+
+    // Listen for notes updates from other components/tabs
+    useEffect(() => {
+        const updateNotes = () => {
+            const notes = loadSavedNotes();
+            setSavedNotes(notes);
+        };
+
+        const unsubscribe = onNotesUpdated(updateNotes);
+        return unsubscribe;
     }, []);
 
     // Save current chat to localStorage
@@ -456,7 +468,7 @@ Be specific and actionable. Focus on what was discussed and any conclusions reac
                         {/* Notes Dropdown */}
                         {showNotes && (
                             <div className="mt-3 -mx-1 animate-in slide-in-from-top-2 duration-200">
-                                <div className="bg-card border rounded-xl shadow-lg max-h-64 overflow-y-auto">
+                                <div className="bg-card border rounded-xl shadow-lg max-h-96 overflow-hidden flex flex-col">
                                     {savedNotes.length === 0 ? (
                                         <div className="p-6 text-center text-muted-foreground">
                                             <Archive className="w-10 h-10 mx-auto mb-2 opacity-50" />
@@ -465,7 +477,7 @@ Be specific and actionable. Focus on what was discussed and any conclusions reac
                                         </div>
                                     ) : (
                                         <>
-                                            <div className="p-2 border-b">
+                                            <div className="p-2 border-b shrink-0">
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
@@ -479,7 +491,7 @@ Be specific and actionable. Focus on what was discussed and any conclusions reac
                                                     View All Notes
                                                 </Button>
                                             </div>
-                                            <div className="divide-y max-h-48 overflow-y-auto">
+                                            <div className="divide-y overflow-y-auto flex-1 min-h-0">
                                                 {savedNotes.slice(0, 5).map((note) => (
                                                     <button
                                                         key={note.id}

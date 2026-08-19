@@ -6,6 +6,14 @@ import { motion } from 'framer-motion';
 import { Hammer, Sparkles, Loader2 } from 'lucide-react';
 import { usePermissions } from '@/components/permission-context';
 
+const DEMO_PARTICLES = Array.from({ length: 20 }, (_, i) => ({
+    id: i,
+    left: (i * 43) % 100,
+    top: (i * 67) % 100,
+    duration: 3 + (i % 5) * 0.4,
+    delay: (i % 8) * 0.2,
+}));
+
 export default function DemoPage() {
     const router = useRouter();
     const { signInAsDemo, isLoaded, isDemoMode } = usePermissions();
@@ -45,22 +53,21 @@ export default function DemoPage() {
 
             {/* Animated particles */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                {[...Array(20)].map((_, i) => (
+                {DEMO_PARTICLES.map(particle => (
                     <motion.div
-                        key={i}
+                        key={particle.id}
                         className="absolute w-2 h-2 rounded-full bg-primary/30"
-                        initial={{
-                            x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1000),
-                            y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800)
-                        }}
+                        style={{ left: `${particle.left}%`, top: `${particle.top}%` }}
+                        initial={{ x: 0, y: 0 }}
                         animate={{
+                            x: [0, 10, -8, 0],
                             y: [null, -100],
                             opacity: [0.3, 0]
                         }}
                         transition={{
-                            duration: 3 + Math.random() * 2,
+                            duration: particle.duration,
                             repeat: Infinity,
-                            delay: Math.random() * 2
+                            delay: particle.delay
                         }}
                     />
                 ))}
